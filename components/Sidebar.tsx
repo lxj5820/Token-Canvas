@@ -10,52 +10,16 @@ interface SidebarProps {
   nodes: NodeData[];
   onPreviewMedia: (url: string, type: 'image' | 'video') => void;
   isDark?: boolean;
+  // 新增：画布操作回调
+  onScreenshot?: () => void;
+  onSelectMode?: () => void;
+  onPanMode?: () => void;
+  onAlignVertical?: () => void;
+  onAlignHorizontal?: () => void;
+  currentMode?: 'select' | 'pan';
 }
 
-type ActivePanel = 'ADD' | 'HISTORY' | 'PROJECT' | null;
-
-const HistoryItem = memo(({ node, type, onClick, isDark }: { node: NodeData, type: 'image' | 'video', onClick: () => void, isDark: boolean }) => {
-    const stackCount = node.outputArtifacts?.length || 0;
-    
-    return (
-        <div 
-           className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group ${isDark ? 'bg-zinc-900' : 'bg-gray-100'}`}
-           onClick={onClick}
-        >
-            {type === 'image' ? (
-                <img src={node.imageSrc} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async"/>
-            ) : (
-                <div className="w-full h-full relative">
-                   <video src={node.videoSrc} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted preload="metadata" />
-                   <div className="absolute inset-0 flex items-center justify-center">
-                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'bg-white/20' : 'bg-black/20'} backdrop-blur-sm`}>
-                           <Icons.Play size={14} className="text-white ml-0.5"/>
-                       </div>
-                   </div>
-                </div>
-            )}
-            
-            {stackCount > 1 && (
-                <div className={`absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 ${isDark ? 'bg-black/60 text-white' : 'bg-white/80 text-gray-700'} backdrop-blur-sm`}>
-                    <Icons.Layers size={10} />
-                    <span className="font-semibold">{stackCount}</span>
-                </div>
-            )}
-
-            <div className={`absolute inset-x-0 bottom-0 p-2 ${isDark ? 'bg-gradient-to-t from-black/80 to-transparent' : 'bg-gradient-to-t from-white/90 to-transparent'}`}>
-                <div className={`text-[11px] truncate font-medium ${isDark ? 'text-white' : 'text-gray-800'}`}>{node.title}</div>
-            </div>
-        </div>
-    );
-}, (prev, next) => {
-    return prev.type === next.type && 
-           prev.node.id === next.node.id && 
-           prev.node.imageSrc === next.node.imageSrc && 
-           prev.node.videoSrc === next.node.videoSrc &&
-           prev.node.title === next.node.title &&
-           prev.isDark === next.isDark &&
-           (prev.node.outputArtifacts?.length || 0) === (next.node.outputArtifacts?.length || 0);
-});
+type ActivePanel = 'ADD' | 'HISTORY' | 'PROJECT' | 'TOOLS' | null;
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   onAddNode, 
@@ -64,7 +28,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenExportImport,
   nodes,
   onPreviewMedia,
-  isDark = true
+  isDark = true,
+  onScreenshot,
+  onSelectMode,
+  onPanMode,
+  onAlignVertical,
+  onAlignHorizontal,
+  currentMode = 'select'
 }) => {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [historyTab, setHistoryTab] = useState<'image' | 'video'>('image');
@@ -117,25 +87,30 @@ const Sidebar: React.FC<SidebarProps> = ({
   const textMuted = isDark ? 'text-gray-600' : 'text-gray-400';
   const hoverBg = isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100';
   const activeBg = isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600';
+  const activeBgOrange = isDark ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600';
 
   // 侧边栏按钮
   const SidebarButton = ({ 
     icon: Icon, 
     panel, 
     tooltip,
-    onClick
+    shortcut,
+    onClick,
+    isActive = false
   }: { 
     icon: any, 
     panel?: ActivePanel, 
     tooltip: string,
-    onClick?: () => void
+    shortcut?: string,
+    onClick?: () => void,
+    isActive?: boolean
   }) => {
-    const isActive = panel && activePanel === panel;
+    const isBtnActive = isActive || (panel && activePanel === panel);
     
     return (
       <button 
         className={`relative w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 group ${
-          isActive ? activeBg : `${textSub} ${hoverBg}`
+          isBtnActive ? activeBg : `${textSub} ${hoverBg}`
         }`}
         onClick={() => {
           if (onClick) {
@@ -150,10 +125,90 @@ const Sidebar: React.FC<SidebarProps> = ({
           isDark ? 'bg-zinc-900 text-white border border-zinc-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
         }`}>
           {tooltip}
+          {shortcut && <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`}>{shortcut}</span>}
         </div>
       </button>
     );
   };
+
+  // 模式切换按钮（特殊样式）
+  const ModeButton = ({
+    icon: Icon,
+    tooltip,
+    shortcut,
+    isActive = false,
+    onClick,
+    color = 'blue'
+  }: {
+    icon: any;
+    tooltip: string;
+    shortcut?: string;
+    isActive?: boolean;
+    onClick?: () => void;
+    color?: 'blue' | 'orange';
+  }) => {
+    const activeClass = color === 'blue' ? activeBg : activeBgOrange;
+    
+    return (
+      <button 
+        className={`relative w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 group ${
+          isActive ? activeClass : `${textSub} ${hoverBg}`
+        }`}
+        onClick={onClick}
+      >
+        <Icon size={20} />
+        <div className={`absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 ${
+          isDark ? 'bg-zinc-900 text-white border border-zinc-700' : 'bg-white text-gray-900 border border-gray-200 shadow-lg'
+        }`}>
+          {tooltip}
+          {shortcut && <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`}>{shortcut}</span>}
+        </div>
+      </button>
+    );
+  };
+
+  // 渲染工具面板
+  const renderToolsPanel = () => (
+    <div className="space-y-3">
+      <div className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>排列工具</div>
+      
+      {/* 上下排列 */}
+      <button
+        onClick={() => { onAlignVertical?.(); setActivePanel(null); }}
+        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all group ${
+          isDark 
+            ? 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50' 
+            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+        }`}
+      >
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+          <Icons.ArrowRightLeft size={18} className="rotate-90" />
+        </div>
+        <div className="text-left">
+          <div className={`text-sm font-medium ${textMain}`}>上下排列</div>
+          <div className={`text-[11px] ${textMuted}`}>选中节点垂直对齐</div>
+        </div>
+      </button>
+      
+      {/* 左右排列 */}
+      <button
+        onClick={() => { onAlignHorizontal?.(); setActivePanel(null); }}
+        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all group ${
+          isDark 
+            ? 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50' 
+            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+        }`}
+      >
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
+          <Icons.ArrowRightLeft size={18} />
+        </div>
+        <div className="text-left">
+          <div className={`text-sm font-medium ${textMain}`}>左右排列</div>
+          <div className={`text-[11px] ${textMuted}`}>选中节点水平对齐</div>
+        </div>
+      </button>
+    </div>
+  );
 
   // 渲染添加节点面板
   const renderAddPanel = () => {
@@ -299,16 +354,27 @@ const Sidebar: React.FC<SidebarProps> = ({
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {(historyTab === 'image' ? imageNodes : videoNodes).map(node => (
-                  <HistoryItem 
+                  <div 
                     key={node.id} 
-                    node={node} 
-                    type={historyTab} 
-                    isDark={isDark}
+                    className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group ${isDark ? 'bg-zinc-900' : 'bg-gray-100'}`}
                     onClick={() => onPreviewMedia(
                       (historyTab === 'image' ? node.imageSrc : node.videoSrc) || '', 
                       historyTab
                     )}
-                  />
+                  >
+                    {historyTab === 'image' ? (
+                      <img src={node.imageSrc!} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async"/>
+                    ) : (
+                      <div className="w-full h-full relative">
+                        <video src={node.videoSrc!} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" muted preload="metadata" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDark ? 'bg-white/20' : 'bg-black/20'} backdrop-blur-sm`}>
+                            <Icons.Play size={14} className="text-white ml-0.5"/>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -338,6 +404,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         title = '项目';
         content = renderProjectPanel();
         break;
+      case 'TOOLS':
+        title = '排列工具';
+        content = renderToolsPanel();
+        break;
     }
 
     return (
@@ -366,20 +436,52 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Sidebar */}
+      {/* Sidebar - 新布局 */}
       <div 
         ref={sidebarRef}
         className={`fixed left-4 top-1/2 -translate-y-1/2 z-[200] ${bgMain} backdrop-blur-xl border ${borderColor} rounded-2xl p-2 flex flex-col items-center gap-1 shadow-xl`}
       >
-        <SidebarButton icon={Icons.LayoutGrid} panel="ADD" tooltip="添加节点" />
+        {/* 第一行：截图 */}
+        <SidebarButton icon={Icons.Camera} tooltip="截图" onClick={onScreenshot} />
         
         <div className={`w-8 h-px my-1 ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
         
-        <SidebarButton icon={Icons.Clock} panel="HISTORY" tooltip="生成历史" />
-        <SidebarButton icon={Icons.Upload} tooltip="导入素材" onClick={onImportAsset} />
+        {/* 第二行：选择模式 */}
+        <ModeButton 
+          icon={Icons.MousePointer2} 
+          tooltip="选择模式" 
+          shortcut="V"
+          isActive={currentMode === 'select'}
+          onClick={onSelectMode}
+          color="blue"
+        />
+        
+        {/* 第三行：移动模式 */}
+        <ModeButton 
+          icon={Icons.Hand} 
+          tooltip="移动模式" 
+          shortcut="H"
+          isActive={currentMode === 'pan'}
+          onClick={onPanMode}
+          color="orange"
+        />
         
         <div className={`w-8 h-px my-1 ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
         
+        {/* 第四行：排列工具（展开面板） */}
+        <SidebarButton icon={Icons.AlignVerticalJustify} panel="TOOLS" tooltip="排列工具" />
+        
+        <div className={`w-8 h-px my-1 ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
+        
+        {/* 第五行：添加节点 */}
+        <SidebarButton icon={Icons.Plus} panel="ADD" tooltip="添加节点" />
+        
+        {/* 第六行：生成历史 */}
+        <SidebarButton icon={Icons.History} panel="HISTORY" tooltip="生成历史" />
+        
+        <div className={`w-8 h-px my-1 ${isDark ? 'bg-zinc-800' : 'bg-gray-200'}`} />
+        
+        {/* 第七行：项目 */}
         <SidebarButton icon={Icons.Folder} panel="PROJECT" tooltip="项目" />
       </div>
 
