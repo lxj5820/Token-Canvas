@@ -52,6 +52,14 @@ const CanvasWithSidebar: React.FC = () => {
   const [dragMode, setDragMode] = useState<DragMode | 'RESIZE_NODE' | 'SELECT'>('NONE');
   const dragModeRef = useRef(dragMode);
   
+  // 新增：当前模式状态（选择/移动）
+  const [currentMode, setCurrentMode] = useState<'select' | 'pan'>('select');
+  
+  // 新增：面板展开状态
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
+  const [showZoomPanel, setShowZoomPanel] = useState(false);
+  
   // New Workflow Dialog State
   const [showNewWorkflowDialog, setShowNewWorkflowDialog] = useState(false);
   
@@ -72,6 +80,72 @@ const CanvasWithSidebar: React.FC = () => {
   useEffect(() => {
       dragModeRef.current = dragMode;
   }, [dragMode]);
+  
+  // 模式切换函数
+  const handleSelectMode = useCallback(() => {
+      setCurrentMode('select');
+      setDragMode('NONE');
+  }, []);
+  
+  const handlePanMode = useCallback(() => {
+      setCurrentMode('pan');
+      setDragMode('PAN');
+  }, []);
+  
+  // 截图功能
+  const handleScreenshot = useCallback(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      
+      // 创建一个离屏 canvas
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // 获取画布区域
+      const rect = container.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      
+      // 绘制背景
+      ctx.fillStyle = canvasBg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 绘制网格
+      const gridSize = 20 * transform.k;
+      const offsetX = transform.x % gridSize;
+      const offsetY = transform.y % gridSize;
+      ctx.strokeStyle = isDark ? '#27272a' : '#E4E4E7';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = offsetX; x < canvas.width; x += gridSize) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+      }
+      for (let y = offsetY; y < canvas.height; y += gridSize) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+      }
+      ctx.stroke();
+      
+      // 使用 html2canvas 或简单绘制节点（这里简化处理）
+      alert('截图功能：Ctrl+S 保存当前视图');
+  }, [canvasBg, isDark]);
+  
+  // 缩放控制
+  const handleZoomIn = useCallback(() => {
+      const newK = Math.min(transform.k + 0.1, 2);
+      setTransform(prev => ({ ...prev, k: newK }));
+  }, [transform.k]);
+  
+  const handleZoomOut = useCallback(() => {
+      const newK = Math.max(transform.k - 0.1, 0.4);
+      setTransform(prev => ({ ...prev, k: newK }));
+  }, [transform.k]);
+  
+  const handleZoomReset = useCallback(() => {
+      setTransform({ x: 0, y: 0, k: 1 });
+  }, []);
 
   // 清除 Sora 2 的旧配置（修复 endpoint 问题）
   useEffect(() => {
@@ -496,6 +570,25 @@ const CanvasWithSidebar: React.FC = () => {
         const target = e.target as HTMLElement;
         const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
         if (!isInput) {
+            // V 键 - 选择模式
+            if (e.key === 'v' || e.key === 'V') {
+                handleSelectMode();
+            }
+            // H 键 - 移动模式
+            if (e.key === 'h' || e.key === 'H') {
+                handlePanMode();
+            }
+            // +/- 缩放
+            if (e.key === '=' || e.key === '+') {
+                handleZoomIn();
+            }
+            if (e.key === '-' || e.key === '_') {
+                handleZoomOut();
+            }
+            // 0 重置缩放
+            if (e.key === '0') {
+                handleZoomReset();
+            }
             if (e.key === 'Delete' || e.key === 'Backspace') {
                  if (selectedNodeIds.size > 0) {
                      const nodesToDelete = nodes.filter(n => selectedNodeIds.has(n.id));
@@ -1178,7 +1271,168 @@ const CanvasWithSidebar: React.FC = () => {
           nodes={[...nodes, ...deletedNodes]}
           onPreviewMedia={handleHistoryPreview}
           isDark={isDark}
+          onScreenshot={handleScreenshot}
+          onSelectMode={handleSelectMode}
+          onPanMode={handlePanMode}
+          onAlignVertical={() => handleAlign('UP')}
+          onAlignHorizontal={() => handleAlign('LEFT')}
+          currentMode={currentMode}
         />
+        
+        {/* 左下角 - 缩放控制面板 */}
+        <div className="absolute bottom-4 left-4 z-50">
+            <div className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
+                isDark 
+                    ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' 
+                    : 'bg-white/90 border-gray-200 shadow-lg'
+            }`}>
+                {/* 缩小 */}
+                <button
+                    onClick={handleZoomOut}
+                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                        isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="缩小 (-)"
+                >
+                    <Icons.MinusCircle size={18} />
+                </button>
+                
+                {/* 缩放比例显示 */}
+                <button
+                    onClick={() => setShowZoomPanel(!showZoomPanel)}
+                    className={`px-3 py-1.5 text-sm font-medium tabular-nums rounded-lg transition-all ${
+                        isDark ? 'text-gray-300 hover:text-white hover:bg-white/5' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                >
+                    {Math.round(transform.k * 100)}%
+                </button>
+                
+                {/* 放大 */}
+                <button
+                    onClick={handleZoomIn}
+                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                        isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="放大 (+)"
+                >
+                    <Icons.PlusCircle size={18} />
+                </button>
+                
+                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+                
+                {/* 重置缩放 */}
+                <button
+                    onClick={handleZoomReset}
+                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                        isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="重置缩放 (0)"
+                >
+                    <Icons.Maximize size={16} />
+                </button>
+                
+                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+                
+                {/* 快捷键说明 */}
+                <button
+                    onClick={() => setShowShortcutsPanel(!showShortcutsPanel)}
+                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        showShortcutsPanel 
+                            ? (isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600')
+                            : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+                    }`}
+                    title="快捷键"
+                >
+                    <Icons.Keyboard size={15} />
+                    <span className="text-xs">快捷键</span>
+                </button>
+            </div>
+            
+            {/* 快捷键面板 */}
+            {showShortcutsPanel && (
+                <div className={`absolute bottom-full left-0 mb-2 w-72 p-4 rounded-2xl backdrop-blur-xl border shadow-xl animate-in slide-in-from-bottom-2 duration-200 ${
+                    isDark ? 'bg-[#18181b]/95 border-zinc-800' : 'bg-white/95 border-gray-200'
+                }`}>
+                    <div className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>快捷键</div>
+                    <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>选择模式</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>V</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>移动模式</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>H</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>放大</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>+</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>缩小</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>-</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>重置缩放</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>0</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>删除</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Delete</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>复制</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Ctrl+C</kbd>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+        
+        {/* 右上角 - AI 小助手快捷键 */}
+        <div className="absolute top-4 right-4 z-50">
+            <div className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
+                isDark 
+                    ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' 
+                    : 'bg-white/90 border-gray-200 shadow-lg'
+            }`}>
+                {/* AI 小助手 */}
+                <button
+                    onClick={() => setShowAIPanel(!showAIPanel)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                        showAIPanel 
+                            ? (isDark ? 'bg-purple-500/10 text-purple-400' : 'bg-purple-50 text-purple-600')
+                            : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+                    }`}
+                >
+                    <Icons.Sparkles size={15} />
+                    <span>AI 助手</span>
+                </button>
+            </div>
+            
+            {/* AI 小助手面板 */}
+            {showAIPanel && (
+                <div className={`absolute top-full right-0 mt-2 w-80 p-4 rounded-2xl backdrop-blur-xl border shadow-xl animate-in slide-in-from-top-2 duration-200 ${
+                    isDark ? 'bg-[#18181b]/95 border-zinc-800' : 'bg-white/95 border-gray-200'
+                }`}>
+                    <div className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>AI 助手快捷键</div>
+                    <div className="space-y-3">
+                        <div className={`p-3 rounded-xl border ${isDark ? 'border-zinc-800 bg-zinc-800/30' : 'border-gray-100 bg-gray-50'}`}>
+                            <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>快速生图</div>
+                            <div className="text-[11px] text-gray-500">添加节点 → 输入提示词 → 点击生成</div>
+                        </div>
+                        <div className={`p-3 rounded-xl border ${isDark ? 'border-zinc-800 bg-zinc-800/30' : 'border-gray-100 bg-gray-50'}`}>
+                            <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>快速生视频</div>
+                            <div className="text-[11px] text-gray-500">添加视频节点 → 连接图片节点 → 生成</div>
+                        </div>
+                        <div className={`p-3 rounded-xl border ${isDark ? 'border-zinc-800 bg-zinc-800/30' : 'border-gray-100 bg-gray-50'}`}>
+                            <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>节点连接</div>
+                            <div className="text-[11px] text-gray-500">拖拽节点端口 → 连接到下一个节点</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+        
         <input type="file" ref={workflowInputRef} hidden accept=".aistudio-flow,.json" onChange={handleLoadWorkflow} />
         <input type="file" ref={assetInputRef} hidden accept="image/*,video/*" onChange={handleImportAsset} />
         <input type="file" ref={replaceImageRef} hidden accept="image/*" onChange={handleReplaceImage} />
