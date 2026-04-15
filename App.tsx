@@ -1720,6 +1720,26 @@ const CanvasWithSidebar: React.FC = () => {
                 </div>
             )}
 
+            {/* Local Storage Warning Banner */}
+            <div className="absolute top-4 right-4 z-50">
+                <div className={`px-4 py-2 rounded-xl border backdrop-blur-xl ${
+                    isDark 
+                        ? 'bg-red-900/30 border-red-700/50' 
+                        : 'bg-red-50 border-red-200'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isDark ? 'text-red-400' : 'text-red-500'}>
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <span className={`text-xs font-medium ${isDark ? 'text-red-300' : 'text-red-600'}`}>
+                            数据仅保存在本地浏览器 · 换浏览器或清缓存会丢失
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             {/* Current Zoom Indicator */}
             <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-xs backdrop-blur-xl border z-50 ${
                 isDark ? 'bg-zinc-800/90 border-zinc-700 text-gray-400' : 'bg-white/90 border-gray-200 text-gray-500'
@@ -1730,8 +1750,8 @@ const CanvasWithSidebar: React.FC = () => {
             {/* Top Left Project Name */}
             <div className="absolute top-4 left-4 z-50">
                 <div className={`flex items-center gap-2.5 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all duration-300 ${
-                    isDark 
-                        ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' 
+                    isDark
+                        ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl'
                         : 'bg-white/90 border-gray-200 shadow-lg'
                 }`}>
                     {/* Logo */}
@@ -1740,7 +1760,7 @@ const CanvasWithSidebar: React.FC = () => {
                     }`}>
                         <Icons.Sparkles size={16} />
                     </div>
-                    
+
                     {/* Project Name */}
                     {isEditingProjectName ? (
                         <input

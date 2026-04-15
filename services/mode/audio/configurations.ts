@@ -3,16 +3,26 @@ import { fetchThirdParty, constructUrl } from "../network";
 
 // Suno 音频生成处理器
 export const SunoHandler = {
-    rules: { durations: ['30s', '60s', '120s'], styles: ['pop', 'rock', 'electronic', 'jazz', 'classical', 'folk', 'rap', 'ambient'] },
+    rules: { 
+        durations: ['30s', '60s', '120s'], 
+        styles: ['pop', 'rock', 'electronic', 'jazz', 'classical', 'folk', 'rap', 'ambient', 'R&B', 'metal', 'blues', 'country'],
+        modes: ['fast', 'extended'],
+        qualities: ['standard', 'high']
+    },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const { duration = '30s', style = 'pop' } = params;
+        const { duration = '30s', style = 'pop', mode = 'fast', seed = -1, quality = 'standard' } = params;
 
         // Suno API 调用
-        const payload = {
+        const payload: any = {
             prompt: prompt,
             duration: duration,
-            style: style
+            style: style,
+            mode: mode
         };
+
+        if (seed !== -1) {
+            payload.seed = seed;
+        }
 
         // 尝试 Suno API
         let url = constructUrl(cfg.baseUrl, cfg.endpoint || '/v1/audio/generate');
@@ -52,10 +62,13 @@ export const SunoHandler = {
 
 // 通用的 Chat-based 音频生成（用于其他音乐 API）
 const generateChatAudio = async (config: ModelConfig, prompt: string, params: any) => {
-    const { duration = '30s' } = params;
+    const { duration = '30s', style = 'pop', seed = -1, count = 1 } = params;
 
     // 转换为更长的提示词
-    const enhancedPrompt = `Generate music: ${prompt}. Duration: ${duration}. Style: ${params.style || 'pop'}.`;
+    const enhancedPrompt = `Generate music: ${prompt}. Duration: ${duration}. Style: ${style}. Generate ${count} variation(s).`;
+    if (seed !== -1) {
+        enhancedPrompt += ` Use seed: ${seed}.`;
+    }
 
     const messages = [{ role: 'user', content: enhancedPrompt }];
     const payload = { model: config.modelId, messages, stream: false };
@@ -83,7 +96,12 @@ const generateChatAudio = async (config: ModelConfig, prompt: string, params: an
 };
 
 export const ChatAudioHandler = {
-    rules: { durations: ['30s', '60s', '120s'], styles: ['pop', 'rock', 'electronic', 'jazz', 'classical', 'folk', 'rap', 'ambient'] },
+    rules: { 
+        durations: ['30s', '60s', '120s'], 
+        styles: ['pop', 'rock', 'electronic', 'jazz', 'classical', 'folk', 'rap', 'ambient', 'R&B', 'metal', 'blues', 'country'],
+        modes: ['standard'],
+        qualities: ['standard']
+    },
     generate: generateChatAudio
 };
 

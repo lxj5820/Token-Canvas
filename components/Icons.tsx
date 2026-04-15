@@ -12,7 +12,7 @@ import {
   Eye, EyeOff, RotateCcw, Info, Hand, 
   Keyboard, ZoomIn, ZoomOut, Maximize, Minimize, Move, PlusCircle, MinusCircle,
   ArrowUpDown, ArrowUp, ArrowDown, AlignVerticalJustifyCenter, AlignHorizontalJustifyCenter,
-  Paperclip, AtSign, Music
+  Paperclip, AtSign, Music, Hash
 } from 'lucide-react';
 
 export const Icons = {
@@ -25,7 +25,7 @@ export const Icons = {
   Frame, Images, Blend, Edit3, RefreshCw, Eye, EyeOff, RotateCcw, Info, 
   Hand, AlignVerticalJustifyCenter, AlignHorizontalJustifyCenter, Keyboard,
   ZoomIn, ZoomOut, Maximize, Minimize, Move, PlusCircle, MinusCircle,
-  ArrowUpDown, ArrowUp, ArrowDown, Paperclip, AtSign, Music,
+  ArrowUpDown, ArrowUp, ArrowDown, Paperclip, AtSign, Music, Hash,
   // History 图标（使用 Clock）
   History: Clock
 };
