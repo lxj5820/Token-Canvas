@@ -25,18 +25,18 @@ export const generateKlingO1Video = async (
         duration: durationInt
     };
 
-    // Handle Input Images
+    // 处理输入图像
     if (inputImages.length > 0) {
         if (isStartEndMode && inputImages.length > 1) {
-             // Start/End Frame Mode
+             // 首尾帧模式
              payload.image_list = [
                  { image_url: inputImages[0], type: "first_frame" },
                  { image_url: inputImages[inputImages.length - 1], type: "end_frame" }
              ];
         } else {
-             // Reference Image Mode (do not pass type)
+             // 参考图像模式（不传递类型）
              payload.image_list = inputImages.map(url => ({ image_url: url }));
-             // Enforce max 1 for reference mode if needed, usually just takes the first
+             // 如果需要，参考模式强制最多1张图像，通常只使用第一张
              if (payload.image_list.length > 1) {
                  payload.image_list = [payload.image_list[0]];
              }
@@ -50,7 +50,7 @@ export const generateKlingO1Video = async (
         throw new Error(`No Task ID returned from Kling O1: ${JSON.stringify(res)}`);
     }
 
-    // Polling
+    // 轮询
     const qUrl = config.queryEndpoint 
         ? constructUrl(config.baseUrl, config.queryEndpoint)
         : `${targetUrl}/${taskId}`;
@@ -59,34 +59,34 @@ export const generateKlingO1Video = async (
     while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         
-        // Handle {id} replacement if present in queryEndpoint
+        // 如果queryEndpoint中包含{id}，则替换为任务ID
         const finalUrl = qUrl.replace('{id}', taskId);
 
         try {
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
             
-            // Prioritize inner task_status if available (common in proxies where root status is API status)
-            // Structure might be check.data.data.task_status or check.data.task_status
+            // 如果有内部task_status，优先使用（在代理中常见，根级status是API状态）
+            // 结构可能是check.data.data.task_status或check.data.task_status
             const innerStatus = check.data?.data?.task_status || check.data?.task_status || check.task_result?.task_status;
             const rootStatus = check.task_status || check.status;
             const status = (innerStatus || rootStatus || '').toString().toLowerCase();
 
             if (['succeed', 'success', 'completed'].includes(status)) {
-                // Return result
+                // 返回结果
                 
-                // 1. Try Deepest Nesting (Wrapper -> Data -> TaskResult)
-                // matches user provided format: data.data.task_result.videos[0].url
+                // 1. 尝试最深层嵌套（Wrapper -> Data -> TaskResult）
+                // 匹配用户提供的格式：data.data.task_result.videos[0].url
                 const videos = check.data?.data?.task_result?.videos || check.data?.task_result?.videos || check.task_result?.videos;
                 if (videos && videos[0]?.url) return videos[0].url;
 
                 const images = check.data?.data?.task_result?.images || check.data?.task_result?.images || check.task_result?.images;
                 if (images && images[0]?.url) return images[0].url;
                 
-                // 2. Fallbacks for other structures
+                // 2. 其他结构的备用方案
                 if (check.data?.url) return check.data.url;
                 if (check.url) return check.url;
                 
-                // Log content for debugging if needed, but throw error to keep flow standard
+                // 如果需要，记录内容用于调试，但抛出错误以保持流程标准
                 throw new Error("Kling O1 succeeded but no URL found in response.");
             } else if (['failed', 'failure'].includes(status)) {
                  const msg = check.data?.data?.task_status_msg || check.task_status_msg || check.fail_reason || 'Unknown error';
@@ -111,17 +111,17 @@ export const generateKlingStandardVideo = async (
 ): Promise<string> => {
     const isImage2Video = inputImages.length > 0;
     const endpointSuffix = isImage2Video ? '/image2video' : '/text2video';
-    // Clean base endpoint
+    // 清理基础端点
     const baseEndpoint = config.endpoint.replace(/\/$/, '');
     const targetUrl = constructUrl(config.baseUrl, baseEndpoint + endpointSuffix);
 
     // Kling 2.6 ID: kling-v2-6, Kling 2.5 ID: kling-v2-5-turbo
     const isV2_6 = config.modelId.includes('v2-6');
 
-    // Determine Mode
+    // 确定模式
     let mode = modelName.includes('Pro') ? 'pro' : 'std';
     if (isV2_6) {
-        mode = 'pro'; // Kling 2.6 only supports pro mode
+        mode = 'pro'; // Kling 2.6 仅支持pro模式
     }
 
     const durationInt = parseInt(duration.replace('s', '')) || 5;
@@ -136,22 +136,22 @@ export const generateKlingStandardVideo = async (
     };
 
     if (isV2_6) {
-        // Handle Sound for Kling 2.6
+        // 处理Kling 2.6的声音
         if (modelName.includes('ProYS')) {
             payload.sound = 'on';
         } else if (modelName.includes('ProNS')) {
             payload.sound = 'off';
         } else {
-            // Default to off if suffix not matched, to be safe
+            // 如果后缀不匹配，默认为关闭，以确保安全
             payload.sound = 'off';
         }
     }
-    // For 2.5, sound param is omitted
+    // 对于2.5版本，省略声音参数
 
     if (isImage2Video) {
         payload.image = inputImages[0];
         
-        // Only pass image_tail if Start/End Mode is active
+        // 仅当首尾帧模式激活时传递image_tail
         if (isStartEndMode && inputImages.length > 1) {
              payload.image_tail = inputImages[inputImages.length - 1];
         }
@@ -164,8 +164,8 @@ export const generateKlingStandardVideo = async (
         throw new Error(`No Task ID returned from Kling: ${JSON.stringify(res)}`);
     }
 
-    // FIX: Construct polling URL correctly ensuring suffix is present if no custom queryEndpoint
-    // Default: /kling/v1/videos/text2video/{id}
+    // 修复：正确构建轮询URL，确保在没有自定义queryEndpoint时添加后缀
+    // 默认：/kling/v1/videos/text2video/{id}
     let relativePollPath: string;
     if (config.queryEndpoint) {
         relativePollPath = config.queryEndpoint;
@@ -179,7 +179,7 @@ export const generateKlingStandardVideo = async (
     while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         
-        // Handle {id} replacement if present
+        // 如果存在{id}，则进行替换
         const currentUrl = finalPollUrlTemplate.replace('{id}', taskId);
 
         try {
@@ -190,11 +190,11 @@ export const generateKlingStandardVideo = async (
             const status = (innerStatus || rootStatus || '').toString().toLowerCase();
 
             if (['succeed', 'success', 'completed'].includes(status)) {
-                // 1. Try Deepest Nesting
+                // 1. 尝试最深层嵌套
                 const videos = check.data?.data?.task_result?.videos || check.data?.task_result?.videos || check.task_result?.videos;
                 if (videos && videos[0]?.url) return videos[0].url;
 
-                // 2. Fallbacks
+                // 2. 备用方案
                 if (check.data?.url) return check.data.url;
                 if (check.url) return check.url;
                 

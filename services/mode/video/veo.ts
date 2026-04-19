@@ -124,7 +124,7 @@ export const generateVeo3Video = async (
      while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         try {
-            // Specific Veo query format: ?id=TASK_ID
+            // Veo特定查询格式：?id=TASK_ID
             const finalUrl = `${qUrl}?id=${taskId}`;
             
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
@@ -157,7 +157,7 @@ export const generateGrokVideo = async (
 ): Promise<string> => {
      const targetUrl = constructUrl(config.baseUrl, config.endpoint);
      
-     // Grok requires "size": "720P" (uppercase P)
+     // Grok要求"size": "720P"（大写P）
      const size = (resolution || '720p').toUpperCase();
 
      const payload: any = {
@@ -187,7 +187,7 @@ export const generateGrokVideo = async (
      while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         try {
-            // Query param style ?id=...
+            // 查询参数样式 ?id=...
             const finalUrl = `${qUrl}?id=${taskId}`;
             
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
@@ -198,7 +198,7 @@ export const generateGrokVideo = async (
                  if (check.url) return check.url;
                  if (check.data?.url) return check.data.url;
                  if (check.data?.video_url) return check.data.video_url;
-                 // Fallbacks
+                 // 备用方案
                  if (check.video_url) return check.video_url;
             } else if (['failed', 'failure', 'error'].includes(status)) {
                  throw new Error(`Grok failed: ${check.fail_reason || check.error || 'Unknown error'}`);
@@ -221,9 +221,9 @@ export const generateSoraVideo = async (
 ): Promise<string> => {
      const targetUrl = constructUrl(config.baseUrl, config.endpoint);
      
-     // Map Parameters
+     // 映射参数
      const orientation = aspectRatio === '9:16' ? 'portrait' : 'landscape';
-     const size = resolution === '1080p' ? 'large' : 'small'; // small is 720p
+     const size = resolution === '1080p' ? 'large' : 'small'; // small 是 720p
      const durationInt = parseInt(duration.replace('s', '')) || 10;
 
      const payload: any = {
@@ -265,12 +265,12 @@ export const generateSoraVideo = async (
      while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         try {
-            // Assume Query param style ?id=... similar to Grok/Veo for this API proxy
+            // 假设此API代理使用类似于Grok/Veo的查询参数样式 ?id=...
             const finalUrl = `${qUrl}?id=${taskId}`;
             
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
             
-            // Check status (flexible)
+            // 检查状态（灵活处理）
             const status = (check.status || check.data?.status || check.state || '').toString().toLowerCase();
             
             console.log(`[Sora] Poll #${attempts + 1}, Status: "${status}", Response:`, JSON.stringify(check).substring(0, 300));

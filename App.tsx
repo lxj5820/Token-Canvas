@@ -19,7 +19,7 @@ const DEFAULT_NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 240; 
 const EMPTY_ARRAY: string[] = [];
 
-// Helper for resizing imported media constraints
+// 辅助函数：调整导入媒体的尺寸约束
 const calculateImportDimensions = (naturalWidth: number, naturalHeight: number) => {
     const ratio = naturalWidth / naturalHeight;
     const maxSide = 750;
@@ -65,21 +65,21 @@ const CanvasWithSidebar: React.FC = () => {
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
   const [showZoomPanel, setShowZoomPanel] = useState(false);
   
-  // New Workflow Dialog State
+  // 新工作流对话框状态
   const [showNewWorkflowDialog, setShowNewWorkflowDialog] = useState(false);
   
-  // Project Name State
+  // 项目名称状态
   const [projectName, setProjectName] = useState('未命名项目');
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
   
-  // Settings Modal State
+  // 设置模态框状态
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStorageOpen, setIsStorageOpen] = useState(false);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => !hasShownWelcome());
   const [storageDirName, setStorageDirName] = useState<string | null>(null);
 
-  // History State (Persist deleted nodes that have content)
+  // 历史状态（保存已删除的包含内容的节点）
   const [deletedNodes, setDeletedNodes] = useState<NodeData[]>([]);
 
   useEffect(() => {
@@ -132,9 +132,12 @@ const CanvasWithSidebar: React.FC = () => {
       }
   }, []);
 
-  // Default to light theme (white)
-  const [canvasBg, setCanvasBg] = useState('#F5F7FA');
+  // 默认使用暗色主题
+  const [canvasBg, setCanvasBg] = useState('#0B0C0E');
   const isDark = canvasBg === '#0B0C0E';
+  
+  // 本地存储警告横幅状态
+  const [showStorageWarning, setShowStorageWarning] = useState(true);
 
   // 截图功能
   const handleScreenshot = useCallback(() => {
@@ -176,7 +179,7 @@ const CanvasWithSidebar: React.FC = () => {
       alert('截图功能：Ctrl+S 保存当前视图');
   }, [canvasBg, isDark]);
   
-  // Sync body class for CSS variables
+  // 同步body类以使用CSS变量
   useEffect(() => {
     if (isDark) {
       document.body.classList.add('dark');
@@ -184,13 +187,23 @@ const CanvasWithSidebar: React.FC = () => {
       document.body.classList.remove('dark');
     }
   }, [isDark]);
+  
+  // 5秒后自动隐藏存储警告
+  useEffect(() => {
+    if (showStorageWarning) {
+      const timer = setTimeout(() => {
+        setShowStorageWarning(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showStorageWarning]);
 
   const [selectionBox, setSelectionBox] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [suggestedNodes, setSuggestedNodes] = useState<NodeData[]>([]);
   const [previewMedia, setPreviewMedia] = useState<{ url: string, type: 'image' | 'video' } | null>(null);
   
-  // Quick Add Menu State
+  // 快速添加菜单状态
   const [quickAddMenu, setQuickAddMenu] = useState<{ sourceId: string, x: number, y: number, worldX: number, worldY: number } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{ 
@@ -227,7 +240,7 @@ const CanvasWithSidebar: React.FC = () => {
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
-  // Memoize inputs map to prevent array recreation on every render
+  // 记忆化输入映射，防止每次渲染时重新创建数组
   const inputsMap = useMemo(() => {
     const map: Record<string, string[]> = {};
     nodes.forEach(node => {
@@ -305,7 +318,7 @@ const CanvasWithSidebar: React.FC = () => {
 
           const isVerticalAlign = direction === 'UP' || direction === 'DOWN';
           
-          // Check overlap logic with Threshold to avoid accidental grouping
+          // 检查重叠逻辑，使用阈值避免意外分组
           const OVERLAP_THRESHOLD = 10;
           const isOverlap = (a: NodeData, b: NodeData) => {
               if (isVerticalAlign) {
@@ -649,13 +662,13 @@ const CanvasWithSidebar: React.FC = () => {
   }, [selectedNodeIds, selectedConnectionId, previewMedia, contextMenu, nodes, connections, quickAddMenu, showNewWorkflowDialog, isSettingsOpen, isStorageOpen, isExportImportOpen, handleAlign]);
 
   useEffect(() => {
-    // Load storage directory name for the top-right indicator
+    // 加载存储目录名称用于右上角指示器
     const loadStorageInfo = async () => {
         const name = await storageService.getDownloadDirectoryName();
         setStorageDirName(name);
     };
     if (isStorageOpen === false) {
-        // Refresh when modal closes
+        // 当模态框关闭时刷新
         loadStorageInfo();
     }
     loadStorageInfo();
@@ -701,7 +714,7 @@ const CanvasWithSidebar: React.FC = () => {
     
     const inputs = getInputImages(node.id);
     
-    // Debug: Log input images for troubleshooting
+    // 调试：记录输入图像用于故障排除
     console.log(`[Generation] Node: ${node.title} (${node.type}), Input Images:`, inputs.length > 0 ? inputs.map(i => i.substring(0, 50) + '...') : 'None');
 
     try {
@@ -711,19 +724,19 @@ const CanvasWithSidebar: React.FC = () => {
       } else {
           let results: string[] = [];
           
-          // Image generation
+          // 图像生成
           if (node.type === NodeType.TEXT_TO_IMAGE) {
             results = await generateImage(
                 node.prompt || '', node.aspectRatio, node.model, node.resolution, node.count || 1, inputs, node.promptOptimize 
             );
           }
-          // Video generation 
+          // 视频生成
           else if (node.type === NodeType.TEXT_TO_VIDEO) {
             results = await generateVideo(
                 node.prompt || '', inputs, node.aspectRatio, node.model, node.resolution, node.duration, node.count || 1, node.promptOptimize
             );
           }
-          // Start-End Frame to Video generation (首尾帧模式)
+          // 首尾帧到视频生成（首尾帧模式）
           else if (node.type === NodeType.START_END_TO_VIDEO) {
             // 添加 _FL 后缀来标识首尾帧模式
             const modelWithFL = (node.model || 'Sora 2') + '_FL';
@@ -733,7 +746,7 @@ const CanvasWithSidebar: React.FC = () => {
                 node.prompt || '', orderedInputs, node.aspectRatio, modelWithFL, node.resolution, node.duration, node.count || 1, node.promptOptimize
             );
           }
-          // Audio generation (音频生成)
+          // 音频生成
           else if (node.type === NodeType.TEXT_TO_AUDIO) {
             const { generateAudio } = await import('./services/geminiService');
             results = await generateAudio(
@@ -749,7 +762,7 @@ const CanvasWithSidebar: React.FC = () => {
               
               const updates: Partial<NodeData> = { isLoading: false, outputArtifacts: newArtifacts };
               
-              // Set output based on node type
+              // 根据节点类型设置输出
               if (node.type === NodeType.TEXT_TO_IMAGE) {
                   updates.imageSrc = results[0];
               } else if (node.type === NodeType.TEXT_TO_VIDEO || node.type === NodeType.START_END_TO_VIDEO) {
@@ -888,7 +901,7 @@ const CanvasWithSidebar: React.FC = () => {
           const response = await fetch(url);
           const blob = await response.blob();
           
-          // Try storage service first
+          // 首先尝试存储服务
           const saved = await storageService.saveFile(blob, filename);
           if (saved) return;
 
@@ -1721,24 +1734,26 @@ const CanvasWithSidebar: React.FC = () => {
             )}
 
             {/* Local Storage Warning Banner */}
-            <div className="absolute top-4 right-4 z-50">
-                <div className={`px-4 py-2 rounded-xl border backdrop-blur-xl ${
-                    isDark 
-                        ? 'bg-red-900/30 border-red-700/50' 
-                        : 'bg-red-50 border-red-200'
-                }`}>
-                    <div className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isDark ? 'text-red-400' : 'text-red-500'}>
-                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-                            <line x1="12" y1="9" x2="12" y2="13"/>
-                            <line x1="12" y1="17" x2="12.01" y2="17"/>
-                        </svg>
-                        <span className={`text-xs font-medium ${isDark ? 'text-red-300' : 'text-red-600'}`}>
-                            数据仅保存在本地浏览器 · 换浏览器或清缓存会丢失
-                        </span>
+            {showStorageWarning && (
+                <div className="absolute top-20 right-4 z-50 max-w-sm animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className={`px-4 py-3 rounded-xl border backdrop-blur-xl shadow-lg ${
+                        isDark 
+                            ? 'bg-red-900/40 border-red-700/60' 
+                            : 'bg-red-50 border-red-200'
+                    }`}>
+                        <div className="flex items-start gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isDark ? 'text-red-400 shrink-0 mt-0.5' : 'text-red-500 shrink-0 mt-0.5'}>
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            <span className={`text-xs font-medium ${isDark ? 'text-red-300' : 'text-red-600'}`}>
+                                数据仅保存在本地浏览器 · 换浏览器或清缓存会丢失
+                            </span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Current Zoom Indicator */}
             <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-xs backdrop-blur-xl border z-50 ${

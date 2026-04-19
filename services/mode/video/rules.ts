@@ -34,7 +34,7 @@ export const getVideoConstraints = (modelName: string, resolution: string | unde
              disabledDurations = videoDurations.filter(d => d !== '6s');
         }
     } else if (isVeo) {
-        // Veo: disable 480p, disable 1:1/3:4/4:3 (keep only 16:9, 9:16), duration 8s only
+        // Veo: 禁用480p，禁用1:1/3:4/4:3（仅保留16:9, 9:16），仅支持8秒时长
         disabledRes = ['480p']; 
         disabledRatios = ['1:1', '3:4', '4:3'];
         disabledDurations = videoDurations.filter(d => d !== '8s');
@@ -43,7 +43,7 @@ export const getVideoConstraints = (modelName: string, resolution: string | unde
         const allowed = ['5s', '7s', '10s']; 
         disabledDurations = videoDurations.filter(d => !allowed.includes(d));
     } else if (isKlingO1) {
-        // Kling O1: 1080p only. Ratios 16:9, 9:16, 1:1. Duration 5s, 10s.
+        // Kling O1: 仅支持1080p。比例16:9, 9:16, 1:1。时长5秒, 10秒。
         resOptions = ['1080p'];
         disabledRes = ['480p', '720p'];
         disabledRatios = ['3:4', '4:3'];
@@ -53,7 +53,7 @@ export const getVideoConstraints = (modelName: string, resolution: string | unde
         // Kling 2.5 / 2.6
         resOptions = ['720p', '1080p'];
         disabledRes = ['480p'];
-        disabledRatios = ['1:1', '3:4', '4:3']; // Only 16:9, 9:16
+        disabledRatios = ['1:1', '3:4', '4:3']; // 仅16:9, 9:16
         const allowed = ['5s', '10s'];
         disabledDurations = videoDurations.filter(d => !allowed.includes(d));
     } else if (isGrok) {
@@ -63,14 +63,14 @@ export const getVideoConstraints = (modelName: string, resolution: string | unde
         const allowed = ['6s'];
         disabledDurations = videoDurations.filter(d => !allowed.includes(d));
     } else if (isSora) {
-        // Sora 2: 720p (small), 1080p (large). Ratios 16:9, 9:16. Duration 4s, 8s, 12s.
+        // Sora 2: 720p (small), 1080p (large)。比例16:9, 9:16。时长4秒, 8秒, 12秒。
         resOptions = ['720p', '1080p'];
         disabledRes = ['480p'];
         disabledRatios = ['1:1', '3:4', '4:3'];
         const allowed = ['4s', '8s', '12s'];
         disabledDurations = videoDurations.filter(d => !allowed.includes(d));
     } else if (isWan) {
-        // Wan: 720p, 1080p. Duration 5s, 10s.
+        // Wan: 720p, 1080p。时长5秒, 10秒。
         resOptions = ['720p', '1080p'];
         disabledRes = ['480p'];
         const allowed = ['5s', '10s'];

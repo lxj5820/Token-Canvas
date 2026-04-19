@@ -50,7 +50,7 @@ export interface StorageStats {
     oldestCacheTime: number | null;
 }
 
-// TypeScript interfaces for File System Access API
+// File System Access API的TypeScript接口
 interface FileSystemHandle {
     kind: 'file' | 'directory';
     name: string;

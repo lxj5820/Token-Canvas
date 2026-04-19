@@ -21,7 +21,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     const [configs, setConfigs] = useState<Record<string, ModelConfig>>({});
     const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState<'all' | 'image' | 'video' | 'chat'>('all');
+    const [filterType, setFilterType] = useState<'all' | 'image' | 'video' | 'audio' | 'chat'>('all');
     
     // 测试连接状态
     const [testingModels, setTestingModels] = useState<Set<string>>(new Set());
@@ -31,7 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     const [showAddModel, setShowAddModel] = useState(false);
     const [newModelName, setNewModelName] = useState('');
     const [newModelId, setNewModelId] = useState('');
-    const [newModelType, setNewModelType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
+    const [newModelType, setNewModelType] = useState<'IMAGE' | 'VIDEO' | 'AUDIO'>('IMAGE');
 
     const configInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,9 +164,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
         registerCustomModel(newModelName, {
             id: newModelId,
             name: newModelName,
-            type: newModelType === 'IMAGE' ? 'IMAGE_GEN' : 'VIDEO_GEN_FORM',
+            type: newModelType === 'IMAGE' ? 'IMAGE_GEN' : newModelType === 'VIDEO' ? 'VIDEO_GEN_FORM' : 'AUDIO_GEN',
             category: newModelType,
-            defaultEndpoint: newModelType === 'IMAGE' ? '/v1/images/generations' : '/v1/videos'
+            defaultEndpoint: newModelType === 'IMAGE' ? '/v1/images/generations' : newModelType === 'VIDEO' ? '/v1/videos' : '/v1/audio/generate'
         });
         
         setConfigs(prev => ({
@@ -262,6 +262,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             const matchesType = filterType === 'all' || 
                 (filterType === 'image' && def.category === 'IMAGE') ||
                 (filterType === 'video' && def.category === 'VIDEO') ||
+                (filterType === 'audio' && def.category === 'AUDIO') ||
                 (filterType === 'chat' && def.category === 'CHAT');
             
             return matchesSearch && matchesType;
@@ -325,8 +326,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                         <div className={`mt-2 p-2 rounded-lg ${isDark ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-emerald-50 border border-emerald-200'}`}>
                                             <p className={`text-xs ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
                                                 <span className="font-bold">✅ 推荐：</span>
-                                                <a href="https://taopipi.com" target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:opacity-80">
-                                                    taopipi
+                                                <a href="https://newapi.asia" target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:opacity-80">
+                                                    词元
                                                 </a>
                                                 <span className="mx-1">—</span>
                                                 <span>AI 画布平台，稳定可靠</span>
@@ -352,7 +353,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                     onChange={e => setGlobalBaseUrl(e.target.value)}
                                     onBlur={saveGlobalConfig}
                                     className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
-                                    placeholder="https://api.example.com"
+                                    placeholder="https://newapi.asia"
                                 />
                                 <p className={`text-xs ${textMuted}`}>
                                     修改后将自动更新所有模型的 BASE URL（Jimeng 4.5、4.1、3.1 除外）
@@ -414,7 +415,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                 />
                             </div>
                             <div className={`flex p-1 rounded-xl border ${borderColor} ${isDark ? 'bg-[#0f0f11]' : 'bg-gray-50'}`}>
-                                {(['all', 'image', 'video'] as const).map(type => (
+                                {(['all', 'image', 'video', 'audio'] as const).map(type => (
                                     <button
                                         key={type}
                                         onClick={() => setFilterType(type)}
@@ -424,7 +425,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                 : `${textSub} hover:text-white`
                                         }`}
                                     >
-                                        {type === 'all' ? '全部' : type === 'image' ? '图像' : '视频'}
+                                        {type === 'all' ? '全部' : type === 'image' ? '图像' : type === 'video' ? '视频' : '音乐'}
                                     </button>
                                 ))}
                             </div>
@@ -478,9 +479,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                         ? (isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600')
                                                         : def.category === 'VIDEO'
                                                         ? (isDark ? 'bg-purple-500/10 text-purple-400' : 'bg-purple-50 text-purple-600')
+                                                        : def.category === 'AUDIO'
+                                                        ? (isDark ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600')
                                                         : (isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600')
                                                 }`}>
-                                                    {def.category === 'IMAGE' ? 'Image' : def.category === 'VIDEO' ? 'Video' : 'Chat'}
+                                                    {def.category === 'IMAGE' ? 'Image' : def.category === 'VIDEO' ? 'Video' : def.category === 'AUDIO' ? 'Audio' : 'Chat'}
                                                 </span>
                                                 
                                                 {/* 删除按钮 */}
@@ -558,7 +561,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                         value={config.baseUrl || ''}
                                                         onChange={e => updateConfig(key, 'baseUrl', e.target.value)}
                                                         className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
-                                                        placeholder={globalBaseUrl || 'https://api.example.com'}
+                                                        placeholder={globalBaseUrl || 'https://newapi.asia'}
                                                     />
                                                 </div>
 
@@ -686,7 +689,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                             <div className="space-y-2">
                                 <label className={`text-xs font-medium uppercase ${textSub}`}>模型类型</label>
                                 <div className="flex gap-2">
-                                    {(['IMAGE', 'VIDEO'] as const).map(type => (
+                                    {(['IMAGE', 'VIDEO', 'AUDIO'] as const).map(type => (
                                         <button
                                             key={type}
                                             onClick={() => setNewModelType(type)}
@@ -696,7 +699,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                     : `${borderColor} ${textSub}`
                                             }`}
                                         >
-                                            {type === 'IMAGE' ? '图像生成' : '视频生成'}
+                                            {type === 'IMAGE' ? '图像生成' : type === 'VIDEO' ? '视频生成' : '音乐生成'}
                                         </button>
                                     ))}
                                 </div>

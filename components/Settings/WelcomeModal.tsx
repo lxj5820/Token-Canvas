@@ -41,10 +41,10 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
             >
                 {/* Header */}
                 <div className={`px-6 py-5 border-b ${borderColor} text-center`}>
-                    <div className={`w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center ${isDark ? 'bg-gradient-to-br from-pink-500/20 to-purple-500/20' : 'bg-gradient-to-br from-pink-100 to-purple-100'}`}>
-                        <Icons.Sparkles size={32} className={isDark ? 'text-pink-400' : 'text-pink-600'} />
+                    <div className={`w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center ${isDark ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20' : 'bg-gradient-to-br from-yellow-100 to-orange-100'}`}>
+                        <Icons.Coins size={32} className={isDark ? 'text-yellow-400' : 'text-yellow-600'} />
                     </div>
-                    <h2 className={`text-xl font-bold ${textMain}`}>欢迎使用桃屁屁 AI 画布 🎨</h2>
+                    <h2 className={`text-xl font-bold ${textMain}`}>欢迎使用词元 AI 画布🪙</h2>
                     <p className={`text-sm mt-1 ${textSub}`}>你的 AI 创意工具箱</p>
                 </div>
 
@@ -57,7 +57,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
                             <Icons.AlertTriangle size={20} className={isDark ? 'text-amber-400 shrink-0 mt-0.5' : 'text-amber-600 shrink-0 mt-0.5'} />
                             <div>
                                 <h4 className={`text-sm font-bold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
-                                    博主郑重提醒
+                                    郑重提醒
                                 </h4>
                                 <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-amber-300/80' : 'text-amber-600'}`}>
                                     自接 API 平台存在风险！很多小型 API 中转商可能会<strong>跑路</strong>，充值后血本无归。
@@ -76,7 +76,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
                                     免责声明
                                 </h4>
                                 <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-blue-300/80' : 'text-blue-600'}`}>
-                                    桃屁屁 AI 画布为完全免费开源项目，仅供学习交流使用。使用过程中产生的任何内容均由用户自行负责，与本平台无关。
+                                    词元 AI 画布为完全免费开源项目，仅供学习交流使用。使用过程中产生的任何内容均由用户自行负责，与本平台无关。
                                 </p>
                             </div>
                         </div>

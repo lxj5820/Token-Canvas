@@ -62,7 +62,7 @@ export const generateMinimaxVideo = async (
      const taskId = res.task_id || res.id || res.data?.task_id || res.data?.id; 
      if (!taskId) throw new Error("No Task ID returned from Minimax");
      
-     // Polling
+     // 轮询
      const qUrl = config.queryEndpoint 
         ? constructUrl(config.baseUrl, config.queryEndpoint)
         : `${targetUrl}/${taskId}`;

@@ -8,7 +8,7 @@ interface AIPanelProps {
 }
 
 // AI 模型配置
-type AIModel = 'gpt-4o' | 'gpt-4o-mini' | 'claude-3-5-sonnet' | 'claude-3-7-sonnet' | 'glm-4' | 'glm-4v' | 'deepseek-chat';
+type AIModel = 'gemini-3.1-flash-lite-preview' | 'gpt-5.4' | 'gpt-5.4-mini' | 'claude-sonnet-4-6' | 'claude-opus-4-7' | 'glm-5' | 'glm-5.1' | 'deepseek-v3.2';
 
 interface ModelInfo {
     id: AIModel;
@@ -18,13 +18,14 @@ interface ModelInfo {
 }
 
 const MODELS: ModelInfo[] = [
-    { id: 'gpt-4o', name: 'GPT-4o', defaultUrl: 'https://api.acedata.cloud/v1', defaultModel: 'gpt-4o' },
-    { id: 'gpt-4o-mini', name: 'GPT-4o mini', defaultUrl: 'https://api.acedata.cloud/v1', defaultModel: 'gpt-4o-mini' },
-    { id: 'claude-3-5-sonnet', name: 'Claude 3.5', defaultUrl: 'https://api.acedata.cloud/anthropic/v1', defaultModel: 'claude-3-5-sonnet-20250514' },
-    { id: 'claude-3-7-sonnet', name: 'Claude 3.7', defaultUrl: 'https://api.acedata.cloud/anthropic/v1', defaultModel: 'claude-sonnet-4-20250514' },
-    { id: 'glm-4', name: 'GLM-4', defaultUrl: 'https://open.bigmodel.cn/api/paas/v4', defaultModel: 'glm-4' },
-    { id: 'glm-4v', name: 'GLM-4V', defaultUrl: 'https://open.bigmodel.cn/api/paas/v4', defaultModel: 'glm-4v' },
-    { id: 'deepseek-chat', name: 'DeepSeek', defaultUrl: 'https://api.acedata.cloud/v1', defaultModel: 'deepseek-chat' },
+    { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini-3.1', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'gemini-3.1-flash-lite-preview' },
+    { id: 'gpt-5.4', name: 'gpt-5.4', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'gpt-5.4' },
+    { id: 'gpt-5.4-mini', name: 'gpt-5.4 mini', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'gpt-5.4-mini' },
+    { id: 'claude-sonnet-4-6', name: 'Claude 4.6', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'claude-sonnet-4-6-20250514' },
+    { id: 'claude-opus-4-7', name: 'Claude 4.7', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'claude-sonnet-4-20250514' },
+    { id: 'glm-5', name: 'glm-5', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'glm-5' },
+    { id: 'glm-5.1', name: 'glm-5.1', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'glm-5.1' },
+    { id: 'deepseek-v3.2', name: 'DeepSeek', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'deepseek-v3.2' },
 ];
 
 interface ModelConfig {
@@ -45,7 +46,7 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
-    const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-4o');
+    const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-5.4');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showSettings, setShowSettings] = useState(false);
@@ -331,9 +332,9 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                 <div className="flex-1 overflow-y-auto p-4">
                     {messages.length === 0 && !error && (
                         <div className="flex flex-col items-center justify-center h-full text-center">
-                            <div className={`text-4xl mb-3`}>🤖</div>
+                            <div className={`text-4xl mb-3`}><Icons.Cpu /></div>
                             <h3 className={`text-lg font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                你好，我是 AI 助手
+                                你好，我是词元画布助手
                             </h3>
                             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                 双击模型按钮配置 API，双击后即可开始对话
@@ -359,7 +360,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                                     ? (isDark ? 'bg-pink-500/20' : 'bg-pink-100')
                                     : (isDark ? 'bg-zinc-800' : 'bg-gray-100')
                             }`}>
-                                {msg.role === 'user' ? '👤' : '🤖'}
+                                {msg.role === 'user' ? '👤' : <Icons.Cpu size={16} />}
                             </div>
                             <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
                                 msg.role === 'user'
@@ -374,7 +375,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                     {loading && (
                         <div className="flex gap-3 mb-4">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`}>
-                                🤖
+                                <Icons.Cpu size={16} />
                             </div>
                             <div className={`px-4 py-2.5 rounded-2xl text-sm ${isDark ? 'bg-zinc-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
                                 思考中...
@@ -524,9 +525,9 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
 
                         <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-zinc-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
                             <p className="font-medium mb-1">提示：</p>
-                            <p>• 使用 Ace Data Cloud API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://api.acedata.cloud/v1</code></p>
+                            <p>• 使用 New 词元: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
                             <p>• 使用 OpenAI API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://api.openai.com/v1</code></p>
-                            <p>• 使用智谱 API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://open.bigmodel.cn/api/paas/v4</code></p>
+                            <p>• 使用智谱 API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
                         </div>
                     </div>
 

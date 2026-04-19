@@ -7,13 +7,13 @@ import { generateKlingO1Video, generateKlingStandardVideo } from "./kling";
 import { generateAlibailianVideo } from "./alibailian";
 import { fetchThirdParty, constructUrl } from "../network";
 
-// --- Base Rules ---
+// --- 基础规则 ---
 const BASE_RATIOS = ['1:1', '3:4', '4:3', '9:16', '16:9'];
 const EXTENDED_RATIOS = ['1:1', '3:4', '4:3', '9:16', '16:9', '21:9', '9:21'];
 const DURATIONS_STD = ['5s', '10s'];
 const RESOLUTIONS_STD = ['720p', '1080p'];
 
-// --- Helper for Chat-based Video (Doubao/KlingO1) ---
+// --- 基于聊天的视频助手（Doubao/KlingO1）---
 const generateChatVideo = async (config: ModelConfig, prompt: string) => {
     const messages = [{ role: 'user', content: `Generate a video: ${prompt}` }];
     const payload = { model: config.modelId, messages, stream: false };
@@ -22,7 +22,7 @@ const generateChatVideo = async (config: ModelConfig, prompt: string) => {
     return res.choices?.[0]?.message?.content;
 };
 
-// --- Model Specific Implementations ---
+// --- 模型特定实现 ---
 
 export const Sora2Handler = {
     rules: { resolutions: ['720p', '1080p'], durations: ['4s', '8s', '12s'], ratios: ['16:9', '9:16'], maxInputImages: 2 },
@@ -94,18 +94,18 @@ export const Sora2Handler = {
 export const VeoFastHandler = {
     rules: { resolutions: ['720p', '1080p'], durations: ['8s'], ratios: ['16:9', '9:16'], maxInputImages: 3 },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        let modelId = 'veo3.1'; // Default Text-to-Video (Fast Mode)
+        let modelId = 'veo3.1'; // 默认文本到视频（快速模式）
         let images = params.inputImages || [];
 
-        // Logic for Veo 3.1 Fast:
-        // Text-to-Video -> veo3.1
-        // Image-to-Video -> veo3.1-fast-components
+        // Veo 3.1 快速模式逻辑：
+        // 文本到视频 -> veo3.1
+        // 图像到视频 -> veo3.1-fast-components
         
         if (images.length > 0) {
              modelId = 'veo3.1-fast-components';
         }
 
-        // Enforce max 3 images
+        // 强制最多3张图像
         if (images.length > 3) {
             images = images.slice(0, 3);
         }
@@ -120,16 +120,16 @@ export const VeoFastHandler = {
 export const VeoProHandler = {
     rules: { resolutions: ['720p', '1080p'], durations: ['8s'], ratios: ['16:9', '9:16'], maxInputImages: 1 },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        let modelId = 'veo3.1-pro'; // Default Text-to-Video (Pro Mode)
+        let modelId = 'veo3.1-pro'; // 默认文本到视频（专业模式）
         let images = params.inputImages || [];
 
-        // Logic for Veo 3.1 Pro:
-        // Text-to-Video -> veo3.1-pro
-        // Image-to-Video -> veo3.1-components
+        // Veo 3.1 专业模式逻辑：
+        // 文本到视频 -> veo3.1-pro
+        // 图像到视频 -> veo3.1-components
         
         if (images.length > 0) {
             modelId = 'veo3.1-components';
-            // Enforce max 1 image
+            // 强制最多1张图像
             if (images.length > 1) {
                 images = [images[0]];
             }
@@ -173,7 +173,7 @@ export const KlingO1ProHandler = {
 export const KlingStandardHandler = {
     rules: { resolutions: ['720p', '1080p'], durations: ['5s', '10s'], ratios: ['16:9', '9:16'], maxInputImages: 2 },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-         // Fallback default
+         // 备用默认值
          return await generateKlingStandardVideo(cfg, 'Kling 2.5 Std', prompt, params.aspectRatio, params.duration, params.inputImages, params.isStartEndMode);
     }
 };

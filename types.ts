@@ -19,29 +19,29 @@ export interface NodeData {
   height: number;
   title: string;
   
-  // State
+  // 状态
   prompt?: string;
-  imageSrc?: string; // Result or Input (Active Selection)
-  videoSrc?: string; // Result (Active Selection)
-  audioSrc?: string; // Result (Audio)
-  outputArtifacts?: string[]; // History/Batch results
+  imageSrc?: string; // 结果或输入（活动选择）
+  videoSrc?: string; // 结果（活动选择）
+  audioSrc?: string; // 结果（音频）
+  outputArtifacts?: string[]; // 历史/批量结果
   isLoading?: boolean;
-  isStackOpen?: boolean; // UI State for expanded gallery
+  isStackOpen?: boolean; // 展开画廊的UI状态
   
-  // Configs
+  // 配置
   aspectRatio?: string;
   resolution?: string;
-  duration?: string; // Video duration (5s, 10s, 15s) / Audio duration (30s, 60s, 120s)
+  duration?: string; // 视频时长（5s, 10s, 15s）/ 音频时长（30s, 60s, 120s）
   count?: number;
   model?: string;
-  promptOptimize?: boolean; // Prompt Extension/Optimization switch
-  swapFrames?: boolean; // For START_END_TO_VIDEO: swap first/last frame order
-  style?: string; // For TEXT_TO_AUDIO: music style
+  promptOptimize?: boolean; // 提示词扩展/优化开关
+  swapFrames?: boolean; // 对于START_END_TO_VIDEO：交换首尾帧顺序
+  style?: string; // 对于TEXT_TO_AUDIO：音乐风格
   
-  // Creative Desc specific
+  // 创意描述特定
   optimizedPrompt?: string;
 
-  // UI State
+  // UI状态
   activeToolbarItem?: string;
 }
 

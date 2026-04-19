@@ -11,9 +11,9 @@ export const generateAlibailianVideo = async (
 ): Promise<string> => {
     const targetUrl = constructUrl(config.baseUrl, config.endpoint);
     
-    // Resolution: 720p -> 720P
+    // 分辨率：720p -> 720P
     const resParam = (resolution || '720p').toUpperCase();
-    // Duration: 5s -> 5
+    // 时长：5s -> 5
     const durParam = parseInt(duration.replace('s', '')) || 5;
 
     const payload: any = {
@@ -35,7 +35,7 @@ export const generateAlibailianVideo = async (
 
     const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 120000 });
     
-    // Response usually { output: { task_id: "..." }, request_id: "..." }
+    // 响应通常为 { output: { task_id: "..." }, request_id: "..." }
     const taskId = res.output?.task_id || res.task_id;
     if (!taskId) throw new Error(`No Task ID returned from Alibailian: ${JSON.stringify(res)}`);
 

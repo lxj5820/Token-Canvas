@@ -10,13 +10,14 @@ export type StrategyType =
   | 'KLING' 
   | 'KLING_OMNI'
   | 'MJ_MODAL' 
-  | 'MJ_ACTION';
+  | 'MJ_ACTION'
+  | 'AUDIO_GEN';
 
 export interface ModelDef {
   id: string; 
   name: string; 
   type: StrategyType;
-  category: 'IMAGE' | 'VIDEO';
+  category: 'IMAGE' | 'VIDEO' | 'AUDIO';
   defaultEndpoint: string;
   defaultQueryEndpoint?: string; 
   defaultDownloadEndpoint?: string; 
