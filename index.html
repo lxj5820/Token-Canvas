@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>taopipi - AI 画布平台</title>
+    <title>词元 AI 画布平台</title>
     <meta name="description" content="taopipi - 免费 AI 画布平台，支持图片生成、视频创作" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* CSS Variables for Theme Support */
+      /* CSS 变量用于主题支持 */
       :root {
         --color-bg: #F5F7FA;
         --color-text: #1f2937;
@@ -43,7 +44,7 @@
         transition: background-color 0.2s ease, color 0.2s ease;
       }
       
-      /* Custom scrollbar - Light theme default */
+      /* 自定义滚动条 - 浅色主题默认 */
       .node-scroll::-webkit-scrollbar, .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
       .node-scroll::-webkit-scrollbar-track, .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       .node-scroll::-webkit-scrollbar-thumb, .custom-scrollbar::-webkit-scrollbar-thumb { 
@@ -54,17 +55,17 @@
         background: var(--color-scrollbar-hover, #9ca3af); 
       }
       
-      /* Grid pattern for canvas */
+      /* 画布网格图案 */
       .grid-pattern {
         background-size: 20px 20px;
         background-image: radial-gradient(var(--grid-color, #E4E4E7) 1px, transparent 1px);
       }
       
-      /* Hide scrollbar */
+      /* 隐藏滚动条 */
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
-      /* Animation utilities */
+      /* 动画工具类 */
       @keyframes shimmer {
         0% { background-position: -200% 0; }
         100% { background-position: 200% 0; }
@@ -79,7 +80,7 @@
         background-size: 200% 100%;
       }
       
-      /* Focus ring utilities */
+      /* 焦点环工具类 */
       .focus-ring {
         outline: none;
       }
@@ -87,13 +88,13 @@
         box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px #3b82f6;
       }
       
-      /* Smooth transitions for interactive elements */
+      /* 交互元素的平滑过渡 */
       button, a, input, select, textarea {
         transition: all 0.15s ease;
       }
     </style>
     
-    <!-- Inter Font for better typography -->
+    <!-- Inter 字体用于更好的排版 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
