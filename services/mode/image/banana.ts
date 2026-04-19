@@ -163,6 +163,7 @@ export const generateBananaChatImage = async (
         const payload: any = {
             model: config.modelId,
             messages: [{ role: 'user', content: content }],
+            stream: false,
             // OpenAI 风格的 response_format
             response_format: { type: 'image' },
             // generationConfig 透传 (Gemini 风格) - 这是关键！
@@ -247,6 +248,7 @@ export const generateBananaChatImage = async (
     const payload: any = {
         model: config.modelId, 
         messages,
+        stream: false,
         // OpenAI 风格的 response_format
         response_format: { type: 'image' },
         // generationConfig 透传 (Gemini 风格) - 这是关键！

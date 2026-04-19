@@ -64,7 +64,6 @@ export const SunoHandler = {
 const generateChatAudio = async (config: ModelConfig, prompt: string, params: any) => {
     const { duration = '30s', style = 'pop', seed = -1, count = 1 } = params;
 
-    // 转换为更长的提示词
     const enhancedPrompt = `Generate music: ${prompt}. Duration: ${duration}. Style: ${style}. Generate ${count} variation(s).`;
     if (seed !== -1) {
         enhancedPrompt += ` Use seed: ${seed}.`;

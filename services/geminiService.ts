@@ -18,7 +18,7 @@ export const generateCreativeDescription = async (input: string, mode: 'IMAGE' |
   if (!config.key) return input;
   const prompt = `Optimize this ${mode.toLowerCase()} description for professional AI generation. Input: "${input}". Provide ONLY the optimized prompt text.`;
   try {
-     const payload = { model: 'gemini-2.0-flash-exp', messages: [{ role: 'user', content: prompt }] };
+     const payload = { model: 'gemini-2.0-flash-exp', messages: [{ role: 'user', content: prompt }], stream: false };
      const url = constructUrl(config.baseUrl, '/v1/chat/completions');
      const res = await fetchThirdParty(url, 'POST', payload, config);
      return res.choices?.[0]?.message?.content || input;
