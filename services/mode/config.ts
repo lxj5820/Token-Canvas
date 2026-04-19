@@ -29,8 +29,8 @@ const deletedModels = loadDeletedModels();
 
 export const MODEL_REGISTRY: Record<string, ModelDef> = {
   // --- Image Models ---
-  'BananaPro': { id: 'gemini-3-pro-image-preview', name: 'Banana Pro', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1/chat/completions' },
-  'Banana 2': { id: 'gemini-3.1-flash-image-preview', name: 'Banana 2 ', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1/chat/completions' },
+  'Banana 2': { id: 'gemini-3.1-flash-image-preview', name: 'Banana 2 ', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3.1-flash-image-preview:generateContent' },
+  'BananaPro': { id: 'gemini-3-pro-image-preview', name: 'Banana Pro', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3-pro-image-preview:generateContent' },
   
   'doubao 5': { id: 'doubao-seedream-5-0-260128', name: 'Jimeng 5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
   'doubao 4.5': { id: 'doubao-seedream-4-5-251128', name: 'Jimeng 4.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },

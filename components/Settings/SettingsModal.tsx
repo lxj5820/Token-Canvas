@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Icons } from '../Icons';
 import { MODEL_REGISTRY, getModelConfig, saveModelConfig, ModelConfig, registerCustomModel, deleteModel, isCustomModel } from '../../services/geminiService';
-import { EnvConfig } from '../../services/env';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -15,7 +14,7 @@ const GLOBAL_API_KEY_KEY = 'GLOBAL_API_KEY';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, isDark }) => {
     // 全局配置
-    const [globalBaseUrl, setGlobalBaseUrl] = useState(EnvConfig.DEFAULT_BASE_URL);
+    const [globalBaseUrl, setGlobalBaseUrl] = useState('https://newapi.asia');
     const [globalApiKey, setGlobalApiKey] = useState('');
     
     // 模型配置
