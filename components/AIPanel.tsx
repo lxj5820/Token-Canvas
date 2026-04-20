@@ -50,27 +50,21 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showSettings, setShowSettings] = useState(false);
-    const [showModelModal, setShowModelModal] = useState(false);
-    const [configuringModel, setConfiguringModel] = useState<ModelInfo | null>(null);
     
-    // 每个模型的配置
-    const [modelConfigs, setModelConfigs] = useState<Record<AIModel, ModelConfig>>(() => {
-        const saved = localStorage.getItem('ai-model-configs');
+    // 统一模型配置
+    const [modelConfig, setModelConfig] = useState<ModelConfig>(() => {
+        const saved = localStorage.getItem('ai-model-config');
         if (saved) {
             try {
                 return JSON.parse(saved);
             } catch {}
         }
         // 默认配置
-        const configs: Record<AIModel, ModelConfig> = {} as Record<AIModel, ModelConfig>;
-        MODELS.forEach(m => {
-            configs[m.id] = {
-                apiKey: '',
-                baseUrl: m.defaultUrl,
-                model: m.defaultModel,
-            };
-        });
-        return configs;
+        return {
+            apiKey: '',
+            baseUrl: 'https://newapi.asia/v1',
+            model: 'Gemini-3.1',
+        };
     });
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -81,40 +75,19 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
     }, [messages]);
 
     const saveAllConfigs = () => {
-        localStorage.setItem('ai-model-configs', JSON.stringify(modelConfigs));
+        localStorage.setItem('ai-model-config', JSON.stringify(modelConfig));
         setShowSettings(false);
     };
 
-    const openModelConfig = (model: ModelInfo) => {
-        setConfiguringModel(model);
-        setShowModelModal(true);
-    };
-
-    const saveModelConfig = () => {
-        if (configuringModel) {
-            setModelConfigs(prev => ({
-                ...prev,
-                [configuringModel.id]: prev[configuringModel.id]
-            }));
-        }
-        setShowModelModal(false);
-        setConfiguringModel(null);
-    };
-
     const updateModelConfig = (field: keyof ModelConfig, value: string) => {
-        if (configuringModel) {
-            setModelConfigs(prev => ({
-                ...prev,
-                [configuringModel.id]: {
-                    ...prev[configuringModel.id],
-                    [field]: value
-                }
-            }));
-        }
+        setModelConfig(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
     const callAI = async (model: AIModel, messages: Message[]): Promise<string> => {
-        const config = modelConfigs[model];
+        const config = modelConfig;
         if (!config?.apiKey) {
             throw new Error('请先配置 API Key');
         }
@@ -132,7 +105,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                     'anthropic-version': '2023-06-01',
                 },
                 body: JSON.stringify({
-                    model: config.model || model,
+                    model: model,
                     max_tokens: 4096,
                     messages: messages.map(m => ({ role: m.role, content: m.content })),
                 }),
@@ -154,7 +127,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                     'Authorization': `Bearer ${config.apiKey}`,
                 },
                 body: JSON.stringify({
-                    model: config.model || model,
+                    model: model,
                     messages: messages.map(m => ({ role: m.role, content: m.content })),
                 }),
             });
@@ -175,7 +148,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                     'Authorization': `Bearer ${config.apiKey}`,
                 },
                 body: JSON.stringify({
-                    model: config.model || model,
+                    model: model,
                     messages: messages.map(m => ({ role: m.role, content: m.content })),
                 }),
             });
@@ -235,15 +208,14 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
         setError('');
     };
 
-    const currentConfig = modelConfigs[selectedModel];
-    const hasApiKey = !!currentConfig?.apiKey;
+    const hasApiKey = !!modelConfig?.apiKey;
 
     if (!isOpen) return null;
 
     return (
         <>
         <div 
-            className={`fixed right-0 top-0 h-full w-[400px] z-[200] border-l shadow-2xl animate-in slide-in-from-right duration-300 ${
+            className={`fixed right-0 top-0 h-full w-[400px] z-[200] border-l shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col ${
                 isDark ? 'bg-[#0B0C0E] border-zinc-800' : 'bg-white border-gray-200'
             }`}
         >
@@ -281,11 +253,88 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
             {showSettings && (
                 <div className={`p-4 border-b ${isDark ? 'border-zinc-800 bg-zinc-900/50' : 'border-gray-200 bg-gray-50'}`}>
                     <div className={`text-xs font-medium mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        点击模型按钮配置 API
+                        统一 API 配置
                     </div>
                     <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        每个模型可配置独立的 API Key 和 URL
+                        所有模型共享相同的 API 配置
                     </p>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                API Key
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={modelConfig.apiKey === localStorage.getItem('aipanel_key_visible') ? 'text' : 'password'}
+                                    value={modelConfig.apiKey || ''}
+                                    onChange={e => updateModelConfig('apiKey', e.target.value)}
+                                    placeholder="输入 API Key"
+                                    className={`w-full px-3 py-2 pr-10 text-sm rounded-lg border ${
+                                        isDark 
+                                            ? 'bg-zinc-800 border-zinc-700 text-white placeholder-gray-500' 
+                                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                                    }`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const visibleKey = 'aipanel_key_visible';
+                                        const currentVisible = localStorage.getItem(visibleKey);
+                                        const apiKey = modelConfig.apiKey || '';
+                                        if (currentVisible === apiKey) {
+                                            localStorage.removeItem(visibleKey);
+                                        } else {
+                                            localStorage.setItem(visibleKey, apiKey);
+                                        }
+                                        updateModelConfig('apiKey', apiKey + ' ');
+                                        setTimeout(() => updateModelConfig('apiKey', apiKey), 0);
+                                    }}
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                                    title="显示/隐藏 API Key"
+                                >
+                                    {localStorage.getItem('aipanel_key_visible') === modelConfig.apiKey ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Base URL
+                            </label>
+                            <input
+                                type="text"
+                                value={modelConfig.baseUrl || ''}
+                                onChange={e => updateModelConfig('baseUrl', e.target.value)}
+                                placeholder="https://newapi.asia/v1"
+                                className={`w-full px-3 py-2 text-sm rounded-lg border ${
+                                    isDark 
+                                        ? 'bg-zinc-800 border-zinc-700 text-white placeholder-gray-500' 
+                                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                                }`}
+                            />
+                        </div>
+
+                        <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-zinc-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
+                            <p className="font-medium mb-1">提示：</p>
+                            <p>• 使用 New 词元: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
+                            <p>• 使用 OpenAI API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://api.openai.com/v1</code></p>
+                            <p>• 使用智谱 API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                        <button
+                            onClick={saveAllConfigs}
+                            className="w-full py-2 text-sm font-medium rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition-colors"
+                        >
+                            保存配置
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -293,15 +342,12 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
             <div className={`px-4 py-2 border-b ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                 <div className="flex flex-wrap gap-1.5">
                     {MODELS.map(model => {
-                        const config = modelConfigs[model.id];
-                        const isConfigured = !!config?.apiKey;
                         const isSelected = selectedModel === model.id;
                         
                         return (
-                            <div key={model.id} className="relative">
+                            <div key={model.id}>
                                 <button
                                     onClick={() => setSelectedModel(model.id)}
-                                    onDoubleClick={() => openModelConfig(model)}
                                     className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
                                         isSelected
                                             ? (isDark ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-pink-50 text-pink-600 border border-pink-200')
@@ -309,16 +355,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                                     }`}
                                 >
                                     {model.name}
-                                    {isConfigured && <span className="ml-1 text-green-500">✓</span>}
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); openModelConfig(model); }}
-                                    className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs ${
-                                        isDark ? 'bg-zinc-700 text-gray-400 hover:bg-zinc-600' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                                    }`}
-                                    title="配置"
-                                >
-                                    ⚙
+                                    {hasApiKey && <span className="ml-1 text-green-500">✓</span>}
                                 </button>
                             </div>
                         );
@@ -327,7 +364,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
             </div>
 
             {/* Content */}
-            <div className="flex flex-col h-[calc(100%-120px)]">
+            <div className="flex-1 flex flex-col">
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4">
                     {messages.length === 0 && !error && (
@@ -426,132 +463,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
             </div>
         </div>
 
-        {/* 模型配置弹窗 */}
-        {showModelModal && configuringModel && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]" onClick={() => setShowModelModal(false)}>
-                <div 
-                    className={`w-[500px] rounded-2xl p-6 ${isDark ? 'bg-[#1a1a1a] border border-zinc-800' : 'bg-white border border-gray-200'}`}
-                    onClick={e => e.stopPropagation()}
-                >
-                    <div className={`flex items-center justify-between mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        <h3 className="text-lg font-semibold">{configuringModel.name} - API 配置</h3>
-                        <button onClick={() => setShowModelModal(false)} className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}>
-                            <Icons.X size={20} />
-                        </button>
-                    </div>
 
-                    <div className="space-y-4">
-                        <div>
-                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                API Key
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type={modelConfigs[configuringModel.id]?.apiKey === localStorage.getItem('aipanel_key_visible_' + configuringModel.id) ? 'text' : 'password'}
-                                    value={modelConfigs[configuringModel.id]?.apiKey || ''}
-                                    onChange={e => updateModelConfig('apiKey', e.target.value)}
-                                    placeholder="输入 API Key"
-                                    className={`w-full px-3 py-2 pr-10 text-sm rounded-lg border ${
-                                        isDark 
-                                            ? 'bg-zinc-800 border-zinc-700 text-white placeholder-gray-500' 
-                                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                                    }`}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const visibleKey = 'aipanel_key_visible_' + configuringModel.id;
-                                        const currentVisible = localStorage.getItem(visibleKey);
-                                        const apiKey = modelConfigs[configuringModel.id]?.apiKey || '';
-                                        if (currentVisible === apiKey) {
-                                            localStorage.removeItem(visibleKey);
-                                        } else {
-                                            localStorage.setItem(visibleKey, apiKey);
-                                        }
-                                        updateModelConfig('apiKey', apiKey + ' ');
-                                        setTimeout(() => updateModelConfig('apiKey', apiKey), 0);
-                                    }}
-                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
-                                    title="显示/隐藏 API Key"
-                                >
-                                    {localStorage.getItem('aipanel_key_visible_' + configuringModel.id) === modelConfigs[configuringModel.id]?.apiKey ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                Base URL
-                            </label>
-                            <input
-                                type="text"
-                                value={modelConfigs[configuringModel.id]?.baseUrl || ''}
-                                onChange={e => updateModelConfig('baseUrl', e.target.value)}
-                                placeholder={configuringModel.defaultUrl}
-                                className={`w-full px-3 py-2 text-sm rounded-lg border ${
-                                    isDark 
-                                        ? 'bg-zinc-800 border-zinc-700 text-white placeholder-gray-500' 
-                                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                                }`}
-                            />
-                            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                默认: {configuringModel.defaultUrl}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                模型名称
-                            </label>
-                            <input
-                                type="text"
-                                value={modelConfigs[configuringModel.id]?.model || ''}
-                                onChange={e => updateModelConfig('model', e.target.value)}
-                                placeholder={configuringModel.defaultModel}
-                                className={`w-full px-3 py-2 text-sm rounded-lg border ${
-                                    isDark 
-                                        ? 'bg-zinc-800 border-zinc-700 text-white placeholder-gray-500' 
-                                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                                }`}
-                            />
-                            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                默认: {configuringModel.defaultModel}
-                            </p>
-                        </div>
-
-                        <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-zinc-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
-                            <p className="font-medium mb-1">提示：</p>
-                            <p>• 使用 New 词元: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
-                            <p>• 使用 OpenAI API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://api.openai.com/v1</code></p>
-                            <p>• 使用智谱 API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-3 mt-6">
-                        <button
-                            onClick={() => setShowModelModal(false)}
-                            className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                                isDark 
-                                    ? 'border-zinc-700 text-gray-300 hover:bg-zinc-800' 
-                                    : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                            }`}
-                        >
-                            取消
-                        </button>
-                        <button
-                            onClick={saveModelConfig}
-                            className="flex-1 py-2 text-sm font-medium rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition-colors"
-                        >
-                            保存
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
         </>
     );
 };
