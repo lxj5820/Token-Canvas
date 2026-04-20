@@ -205,6 +205,20 @@ export const isCustomModel = (key: string): boolean => {
     return !!customModels[key];
 };
 
+// 取消隐藏模型（从已删除列表中移除）
+export const unhideModel = (key: string) => {
+    const deleted = loadDeletedModels();
+    if (deleted.has(key)) {
+        deleted.delete(key);
+        localStorage.setItem(DELETED_MODELS_KEY, JSON.stringify([...deleted]));
+        deletedModels.delete(key);
+        // 如果模型不在注册表中，重新添加
+        if (!MODEL_REGISTRY[key]) {
+            // 这里可以添加逻辑来恢复内置模型
+        }
+    }
+};
+
 // 获取可见的模型列表（用于下拉框）
 export const getVisibleModels = (): string[] => {
     return Object.keys(MODEL_REGISTRY);
