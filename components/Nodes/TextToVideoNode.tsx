@@ -6,6 +6,7 @@ import { getModelConfig, MODEL_REGISTRY, getVisibleModels } from '../../services
 import { VIDEO_HANDLERS } from '../../services/mode/video/configurations';
 import { getVideoConstraints, getAutoCorrectedVideoSettings } from '../../services/mode/video/rules';
 import { LocalEditableTitle, LocalCustomDropdown, LocalInputThumbnails, LocalMediaStack } from './Shared/LocalNodeComponents';
+import { getOptimizePrompt } from '../AIPanel';
 
 interface TextToVideoNodeProps {
   data: NodeData;
@@ -246,20 +247,38 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
                       <LocalCustomDropdown icon={Icons.Monitor} options={resOptions} value={displayResValue || '720p'} onChange={(val: any) => updateData(data.id, { resolution: val })} isOpen={activeDropdown === 'res'} onToggle={() => setActiveDropdown(activeDropdown === 'res' ? null : 'res')} onClose={() => setActiveDropdown(null)} disabledOptions={constraints.disabledRes} isDark={isDark} />
                       <LocalCustomDropdown icon={Icons.Clock} options={durOptions} value={data.duration || '5s'} onChange={(val: any) => updateData(data.id, { duration: val })} isOpen={activeDropdown === 'duration'} onToggle={() => setActiveDropdown(activeDropdown === 'duration' ? null : 'duration')} onClose={() => setActiveDropdown(null)} disabledOptions={constraints.disabledDurations} isDark={isDark} />
                       <LocalCustomDropdown icon={Icons.Layers} options={[1, 2, 3, 4]} value={data.count || 1} onChange={(val: any) => updateData(data.id, { count: val })} isOpen={activeDropdown === 'count'} onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} onClose={() => setActiveDropdown(null)} isDark={isDark} />
-                      <button 
+                      <button
                           className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${
-                              canOptimize 
-                                  ? (data.promptOptimize 
-                                      ? (isDark ? 'text-purple-400 bg-purple-500/20 border-purple-500/30' : 'text-purple-600 bg-purple-100 border-purple-200') 
+                              data.isOptimizing
+                                  ? (isDark ? 'text-purple-400 bg-purple-500/20 border-purple-500/30 animate-pulse' : 'text-purple-600 bg-purple-100 border-purple-200 animate-pulse')
+                                  : (data.promptOptimize
+                                      ? (isDark ? 'text-purple-400 bg-purple-500/20 border-purple-500/30' : 'text-purple-600 bg-purple-100 border-purple-200')
                                       : (isDark ? 'text-zinc-400 hover:text-white border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700' : 'text-gray-400 hover:text-gray-600 border-gray-200 hover:bg-gray-100')
-                                    ) 
-                                  : (isDark ? 'text-zinc-600 border-zinc-800 opacity-40 cursor-not-allowed' : 'text-gray-300 border-gray-100 opacity-40 cursor-not-allowed')
-                          }`} 
-                          onClick={() => canOptimize && updateData(data.id, { promptOptimize: !data.promptOptimize })}
-                          title={canOptimize ? `提示词优化: ${data.promptOptimize ? '开启' : '关闭'}` : '此模型不支持提示词优化'}
-                          disabled={!canOptimize}
+                                  )
+                          }`}
+                          onClick={async () => {
+                              if (data.isOptimizing) return;
+                              const optimizeFn = getOptimizePrompt();
+                              if (!optimizeFn) {
+                                  alert('请先在 AI 助手中配置 API Key');
+                                  return;
+                              }
+                              if (!data.prompt?.trim()) {
+                                  alert('请先输入提示词');
+                                  return;
+                              }
+                              updateData(data.id, { isOptimizing: true });
+                              try {
+                                  const optimized = await optimizeFn(data.prompt);
+                                  updateData(data.id, { prompt: optimized, isOptimizing: false });
+                              } catch (e) {
+                                  alert(`优化失败: ${e instanceof Error ? e.message : '未知错误'}`);
+                                  updateData(data.id, { isOptimizing: false });
+                              }
+                          }}
+                          title={data.isOptimizing ? '优化中...' : 'AI 优化提示词'}
                       >
-                          <Icons.Sparkles size={15} fill={data.promptOptimize && canOptimize ? "currentColor" : "none"} />
+                          {data.isOptimizing ? <Icons.Loader2 size={15} className="animate-spin" /> : <Icons.Sparkles size={15} fill={data.promptOptimize ? "currentColor" : "none"} />}
                       </button>
                        
                        {/* Spacer */}

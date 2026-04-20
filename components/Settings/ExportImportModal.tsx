@@ -396,6 +396,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                     </div>
                                 </div>
                                 <input
+                                    title="选择文件"
                                     ref={importInputRef}
                                     type="file"
                                     accept=".flow,.json,.aistudio-flow"

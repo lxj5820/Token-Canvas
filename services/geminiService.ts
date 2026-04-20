@@ -14,7 +14,7 @@ export type { ModelConfig };
 // --- Generators ---
 
 export const generateCreativeDescription = async (input: string, mode: 'IMAGE' | 'VIDEO'): Promise<string> => {
-  const config = getModelConfig('BananaPro'); 
+  const config = getModelConfig('Banana 2'); 
   if (!config.key) return input;
   const prompt = `Optimize this ${mode.toLowerCase()} description for professional AI generation. Input: "${input}". Provide ONLY the optimized prompt text.`;
   try {
@@ -30,7 +30,7 @@ export const generateCreativeDescription = async (input: string, mode: 'IMAGE' |
 export const generateImage = async (
     prompt: string, 
     aspectRatio: string = "1:1", 
-    modelName: string = "BananaPro", 
+    modelName: string = "Banana 2", 
     resolution: string = "1k", 
     count: number = 1,
     inputImages: string[] = [],
@@ -47,7 +47,7 @@ export const generateImage = async (
       }
   }
   
-  if (!handler) handler = IMAGE_HANDLERS['BananaPro'];
+  if (!handler) handler = IMAGE_HANDLERS['Banana 2'];
 
   const config = getModelConfig(modelName);
   

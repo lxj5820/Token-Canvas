@@ -43,7 +43,14 @@ interface Message {
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
 
-export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => {
+// 全局提示词优化函数注册表
+let globalOptimizePrompt: ((prompt: string) => Promise<string>) | null = null;
+export const registerOptimizePrompt = (fn: (prompt: string) => Promise<string>) => {
+    globalOptimizePrompt = fn;
+};
+export const getOptimizePrompt = () => globalOptimizePrompt;
+
+export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOptimizePrompt }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-5.4');
@@ -73,6 +80,11 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // 注册优化函数到全局
+    useEffect(() => {
+        registerOptimizePrompt(optimizePromptFunc);
+    }, [modelConfig, selectedModel]);
 
     const saveAllConfigs = () => {
         localStorage.setItem('ai-model-config', JSON.stringify(modelConfig));
@@ -163,6 +175,29 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
         }
     };
 
+    const optimizePromptFunc = async (prompt: string): Promise<string> => {
+        if (!modelConfig?.apiKey) {
+            throw new Error('请先在 AI 助手中配置 API Key');
+        }
+
+        const systemPrompt = `你是一个专业的提示词优化助手。请将用户提供的提示词进行优化，使其更适合用于 AI 图片/视频生成。
+
+要求：
+1. 保持原意不变，但表达更加精确、生动
+2. 增加细节描述（光影、色彩、构图、氛围等）
+3. 去除口语化表达，使用更适合生成模型的描述性语言
+4. 如果原提示词是中文，保持中文输出；如果是英文，保持英文输出
+5. 只输出优化后的提示词，不要添加解释说明`;
+
+        const messagesToSend = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+        ];
+
+        const result = await callAI(selectedModel, messagesToSend as Message[]);
+        return result.trim();
+    };
+
     const handleSend = async () => {
         if (!input.trim() || loading) return;
 
@@ -241,6 +276,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                         <Icons.Settings size={16} />
                     </button>
                     <button 
+                        title="关闭面板"
                         onClick={onClose}
                         className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-zinc-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
                     >
@@ -438,6 +474,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark }) => 
                             rows={2}
                         />
                         <button 
+                            title="发送消息"
                             onClick={handleSend}
                             disabled={!input.trim() || loading}
                             className={`absolute right-2 bottom-2 p-2 rounded-lg transition-colors ${

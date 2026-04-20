@@ -5,6 +5,7 @@ import { Icons } from '../Icons';
 import { getModelConfig, MODEL_REGISTRY, getVisibleModels } from '../../services/geminiService';
 import { IMAGE_HANDLERS } from '../../services/mode/image/configurations';
 import { LocalEditableTitle, LocalCustomDropdown, LocalInputThumbnails, LocalMediaStack } from './Shared/LocalNodeComponents';
+import { getOptimizePrompt } from '../AIPanel';
 
 interface TextToImageNodeProps {
   data: NodeData;
@@ -30,7 +31,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     const isSelectedAndStable = selected && !isSelecting;
 
     const checkConfig = useCallback(() => {
-         const mName = data.model || 'BananaPro';
+         const mName = data.model || 'Banana 2';
          const cfg = getModelConfig(mName);
          setIsConfigured(!!cfg.key);
     }, [data.model]);
@@ -55,8 +56,8 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     useEffect(() => { if (isSelectedAndStable && showControls) { const t = setTimeout(() => setDeferredInputs(true), 100); return () => clearTimeout(t); } else setDeferredInputs(false); }, [isSelectedAndStable, showControls]);
 
     // Get Rules for current model
-    const currentModel = data.model || 'BananaPro';
-    const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['BananaPro']; // Fallback rules
+    const currentModel = data.model || 'Banana 2';
+    const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['Banana 2']; // Fallback rules
     const rules = handler.rules;
     const supportedResolutions = rules.resolutions || ['1k'];
     const supportedRatios = rules.ratios || ['1:1', '16:9'];
@@ -172,7 +173,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                       <div className="flex items-center gap-2">
                           <LocalCustomDropdown 
                               options={imageModels} 
-                              value={data.model || 'BananaPro'} 
+                              value={data.model || 'Banana 2'} 
                               onChange={(val: any) => updateData(data.id, { model: val })} 
                               isOpen={activeDropdown === 'model'} 
                               onToggle={() => setActiveDropdown(activeDropdown === 'model' ? null : 'model')} 
@@ -184,20 +185,38 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                           <LocalCustomDropdown icon={Icons.Crop} options={supportedRatios} value={data.aspectRatio || '1:1'} onChange={handleRatioChange} isOpen={activeDropdown === 'ratio'} onToggle={() => setActiveDropdown(activeDropdown === 'ratio' ? null : 'ratio')} onClose={() => setActiveDropdown(null)} isDark={isDark} />
                           <LocalCustomDropdown icon={Icons.Monitor} options={supportedResolutions} value={data.resolution || '1k'} onChange={(val: any) => updateData(data.id, { resolution: val })} isOpen={activeDropdown === 'res'} onToggle={() => setActiveDropdown(activeDropdown === 'res' ? null : 'res')} onClose={() => setActiveDropdown(null)} disabledOptions={['1k', '2k', '4k'].filter(r => !supportedResolutions.includes(r))} isDark={isDark} />
                           <LocalCustomDropdown icon={Icons.Layers} options={[1, 2, 3, 4]} value={data.count || 1} onChange={(val: any) => updateData(data.id, { count: val })} isOpen={activeDropdown === 'count'} onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} onClose={() => setActiveDropdown(null)} isDark={isDark} />
-                          <button 
+                          <button
                               className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${
-                                  canOptimize 
-                                      ? (data.promptOptimize 
-                                          ? (isDark ? 'text-blue-400 bg-blue-500/20 border-blue-500/30' : 'text-blue-600 bg-blue-100 border-blue-200') 
+                                  data.isOptimizing
+                                      ? (isDark ? 'text-blue-400 bg-blue-500/20 border-blue-500/30 animate-pulse' : 'text-blue-600 bg-blue-100 border-blue-200 animate-pulse')
+                                      : (data.promptOptimize
+                                          ? (isDark ? 'text-blue-400 bg-blue-500/20 border-blue-500/30' : 'text-blue-600 bg-blue-100 border-blue-200')
                                           : (isDark ? 'text-zinc-400 hover:text-white border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700' : 'text-gray-400 hover:text-gray-600 border-gray-200 hover:bg-gray-100')
-                                        ) 
-                                      : (isDark ? 'text-zinc-600 border-zinc-800 opacity-40 cursor-not-allowed' : 'text-gray-300 border-gray-100 opacity-40 cursor-not-allowed')
-                              }`} 
-                              onClick={() => canOptimize && updateData(data.id, { promptOptimize: !data.promptOptimize })}
-                              title={canOptimize ? `提示词优化: ${data.promptOptimize ? '开启' : '关闭'}` : '此模型不支持提示词优化'}
-                              disabled={!canOptimize}
+                                      )
+                              }`}
+                              onClick={async () => {
+                                  if (data.isOptimizing) return;
+                                  const optimizeFn = getOptimizePrompt();
+                                  if (!optimizeFn) {
+                                      alert('请先在 AI 助手中配置 API Key');
+                                      return;
+                                  }
+                                  if (!data.prompt?.trim()) {
+                                      alert('请先输入提示词');
+                                      return;
+                                  }
+                                  updateData(data.id, { isOptimizing: true });
+                                  try {
+                                      const optimized = await optimizeFn(data.prompt);
+                                      updateData(data.id, { prompt: optimized, isOptimizing: false });
+                                  } catch (e) {
+                                      alert(`优化失败: ${e instanceof Error ? e.message : '未知错误'}`);
+                                      updateData(data.id, { isOptimizing: false });
+                                  }
+                              }}
+                              title={data.isOptimizing ? '优化中...' : 'AI 优化提示词'}
                           >
-                              <Icons.Sparkles size={15} fill={data.promptOptimize && canOptimize ? "currentColor" : "none"} />
+                              {data.isOptimizing ? <Icons.Loader2 size={15} className="animate-spin" /> : <Icons.Sparkles size={15} fill={data.promptOptimize ? "currentColor" : "none"} />}
                           </button>
                           
                           {/* Spacer */}

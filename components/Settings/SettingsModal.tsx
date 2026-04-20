@@ -206,7 +206,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             globalBaseUrl,
             globalApiKey,
             configs: Object.fromEntries(
-                Object.entries(configs).filter(([_, v]) => v.key || v.baseUrl || v.modelId)
+                Object.entries(configs).filter(([_, v]) => (v as ModelConfig).key || (v as ModelConfig).baseUrl || (v as ModelConfig).modelId)
             )
         };
         
@@ -356,15 +356,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                     placeholder="https://newapi.asia"
                                 />
                                 <p className={`text-xs ${textMuted}`}>
-                                    修改后将自动更新所有模型的 BASE URL（Jimeng 4.5、4.1、3.1 除外）
+                                    修改后将自动更新所有模型的 BASE URL
                                 </p>
                             </div>
 
                             {/* Global API Key */}
                             <div className="space-y-2">
-                                <label className={`text-xs font-medium uppercase tracking-wider ${textSub}`}>
-                                    GLOBAL API KEY（可选，全局默认 KEY）
-                                </label>
+                                <div className="flex items-center justify-between">
+                                    <label className={`text-xs font-medium uppercase tracking-wider ${textSub}`}>
+                                        GLOBAL API KEY（可选，全局默认 KEY）
+                                    </label>
+                                    <a 
+                                        href="https://newapi.asia/console/token" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-blue-500 hover:text-blue-600 transition-colors"
+                                    >
+                                        获取 Key
+                                    </a>
+                                </div>
                                 <div className="relative">
                                     <input
                                         type={globalApiKey ? (globalApiKey === localStorage.getItem(GLOBAL_API_KEY_KEY + '_visible') ? 'text' : 'password') : 'password'}

@@ -33,33 +33,8 @@ export const BananaProHandler = {
 export const Banana2 = {
     rules: { resolutions: ['1k', '2k', '4k'], ratios: EXTENDED_RATIOS, supportsEdit: true },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        return await generateBananaEdit(cfg, prompt, params.aspectRatio, params.resolution, params.inputImages);
-    }
-};
-
-/**
- * Banana 模型处理器
- * 仅支持 1k 分辨率
- * 使用基础比例列表
- */
-export const BananaHandler = {
-    rules: { resolutions: ['1k'], ratios: BASE_RATIOS },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, '1k', 'Banana');
-        return await generateBananaChatImage(cfg, prompt, params.aspectRatio, '1k', size, params.inputImages);
-    }
-};
-
-/**
- * Flux 2 模型处理器
- * 支持 1k、2k 分辨率
- * 使用基础比例列表
- */
-export const Flux2Handler = {
-    rules: { resolutions: ['1k', '2k'], ratios: BASE_RATIOS },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, params.resolution, 'Flux2');
-        return await generateStandardImage(cfg, { id: 'flux', name: 'Flux', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
+        const size = calculateImageSize(params.aspectRatio, params.resolution, 'Banana 2');
+        return await generateBananaChatImage(cfg, prompt, params.aspectRatio, params.resolution, size, params.inputImages);
     }
 };
 
@@ -74,20 +49,6 @@ export const Jimeng45Handler = {
         // 原为 Doubao4.5，现在为 Jimeng 4.5
         const size = calculateImageSize(params.aspectRatio, params.resolution, '即梦4.5');
         return await generateStandardImage(cfg, { id: 'doubao', name: 'Doubao', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
-    }
-};
-
-/**
- * 即梦 4 模型处理器
- * 仅支持 1k 分辨率
- * 使用基础比例列表
- */
-export const Jimeng4Handler = {
-    rules: { resolutions: ['1k'], ratios: BASE_RATIOS },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        // 原为 Doubao3，现在为 Jimeng 4
-        const size = calculateImageSize(params.aspectRatio, '1k', '即梦 4');
-        return await generateStandardImage(cfg, { id: 'doubao', name: 'Doubao', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, '1k', size, params.inputImages, params.count, params.promptOptimize);
     }
 };
 
@@ -111,33 +72,48 @@ export const MJHandler = {
 export const ZimageHandler = {
     rules: { resolutions: ['1k'], ratios: BASE_RATIOS },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, '1k', 'Zimage');
-        return await generateStandardImage(cfg, { id: 'z-image', name: 'Zimage', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, '1k', size, params.inputImages, params.count, params.promptOptimize);
+        const size = calculateImageSize(params.aspectRatio, '1k', 'Zimage Turbo');
+        return await generateStandardImage(cfg, { id: 'z-image-turbo', name: 'Zimage Turbo', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, '1k', size, params.inputImages, params.count, params.promptOptimize);                              
     }
 };
 
 /**
- * Qwen Edit 模型处理器
- * 仅支持 1k 分辨率
- * 使用基础比例列表
- */
-export const QwenEditHandler = {
-    rules: { resolutions: ['1k'], ratios: BASE_RATIOS },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, '1k', 'Qwen');
-        return await generateStandardImage(cfg, { id: 'qwen', name: 'Qwen', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, '1k', size, params.inputImages, params.count, params.promptOptimize);
-    }
-};
-
-/**
- * 即梦 5 模型处理器
+ * doubao 4 模型处理器
  * 支持 1k、2k、4k 分辨率
  * 使用基础比例列表
  */
-export const Jimeng5Handler = {
+export const Doubao4Handler = {
     rules: { resolutions: ['1k', '2k', '4k'], ratios: BASE_RATIOS },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, params.resolution, '即梦5');
+        const size = calculateImageSize(params.aspectRatio, params.resolution, 'doubao 4');
+        return await generateStandardImage(cfg, { id: 'doubao', name: 'Doubao', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
+    }
+};
+
+
+/**
+ * doubao 4.5 模型处理器
+ * 支持 2k、4k 分辨率
+ * 使用基础比例列表
+ */
+export const Doubao45Handler = {
+    rules: { resolutions: ['2k', '4k'], ratios: BASE_RATIOS },
+    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
+        const size = calculateImageSize(params.aspectRatio, params.resolution, 'doubao 4.5');
+        return await generateStandardImage(cfg, { id: 'doubao', name: 'Doubao', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
+    }
+};
+
+
+/**
+ * doubao 5 模型处理器
+ * 支持 2k、3k 分辨率
+ * 使用基础比例列表
+ */
+export const Doubao5Handler = {
+    rules: { resolutions: [ '2k', '3k'], ratios: BASE_RATIOS },
+    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
+        const size = calculateImageSize(params.aspectRatio, params.resolution, 'doubao 5');
         return await generateStandardImage(cfg, { id: 'doubao', name: 'Doubao', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
     }
 };
@@ -175,14 +151,14 @@ export const KlingImageHandler = {
 export const IMAGE_HANDLERS: Record<string, any> = {
     'BananaPro': BananaProHandler,
     'Banana 2': Banana2,
-    'Banana': BananaHandler,
-    'Flux2': Flux2Handler,
     'Fluxpro': FluxProHandler,
-    '即梦 4.5': Jimeng45Handler,
-    '即梦 4': Jimeng4Handler,
-    'doubao 5': Jimeng5Handler,
+    'doubao 4': Doubao4Handler,
+    'doubao 4.5': Doubao45Handler,
+    'doubao 5': Doubao5Handler,
     'MJ': MJHandler,
     'Zimage': ZimageHandler,
-    'Qwenedit': QwenEditHandler,
     'kling image': KlingImageHandler
 };
+
+export const BananaHandler = BananaProHandler;
+export const Flux2Handler = FluxProHandler;

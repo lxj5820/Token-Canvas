@@ -276,7 +276,7 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className={`text-xs font-mono ${textSub}`}>{formatBytes(size)}</span>
+                                    <span className={`text-xs font-mono ${textSub}`}>{formatBytes(size as number)}</span>
                                     <button
                                         onClick={() => handleClearCache(type)}
                                         disabled={isClearing}
@@ -330,6 +330,7 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
                                 <p className={`text-[10px] ${textMuted}`}>缓存生成的内容以加快加载速度</p>
                             </div>
                             <button
+                                title="切换缓存状态"
                                 onClick={() => handleUpdateSetting('cacheEnabled', !settings.cacheEnabled)}
                                 className={`relative w-9 h-5 rounded-full transition-colors ${settings.cacheEnabled ? (isDark ? 'bg-zinc-50' : 'bg-zinc-900') : (isDark ? 'bg-zinc-800' : 'bg-zinc-200')}`}
                             >
@@ -343,7 +344,8 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
                                 <p className={`text-xs font-medium ${textMain}`}>最大缓存大小</p>
                                 <span className={`text-xs font-mono ${textSub}`}>{formatBytes(settings.maxCacheSize)}</span>
                             </div>
-                            <input
+                            <input  
+                                title="调整最大缓存大小"
                                 type="range"
                                 min={100 * 1024 * 1024}
                                 max={2000 * 1024 * 1024}
@@ -385,6 +387,7 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
                                 <p className={`text-[10px] ${textMuted}`}>每隔一段时间自动保存当前工作流</p>
                             </div>
                             <button
+                                title="切换自动保存状态"
                                 onClick={() => handleUpdateSetting('autoSaveWorkflow', !settings.autoSaveWorkflow)}
                                 className={`relative w-9 h-5 rounded-full transition-colors ${settings.autoSaveWorkflow ? (isDark ? 'bg-zinc-50' : 'bg-zinc-900') : (isDark ? 'bg-zinc-800' : 'bg-zinc-200')}`}
                             >
@@ -411,6 +414,7 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
                                 <span className={`text-xs font-mono ${textSub}`}>{Math.round(settings.imageQuality * 100)}%</span>
                             </div>
                             <input
+                                title="调整图片质量"
                                 type="range"
                                 min={0.5}
                                 max={1}

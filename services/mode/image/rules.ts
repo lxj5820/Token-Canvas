@@ -73,7 +73,7 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
       }
   }
 
-  const supportsHighRes = ['BananaPro', 'Banana Pro Edit', '即梦4.5'].includes(modelName);
+  const supportsHighRes = ['BananaPro', 'Banana Pro Edit', '即梦4.5', 'doubao 4.5'].includes(modelName);
 
   if (supportsHighRes) {
       if (resolution === '2k') {

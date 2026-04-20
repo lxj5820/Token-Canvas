@@ -36,10 +36,10 @@ export const MODEL_REGISTRY: Record<string, ModelDef> = {
   'doubao 4.5': { id: 'doubao-seedream-4-5-251128', name: 'Jimeng 4.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
   'doubao 4': { id: 'doubao-seedream-4-0-250828', name: 'Jimeng 4', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
   
-  'MJ': { id: 'mj_modal', name: 'Midjourney', type: 'MJ_MODAL', category: 'IMAGE', defaultEndpoint: '/mj/submit/modal' },
+  //'MJ': { id: 'mj_modal', name: 'Midjourney', type: 'MJ_MODAL', category: 'IMAGE', defaultEndpoint: '/mj/submit/modal' },
   'Zimage': { id: 'z-image-turbo', name: 'Qwen Zimage', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  'Fluxpro': { id: 'flux-pro', name: 'Flux Pro', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  'kling image': { id: 'kling-image', name: 'Kling Image', type: 'KLING_OMNI', category: 'IMAGE', defaultEndpoint: '/kling/v1/images/generations' },
+  //'Fluxpro': { id: 'flux-pro', name: 'Flux Pro', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
+  //'kling image': { id: 'kling-image', name: 'Kling Image', type: 'KLING_OMNI', category: 'IMAGE', defaultEndpoint: '/kling/v1/images/generations' },
 
   // --- Video Models ---
   'Sora 2': { id: 'sora-2', name: 'Sora 2', type: 'VIDEO_GEN_CHAT', category: 'VIDEO', defaultEndpoint: '/v1/chat/completions' },

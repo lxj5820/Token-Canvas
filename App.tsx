@@ -18,6 +18,7 @@ import { AIPanel } from './components/AIPanel';
 const DEFAULT_NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 240; 
 const EMPTY_ARRAY: string[] = [];
+const WORKFLOW_STORAGE_KEY = 'CANVAS_WORKFLOW_DATA';
 
 // 辅助函数：调整导入媒体的尺寸约束
 const calculateImportDimensions = (naturalWidth: number, naturalHeight: number) => {
@@ -81,6 +82,47 @@ const CanvasWithSidebar: React.FC = () => {
 
   // 历史状态（保存已删除的包含内容的节点）
   const [deletedNodes, setDeletedNodes] = useState<NodeData[]>([]);
+
+  // 加载保存的工作流
+  useEffect(() => {
+      try {
+          const saved = localStorage.getItem(WORKFLOW_STORAGE_KEY);
+          if (saved) {
+              const data = JSON.parse(saved);
+              if (data.nodes && data.connections) {
+                  setNodes(data.nodes);
+                  setConnections(data.connections);
+                  if (data.transform) setTransform(data.transform);
+                  if (data.projectName) setProjectName(data.projectName);
+                  console.log('[App] 已从本地存储加载工作流');
+              }
+          }
+      } catch (e) {
+          console.warn('[App] 加载工作流失败:', e);
+      }
+  }, []);
+
+  // 自动保存工作流到 localStorage
+  useEffect(() => {
+      const saveWorkflow = () => {
+          try {
+              const data = {
+                  nodes,
+                  connections,
+                  transform,
+                  projectName,
+                  savedAt: Date.now()
+              };
+              localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(data));
+          } catch (e) {
+              console.warn('[App] 保存工作流失败:', e);
+          }
+      };
+
+      // 防抖保存：节点或连接变化后 1 秒再保存
+      const timeoutId = setTimeout(saveWorkflow, 1000);
+      return () => clearTimeout(timeoutId);
+  }, [nodes, connections, transform, projectName]);
 
   useEffect(() => {
       dragModeRef.current = dragMode;
@@ -437,7 +479,7 @@ const CanvasWithSidebar: React.FC = () => {
     const getDefaultModel = (t: NodeType) => {
         switch (t) {
             case NodeType.TEXT_TO_IMAGE:
-                return 'BananaPro';
+                return 'Banana 2';
             case NodeType.TEXT_TO_VIDEO:
                 return 'Sora 2';
             case NodeType.TEXT_TO_AUDIO:
@@ -502,7 +544,7 @@ const CanvasWithSidebar: React.FC = () => {
       const getDefaultModel = (t: NodeType) => {
           switch (t) {
               case NodeType.TEXT_TO_IMAGE:
-                  return 'BananaPro';
+                  return 'Banana 2';
               case NodeType.TEXT_TO_VIDEO:
                   return 'Sora 2';
               default:
@@ -867,6 +909,8 @@ const CanvasWithSidebar: React.FC = () => {
     setShowNewWorkflowDialog(false);
     setSelectedNodeIds(new Set());
     setSelectionBox(null);
+    // 清除自动保存的工作流
+    localStorage.removeItem(WORKFLOW_STORAGE_KEY);
   };
 
   const handleLoadWorkflow = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1014,7 +1058,7 @@ const CanvasWithSidebar: React.FC = () => {
     if (contextMenu) setContextMenu(null);
     if (quickAddMenu) setQuickAddMenu(null);
     if (selectedConnectionId) setSelectedConnectionId(null);
-    if (e.button === 1 || (e.button === 0 && spacePressed.current)) {
+    if (currentMode === 'pan' || e.button === 1 || (e.button === 0 && spacePressed.current)) {
       setDragMode('PAN');
       dragStartRef.current = { x: e.clientX, y: e.clientY };
       initialTransformRef.current = { ...transform };
@@ -1748,7 +1792,8 @@ const CanvasWithSidebar: React.FC = () => {
                                 <line x1="12" y1="17" x2="12.01" y2="17"/>
                             </svg>
                             <span className={`text-xs font-medium ${isDark ? 'text-red-300' : 'text-red-600'}`}>
-                                数据仅保存在本地浏览器 · 换浏览器或清缓存会丢失
+                                    请先完成api设置，才能正常使用!!!<br />
+                                    数据仅保存在本地浏览器·换浏览器或清缓存会丢失！
                             </span>
                         </div>
                     </div>
@@ -1897,7 +1942,7 @@ const CanvasWithSidebar: React.FC = () => {
             {previewMedia && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setPreviewMedia(null)}>
                     <div className="relative max-w-[90vw] max-h-[90vh] bg-black rounded-lg shadow-2xl overflow-hidden border border-zinc-700" onClick={(e) => e.stopPropagation()}>
-                         <button className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-red-500 transition-colors z-10" onClick={() => setPreviewMedia(null)}><Icons.X size={20} /></button>
+                         <button title="关闭预览" className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-red-500 transition-colors z-10" onClick={() => setPreviewMedia(null)}><Icons.X size={20} /></button>
                          {previewMedia.type === 'video' ? <video src={previewMedia.url} controls autoPlay className="max-w-full max-h-[90vh]" /> : <img src={previewMedia.url} alt="Preview" className="max-w-full max-h-[90vh] object-contain" />}
                     </div>
                 </div>

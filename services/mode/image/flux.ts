@@ -11,6 +11,13 @@ const extractBase64 = (dataUrl: string): string => {
     return dataUrl;
 };
 
+// Helper: Convert base64 data to proper data URL, avoiding double-encoding
+const toDataUrl = (base64Str: string, defaultMimeType = 'image/png'): string => {
+    if (!base64Str) return '';
+    if (base64Str.startsWith('data:')) return base64Str;
+    return `data:${defaultMimeType};base64,${base64Str}`;
+};
+
 export const generateStandardImage = async (
     config: ModelConfig,
     modelDef: ModelDef,
@@ -30,7 +37,7 @@ export const generateStandardImage = async (
    const isQwen = modelDef.id.includes('qwen');
    const hasInputImage = inputImages.length > 0;
 
-   if ((isFlux || isZimage) && n > 1) {
+   if ((isFlux || isZimage || isDoubao) && n > 1) {
       const promises = Array(n).fill(null).map(async () => {
          const payload: any = {
             model: config.modelId, 
@@ -45,6 +52,12 @@ export const generateStandardImage = async (
                  payload.image = inputImages[0];
                  payload.image_url = inputImages[0];
              }
+         } else if (isDoubao) {
+             // 为 Doubao 模型添加比例参数
+             payload.aspect_ratio = aspectRatio;
+             payload.aspectRatio = aspectRatio;
+             // Doubao 模型需要 response_format
+             payload.response_format = "b64_json";
          } else if (isZimage) {
              payload.response_format = "b64_json";
              payload.watermark = false;
@@ -54,9 +67,13 @@ export const generateStandardImage = async (
          const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 200000 });
          const data = (res.data && Array.isArray(res.data)) ? res.data : (res.data ? [res.data] : [res]);
          return data.map((item: any) => {
-             if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+             if (item.b64_json) return toDataUrl(item.b64_json);
              if (item.url) return item.url;
              if (item.image_url) return item.image_url;
+             if (item.base64) return toDataUrl(item.base64);
+             if (item.image_base64) return toDataUrl(item.image_base64);
+             if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+             if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
              return '';
          }).filter((url: string) => !!url)[0]; 
       });
@@ -77,6 +94,11 @@ export const generateStandardImage = async (
            payload.image = inputImages[0];
            payload.image_url = inputImages[0];
        }
+   } else if (isDoubao) {
+       payload.size = calculatedSize;
+       // 为 Doubao 模型添加比例参数
+       payload.aspect_ratio = aspectRatio;
+       payload.aspectRatio = aspectRatio;
    } else {
        payload.size = calculatedSize;
    }
@@ -107,9 +129,13 @@ export const generateStandardImage = async (
    const data = (res.data && Array.isArray(res.data)) ? res.data : (res.data ? [res.data] : [res]);
    
    return data.map((item: any) => {
-       if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+       if (item.b64_json) return toDataUrl(item.b64_json);
        if (item.url) return item.url;
        if (item.image_url) return item.image_url;
+       if (item.base64) return toDataUrl(item.base64);
+       if (item.image_base64) return toDataUrl(item.image_base64);
+       if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+       if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
        return '';
    }).filter((url: string) => !!url);
 };
