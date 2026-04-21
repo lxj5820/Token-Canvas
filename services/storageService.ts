@@ -3,6 +3,8 @@
  * 支持浏览器环境和未来的 Electron/Tauri 打包
  */
 
+import { indexedDbService } from './indexedDbService';
+
 const DB_NAME = 'canvas_storage_db';
 const DB_VERSION = 2;
 const STORE_HANDLES = 'handles';
@@ -490,6 +492,9 @@ class StorageService {
             const keys = await window.caches.keys();
             await Promise.all(keys.map(key => window.caches.delete(key)));
         }
+
+        // 清除 TokenCanvasDB (indexedDbService) 中的工作流和资产数据
+        await indexedDbService.clearAll();
 
         // 注意：不清除设置和目录句柄
     }

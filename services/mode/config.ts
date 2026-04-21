@@ -33,7 +33,7 @@ export const MODEL_REGISTRY: Record<string, ModelDef> = {
   'BananaPro': { id: 'gemini-3-pro-image-preview', name: 'Banana Pro', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3-pro-image-preview:generateContent' },
   
   'gpt-image-2': { id: 'gpt-image-2-all', name: 'gpt-image-2', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  'gpt-image-1.5': { id: 'gpt-image-1.5-all', name: 'gpt-image-1.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
+  //'gpt-image-1.5': { id: 'gpt-image-1.5-all', name: 'gpt-image-1.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
 
 
   'doubao 5': { id: 'doubao-seedream-5-0-260128', name: 'Jimeng 5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },

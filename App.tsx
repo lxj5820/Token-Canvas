@@ -7,6 +7,7 @@ import { NodeContent } from './components/Nodes/NodeContent';
 import { Icons } from './components/Icons';
 import { generateCreativeDescription, generateImage, generateVideo } from './services/geminiService';
 import { storageService } from './services/storageService';
+import { indexedDbService } from './services/indexedDbService';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import Minimap from './components/Minimap';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -85,26 +86,28 @@ const CanvasWithSidebar: React.FC = () => {
 
   // 加载保存的工作流
   useEffect(() => {
-      try {
-          const saved = localStorage.getItem(WORKFLOW_STORAGE_KEY);
-          if (saved) {
-              const data = JSON.parse(saved);
-              if (data.nodes && data.connections) {
-                  setNodes(data.nodes);
-                  setConnections(data.connections);
-                  if (data.transform) setTransform(data.transform);
-                  if (data.projectName) setProjectName(data.projectName);
-                  console.log('[App] 已从本地存储加载工作流');
+      const loadWorkflow = async () => {
+          try {
+              const saved = await indexedDbService.getWorkflow();
+              if (saved) {
+                  if (saved.nodes && saved.connections) {
+                      setNodes(saved.nodes);
+                      setConnections(saved.connections);
+                      if (saved.transform) setTransform(saved.transform);
+                      if (saved.projectName) setProjectName(saved.projectName);
+                      console.log('[App] 已从IndexedDB加载工作流');
+                  }
               }
+          } catch (e) {
+              console.warn('[App] 加载工作流失败:', e);
           }
-      } catch (e) {
-          console.warn('[App] 加载工作流失败:', e);
-      }
+      };
+      loadWorkflow();
   }, []);
 
-  // 自动保存工作流到 localStorage
+  // 自动保存工作流到 IndexedDB
   useEffect(() => {
-      const saveWorkflow = () => {
+      const saveWorkflow = async () => {
           try {
               const data = {
                   nodes,
@@ -113,7 +116,7 @@ const CanvasWithSidebar: React.FC = () => {
                   projectName,
                   savedAt: Date.now()
               };
-              localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(data));
+              await indexedDbService.saveWorkflow(data);
           } catch (e) {
               console.warn('[App] 保存工作流失败:', e);
           }
@@ -151,8 +154,53 @@ const CanvasWithSidebar: React.FC = () => {
   }, [transform.k]);
   
   const handleZoomReset = useCallback(() => {
-      setTransform({ x: 0, y: 0, k: 1 });
-  }, []);
+      if (nodes.length === 0) {
+          // 如果没有节点，重置到默认位置
+          setTransform({ x: 0, y: 0, k: 1 });
+          return;
+      }
+
+      // 计算所有节点的边界框
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+
+      nodes.forEach(node => {
+          minX = Math.min(minX, node.x);
+          minY = Math.min(minY, node.y);
+          maxX = Math.max(maxX, node.x + node.width);
+          maxY = Math.max(maxY, node.y + node.height);
+      });
+
+      // 计算节点边界框的大小
+      const boundingWidth = maxX - minX;
+      const boundingHeight = maxY - minY;
+
+      // 获取容器大小
+      const container = containerRef.current;
+      if (!container) {
+          setTransform({ x: 0, y: 0, k: 1 });
+          return;
+      }
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      // 计算适合的缩放比例，留出一些边距
+      const padding = 50;
+      const scaleX = (containerWidth - padding * 2) / boundingWidth;
+      const scaleY = (containerHeight - padding * 2) / boundingHeight;
+      const newScale = Math.min(scaleX, scaleY, 1); // 最大缩放为1
+
+      // 计算居中位置
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const newX = containerWidth / 2 - centerX * newScale;
+      const newY = containerHeight / 2 - centerY * newScale;
+
+      setTransform({ x: newX, y: newY, k: newScale });
+  }, [nodes]);
 
   // 清除 Sora 2 的旧配置（修复 endpoint 问题）
   useEffect(() => {
@@ -733,12 +781,97 @@ const CanvasWithSidebar: React.FC = () => {
       setIsStorageOpen(true);
   };
 
-  const handleImportWorkflow = (data: { nodes: NodeData[], connections: Connection[], transform?: CanvasTransform, projectName?: string }) => {
+  const handleImportWorkflow = async (data: { nodes: NodeData[], connections: Connection[], transform?: CanvasTransform, projectName?: string }) => {
       // 保存当前有内容的节点到历史
       const withContent = nodes.filter(n => n.imageSrc || n.videoSrc);
       if (withContent.length > 0) setDeletedNodes(prev => [...prev, ...withContent]);
       
-      setNodes(data.nodes);
+      // 创建一个映射来跟踪节点资源的新URL
+      const resourceUrlMap: Map<string, string> = new Map();
+      let processedNodes = [...data.nodes];
+      
+      // 处理图片和视频资源，保存到IndexedDB
+      const resourcePromises: Promise<void>[] = [];
+      const timestamp = Date.now();
+      
+      processedNodes.forEach((node, index) => {
+          // 处理图片资源
+          if (node.imageSrc) {
+              const originalUrl = node.imageSrc;
+              if (originalUrl.startsWith('data:')) {
+                  // 这是一个data URL，直接保存
+                  resourcePromises.push(
+                      (async () => {
+                          try {
+                              const assetId = `imported_img_${node.id}_${timestamp}_${index}`;
+                              await indexedDbService.saveAsset('current', {
+                                  id: assetId,
+                                  url: originalUrl,
+                                  type: 'image',
+                                  data: originalUrl
+                              });
+                              console.log('[App] 导入图片保存成功:', assetId);
+                          } catch (e) {
+                              console.warn('[App] 导入图片保存失败:', e);
+                          }
+                      })()
+                  );
+              }
+          }
+          
+          // 处理视频资源
+          if (node.videoSrc) {
+              const originalUrl = node.videoSrc;
+              if (originalUrl.startsWith('data:') || originalUrl.startsWith('blob:')) {
+                  resourcePromises.push(
+                      (async () => {
+                          try {
+                              let base64Data = originalUrl;
+                              // 如果是blob URL，需要转换为base64
+                              if (originalUrl.startsWith('blob:')) {
+                                  try {
+                                      const response = await fetch(originalUrl);
+                                      const blob = await response.blob();
+                                      base64Data = await new Promise((resolve) => {
+                                          const reader = new FileReader();
+                                          reader.onload = () => resolve(reader.result as string);
+                                          reader.readAsDataURL(blob);
+                                      });
+                                  } catch (e) {
+                                      console.warn('[App] 转换blob URL失败:', e);
+                                      return;
+                                  }
+                              }
+                              
+                              const assetId = `imported_vid_${node.id}_${timestamp}_${index}`;
+                              await indexedDbService.saveAsset('current', {
+                                  id: assetId,
+                                  url: base64Data,
+                                  type: 'video',
+                                  data: base64Data
+                              });
+                              console.log('[App] 导入视频保存成功:', assetId);
+                          } catch (e) {
+                              console.warn('[App] 导入视频保存失败:', e);
+                          }
+                      })()
+                  );
+              }
+          }
+      });
+      
+      // 等待所有资源保存完成
+      if (resourcePromises.length > 0) {
+          try {
+              await Promise.all(resourcePromises);
+              console.log('[App] 所有导入资源已保存完成');
+          } catch (e) {
+              console.warn('[App] 部分资源保存失败:', e);
+          }
+      }
+      
+      // 设置导入的工作流数据
+      setNodes(processedNodes);
       setConnections(data.connections);
       if (data.transform) setTransform(data.transform);
       if (data.projectName) setProjectName(data.projectName);
@@ -748,6 +881,37 @@ const CanvasWithSidebar: React.FC = () => {
   const updateNodeData = useCallback((id: string, updates: Partial<NodeData>) => {
     setNodes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
   }, []);
+
+  // 保存资产到IndexedDB
+  const saveAssetToIndexedDB = async (nodeId: string, url: string, type: 'image' | 'video') => {
+    try {
+      if (url.startsWith('data:')) {
+        await indexedDbService.saveAsset('current', {
+          id: `${nodeId}_${Date.now()}`,
+          url,
+          type,
+          data: url
+        });
+      } else if (url.startsWith('blob:')) {
+        // 对于blob URL，需要转换为base64
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64Data = e.target?.result as string;
+          await indexedDbService.saveAsset('current', {
+            id: `${nodeId}_${Date.now()}`,
+            url,
+            type,
+            data: base64Data
+          });
+        };
+        reader.readAsDataURL(blob);
+      }
+    } catch (e) {
+      console.warn('[App] 保存资产到IndexedDB失败:', e);
+    }
+  };
 
   const handleGenerate = async (nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
@@ -807,8 +971,12 @@ const CanvasWithSidebar: React.FC = () => {
               // 根据节点类型设置输出
               if (node.type === NodeType.TEXT_TO_IMAGE) {
                   updates.imageSrc = results[0];
+                  // 保存图片到IndexedDB
+                  await saveAssetToIndexedDB(nodeId, results[0], 'image');
               } else if (node.type === NodeType.TEXT_TO_VIDEO || node.type === NodeType.START_END_TO_VIDEO) {
                   updates.videoSrc = results[0];
+                  // 保存视频到IndexedDB
+                  await saveAssetToIndexedDB(nodeId, results[0], 'video');
               } else if (node.type === NodeType.TEXT_TO_AUDIO) {
                   updates.audioSrc = results[0];
               }
@@ -857,9 +1025,9 @@ const CanvasWithSidebar: React.FC = () => {
       const nodeId = nodeToReplaceRef.current;
       if (file && nodeId) {
            const reader = new FileReader();
-           reader.onload = (event) => {
+           reader.onload = async (event) => {
                const img = new Image();
-               img.onload = () => {
+               img.onload = async () => {
                    const node = nodes.find(n => n.id === nodeId);
                    if (node) {
                         const { width, height, ratio } = calculateImportDimensions(img.width, img.height);
@@ -872,6 +1040,8 @@ const CanvasWithSidebar: React.FC = () => {
                             aspectRatio: `${ratio}:1`, 
                             outputArtifacts: newArtifacts
                         });
+                        // 保存图片到IndexedDB
+                        await saveAssetToIndexedDB(nodeId, src, 'image');
                    }
                };
                img.src = event.target?.result as string;
@@ -898,7 +1068,7 @@ const CanvasWithSidebar: React.FC = () => {
 
   const handleNewWorkflow = () => setShowNewWorkflowDialog(true);
   
-  const handleConfirmNew = (shouldSave: boolean) => {
+  const handleConfirmNew = async (shouldSave: boolean) => {
     if (shouldSave) handleSaveWorkflow();
     const withContent = nodes.filter(n => n.imageSrc || n.videoSrc);
     if (withContent.length > 0) setDeletedNodes(prev => [...prev, ...withContent]);
@@ -910,7 +1080,7 @@ const CanvasWithSidebar: React.FC = () => {
     setSelectedNodeIds(new Set());
     setSelectionBox(null);
     // 清除自动保存的工作流
-    localStorage.removeItem(WORKFLOW_STORAGE_KEY);
+    await indexedDbService.deleteWorkflow('current');
   };
 
   const handleLoadWorkflow = (e: React.ChangeEvent<HTMLInputElement>) => {

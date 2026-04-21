@@ -3,14 +3,13 @@ import type { ImageModelRules, ModelConfig } from "../types";
 import { generateBananaChatImage, generateBananaEdit } from "./banana";
 import { generateStandardImage, generateMjModal } from "./flux";
 import { calculateImageSize } from "./rules";
+import { GPTImage2Handler, GPTImage15Handler } from "./gpt";
 
 // --- 基础规则配置 ---
 // 基础比例列表
 const BASE_RATIOS = ['1:1', '3:4', '4:3', '9:16', '16:9'];
 // 扩展比例列表（包含更多比例选项）
 const EXTENDED_RATIOS = ['1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'];
-// GPT Image 模型特定尺寸
-const GPT_IMAGE_SIZES = ['1:1', '16:9', '9:16'];
 
 // --- 模型特定实现 ---
 
@@ -39,34 +38,6 @@ export const Banana2 = {
         return await generateBananaChatImage(cfg, prompt, params.aspectRatio, params.resolution, size, params.inputImages);
     }
 };
-
-/**
- * GPT Image 2 模型处理器
- * 支持特定尺寸：1024x1024、1792x1024、1024x1792
- * 使用基础比例列表
- */
-export const GPTImage2Handler = {
-    rules: { resolutions: ['1k'], ratios: GPT_IMAGE_SIZES },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, params.resolution, 'gpt-image-2');
-        return await generateStandardImage(cfg, { id: 'gpt-image-2', name: 'gpt-image-2', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
-    }
-}
-
-/**
- * GPT Image 1.5 模型处理器
- * 支持特定尺寸：1024x1024、1792x1024、1024x1792
- * 使用 GPT Image 模型特定尺寸比例
- */
-export const GPTImage15Handler = {
-    rules: { resolutions: ['1k'], ratios: GPT_IMAGE_SIZES },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        const size = calculateImageSize(params.aspectRatio, params.resolution, 'gpt-image-1.5');
-        return await generateStandardImage(cfg, { id: 'gpt-image-1.5', name: 'gpt-image-1.5', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
-    }
-}
-
-
 
 /**
  * 即梦 4.5 模型处理器

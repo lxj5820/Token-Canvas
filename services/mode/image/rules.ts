@@ -5,6 +5,7 @@
  */
 
 import { ImageModelRules } from "../types";
+import { GPT_IMAGE_CONFIG } from "./gpt";
 
 /**
  * 默认比例列表
@@ -29,8 +30,8 @@ export const IMAGE_MODEL_CAPABILITIES: Record<string, ImageModelRules> = {
     'Zimage': { resolutions: ['1k'], ratios: DEFAULT_RATIOS, hasPromptExtend: true },
     'Qwenedit': { resolutions: ['1k'], ratios: DEFAULT_RATIOS },
     'kling image': { resolutions: ['1k'], ratios: DEFAULT_RATIOS },
-    'gpt-image-2': { resolutions: ['1k'], ratios: ['1:1', '16:9', '9:16'], supportsEdit: true },
-    'gpt-image-1.5': { resolutions: ['1k'], ratios: ['1:1', '16:9', '9:16'], supportsEdit: true }
+    'gpt-image-2': { resolutions: GPT_IMAGE_CONFIG.supportedResolutions, ratios: GPT_IMAGE_CONFIG.supportedRatios, supportsEdit: true },
+    'gpt-image-1.5': { resolutions: GPT_IMAGE_CONFIG.supportedResolutions, ratios: GPT_IMAGE_CONFIG.supportedRatios, supportsEdit: true }
 };
 
 /**
@@ -58,11 +59,11 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
   }
 
   // GPT Image 模型特殊处理
-  // 只支持三种尺寸：1024x1024、1792x1024、1024x1792
+  // 支持尺寸：1024x1024、1536x1024（横版）、1024x1536（竖版）
   if (modelName.includes('gpt-image')) {
       if (aspectRatio === '1:1') return '1024x1024';
-      if (aspectRatio === '16:9') return '1792x1024';
-      if (aspectRatio === '9:16') return '1024x1792';
+      if (aspectRatio === '3:2') return '1536x1024';
+      if (aspectRatio === '2:3') return '1024x1536';
       // 对于其他比例，默认使用 1:1
       return '1024x1024';
   }

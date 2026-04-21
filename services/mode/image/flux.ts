@@ -35,7 +35,6 @@ export const generateStandardImage = async (
    const isDoubao = modelDef.id.includes('doubao');
    const isZimage = modelDef.id.includes('z-image');
    const isQwen = modelDef.id.includes('qwen');
-   const isGptImage = modelDef.id.includes('gpt-image');
    const hasInputImage = inputImages.length > 0;
 
    if ((isFlux || isZimage || isDoubao) && n > 1) {
@@ -64,15 +63,6 @@ export const generateStandardImage = async (
              payload.watermark = false;
              payload.prompt_extend = !!promptOptimize;
              if (hasInputImage) payload.image = extractBase64(inputImages[0]);
-         } else if (isGptImage) {
-             // GPT Image 模型需要 response_format
-             payload.response_format = "b64_json";
-             // GPT Image image-to-image support
-             if (hasInputImage) {
-                 payload.image = inputImages[0];
-                 payload.image_url = inputImages[0];
-                 payload.init_image = inputImages[0];
-             }
          }
          const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 200000 });
          const data = (res.data && Array.isArray(res.data)) ? res.data : (res.data ? [res.data] : [res]);
@@ -117,9 +107,6 @@ export const generateStandardImage = async (
        payload.watermark = false;
        payload.prompt_extend = !!promptOptimize;
        if (hasInputImage) payload.image = extractBase64(inputImages[0]);
-   } else if (isGptImage) {
-       // GPT Image 模型需要 response_format
-       payload.response_format = "b64_json";
    }
 
    // Jimeng (即梦) image-to-image support
@@ -136,13 +123,6 @@ export const generateStandardImage = async (
        payload.image = inputImages[0];
        payload.image_url = inputImages[0];
        payload.ref_image = inputImages[0];
-   }
-
-   // GPT Image image-to-image support
-   if (isGptImage && hasInputImage) {
-       payload.image = inputImages[0];
-       payload.image_url = inputImages[0];
-       payload.init_image = inputImages[0];
    }
 
    const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 200000 });

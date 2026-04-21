@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Icons } from '../Icons';
 import { storageService, StorageStats, AppSettings } from '../../services/storageService';
+import { indexedDbService } from '../../services/indexedDbService';
 
 interface StorageModalProps {
     isOpen: boolean;
@@ -32,9 +33,21 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
             Promise.resolve(storageService.getSettings())
         ]);
         
+        // 获取indexedDbService的资源统计
+        const assetStats = await indexedDbService.getAssetStats();
+        
         setStorageDir(dir);
         setStorageStats(stats);
-        setCacheStats(cache);
+        setCacheStats({
+            ...cache,
+            count: cache.count + assetStats.count,
+            totalSize: cache.totalSize + assetStats.totalSize,
+            byType: {
+                ...cache.byType,
+                image: (cache.byType.image || 0) + (assetStats.byType.image || 0),
+                video: (cache.byType.video || 0) + (assetStats.byType.video || 0)
+            }
+        });
         setSettings(appSettings);
     }, []);
 
@@ -63,8 +76,14 @@ export const StorageModal: React.FC<StorageModalProps> = ({ isOpen, onClose, isD
         
         try {
             if (type) {
+                // 按类型清理时，需要同时清理 storageService 和 indexedDbService
                 await storageService.clearCache(type as any);
+                // 如果是图片或视频类型，也清理 indexedDbService 中的对应资产
+                if (type === 'image' || type === 'video') {
+                    await indexedDbService.deleteAssetsByType(type);
+                }
             } else {
+                // 清理所有数据
                 await storageService.clearAllData();
             }
             await loadData();

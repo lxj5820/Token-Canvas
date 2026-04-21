@@ -11,7 +11,7 @@ interface ExportImportModalProps {
     nodes: NodeData[];
     connections: Connection[];
     transform: CanvasTransform;
-    onImport: (data: { nodes: NodeData[], connections: Connection[], transform?: CanvasTransform, projectName?: string }) => void;
+    onImport: (data: { nodes: NodeData[], connections: Connection[], transform?: CanvasTransform, projectName?: string }) => Promise<void> | void;
 }
 
 type TabType = 'export' | 'import';
@@ -33,13 +33,63 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     const [localProjectName, setLocalProjectName] = useState(projectName);
     const [isExporting, setIsExporting] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isPickerActive, setIsPickerActive] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importProgress, setImportProgress] = useState<string>('');
     
     const importInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFile = async (file: File) => {
+        if (isImporting) return;
+        
+        setImportError(null);
+        setIsImporting(true);
+        setImportProgress('正在解析文件...');
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = JSON.parse(event.target?.result as string);
+                if (data.nodes && data.connections) {
+                    setImportProgress('正在处理资源...');
+                    
+                    await onImport({
+                        nodes: data.nodes,
+                        connections: data.connections,
+                        transform: data.transform,
+                        projectName: data.projectName
+                    });
+                    
+                    setImportProgress('导入完成！');
+                    setTimeout(() => {
+                        onClose();
+                    }, 500);
+                } else {
+                    setImportError('无效的工作流文件格式');
+                    setIsImporting(false);
+                }
+            } catch (err) {
+                console.error(err);
+                setImportError('文件解析失败，请确保文件格式正确');
+                setIsImporting(false);
+            }
+        };
+        reader.onerror = () => {
+            setImportError('文件读取失败');
+            setIsImporting(false);
+        };
+        reader.readAsText(file);
+    };
 
     useEffect(() => {
         if (isOpen) {
             setLocalProjectName(projectName);
             setImportError(null);
+            setIsPickerActive(false);
+            setIsDragging(false);
+            setIsImporting(false);
+            setImportProgress('');
         }
     }, [isOpen, projectName]);
 
@@ -54,6 +104,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
     // 导出 JSON
     const handleExportJSON = async () => {
+        if (isExporting) return;
+        
         setIsExporting(true);
         try {
             const workflowData = {
@@ -90,11 +142,28 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
     // 导出文件夹（包含资源）
     const handleExportFolder = async () => {
+        // 防止重复点击
+        if (isExporting || isPickerActive) return;
+        
         setIsExporting(true);
+        setIsPickerActive(true);
+        
         try {
             // 检查是否支持 File System Access API
             if ('showDirectoryPicker' in window) {
-                const dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+                let dirHandle;
+                try {
+                    dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+                } catch (pickerError: any) {
+                    // 用户取消或选择器关闭
+                    console.log('目录选择已取消或失败:', pickerError);
+                    setIsPickerActive(false);
+                    setIsExporting(false);
+                    return;
+                }
+                
+                setIsPickerActive(false);
+                
                 const safeName = localProjectName.replace(/[<>:"/\\|?*]/g, '_').trim() || '未命名项目';
                 
                 // 创建项目文件夹
@@ -158,6 +227,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 onProjectNameChange(localProjectName);
             } else {
                 // 降级为 ZIP 下载
+                setIsPickerActive(false);
                 alert('您的浏览器不支持文件夹导出，将使用 JSON 格式导出');
                 handleExportJSON();
                 return;
@@ -169,8 +239,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             }, 500);
         } catch (e: any) {
             console.error(e);
-            if (e.name !== 'AbortError') {
-                alert('导出失败: ' + e.message);
+            setIsPickerActive(false);
+            // 只在非用户取消的情况下显示错误
+            if (e.name !== 'AbortError' && e.message !== 'The user aborted a request.') {
+                alert('导出失败: ' + (e.message || '未知错误'));
             }
             setIsExporting(false);
         }
@@ -188,30 +260,28 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
-        setImportError(null);
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const data = JSON.parse(event.target?.result as string);
-                if (data.nodes && data.connections) {
-                    onImport({
-                        nodes: data.nodes,
-                        connections: data.connections,
-                        transform: data.transform,
-                        projectName: data.projectName
-                    });
-                    onClose();
-                } else {
-                    setImportError('无效的工作流文件格式');
-                }
-            } catch (err) {
-                console.error(err);
-                setImportError('文件解析失败，请确保文件格式正确');
-            }
-        };
-        reader.readAsText(file);
+        handleFile(file);
         e.target.value = '';
+    };
+
+    // 拖拽事件
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            await handleFile(file);
+        }
     };
 
     // 样式
@@ -376,34 +446,65 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                     ) : (
                         <>
                             {/* Import Area */}
-                            <div 
-                                className={`relative p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer group ${
-                                    isDark 
-                                        ? 'border-zinc-700 hover:border-blue-500/50 bg-[#131316] hover:bg-blue-500/5' 
-                                        : 'border-gray-300 hover:border-blue-500 bg-gray-50 hover:bg-blue-50'
-                                }`}
-                                onClick={() => importInputRef.current?.click()}
-                            >
-                                <div className="flex flex-col items-center gap-3 text-center">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                                        isDark ? 'bg-zinc-800 group-hover:bg-blue-500/20' : 'bg-gray-200 group-hover:bg-blue-100'
-                                    }`}>
-                                        <Icons.Upload size={22} className={`transition-colors ${isDark ? 'text-gray-500 group-hover:text-blue-400' : 'text-gray-400 group-hover:text-blue-500'}`} />
-                                    </div>
-                                    <div>
-                                        <p className={`text-sm font-medium ${textMain}`}>点击选择或拖拽文件</p>
-                                        <p className={`text-[11px] mt-0.5 ${textMuted}`}>支持 .flow, .json 格式</p>
+                            {isImporting ? (
+                                <div 
+                                    className={`relative p-6 rounded-xl border-2 transition-all ${
+                                        isDark ? 'border-zinc-700 bg-[#131316]' : 'border-gray-300 bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="flex flex-col items-center gap-3 text-center">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                            isDark ? 'bg-zinc-800 text-blue-400' : 'bg-gray-200 text-blue-500'
+                                        }`}>
+                                            <Icons.Loader2 size={22} className="animate-spin" />
+                                        </div>
+                                        <div>
+                                            <p className={`text-sm font-medium ${textMain}`}>正在导入...</p>
+                                            <p className={`text-[11px] mt-0.5 ${textMuted}`}>{importProgress}</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <input
-                                    title="选择文件"
-                                    ref={importInputRef}
-                                    type="file"
-                                    accept=".flow,.json,.aistudio-flow"
-                                    onChange={handleImportFile}
-                                    className="hidden"
-                                />
-                            </div>
+                            ) : (
+                                <div 
+                                    className={`relative p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer group ${
+                                        isDragging 
+                                            ? (isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-500 bg-blue-50') 
+                                            : (isDark 
+                                                ? 'border-zinc-700 hover:border-blue-500/50 bg-[#131316] hover:bg-blue-500/5' 
+                                                : 'border-gray-300 hover:border-blue-500 bg-gray-50 hover:bg-blue-50')
+                                    }`}
+                                    onClick={() => importInputRef.current?.click()}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                >
+                                    <div className="flex flex-col items-center gap-3 text-center">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                                            isDragging 
+                                                ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-500') 
+                                                : (isDark ? 'bg-zinc-800 group-hover:bg-blue-500/20' : 'bg-gray-200 group-hover:bg-blue-100')
+                                        }`}>
+                                            <Icons.Upload size={22} className={`transition-colors ${
+                                                isDragging 
+                                                    ? (isDark ? 'text-blue-400' : 'text-blue-500') 
+                                                    : (isDark ? 'text-gray-500 group-hover:text-blue-400' : 'text-gray-400 group-hover:text-blue-500')
+                                            }`} />
+                                        </div>
+                                        <div>
+                                            <p className={`text-sm font-medium ${textMain}`}>{isDragging ? '释放以导入文件' : '点击选择或拖拽文件'}</p>
+                                            <p className={`text-[11px] mt-0.5 ${textMuted}`}>支持 .flow, .json 格式（图片视频会自动保存）</p>
+                                        </div>
+                                    </div>
+                                    <input
+                                        title="选择文件"
+                                        ref={importInputRef}
+                                        type="file"
+                                        accept=".flow,.json,.aistudio-flow"
+                                        onChange={handleImportFile}
+                                        className="hidden"
+                                    />
+                                </div>
+                            )}
 
                             {importError && (
                                 <div className={`p-3 rounded-lg ${isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}>
@@ -418,6 +519,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                             <div className={`text-[11px] ${textMuted} space-y-1`}>
                                 <p>• 导入将替换当前工作流内容</p>
                                 <p>• 支持从其他设备导出的文件</p>
+                                <p>• 图片和视频会自动保存到本地存储</p>
                             </div>
                         </>
                     )}
