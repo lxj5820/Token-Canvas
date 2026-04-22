@@ -9,8 +9,8 @@ const toDataUrl = (base64Str: string, defaultMimeType = 'image/png'): string => 
     return `data:${defaultMimeType};base64,${base64Str}`;
 };
 
-// GPT Image 模型特定尺寸（符合API文档要求）
-const GPT_IMAGE_SIZES = ['1:1', '3:2', '2:3'];
+// GPT Image 模型特定尺寸
+const GPT_IMAGE_SIZES = ['1:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16', '5:4', '4:5', '21:9', '9:21'];
 
 /**
  * GPT Image 2 模型处理器
@@ -96,44 +96,76 @@ export const generateGptImage = async (
             
             // 打印响应结构以便调试
             console.log('[GPT Image] Response structure:', Object.keys(res));
-            console.log('[GPT Image] Response:', JSON.stringify(res).substring(0, 500));
+
+            // 处理不同格式的响应
+            if (res.data?.b64_json) return toDataUrl(res.data.b64_json);
+            if (res.data?.url) return res.data.url;
+            if (res.data?.image_url) return res.data.image_url;
+            if (res.data?.base64) return toDataUrl(res.data.base64);
+            if (res.data?.image_base64) return toDataUrl(res.data.image_base64);
+            if (typeof res.data?.image === 'string' && res.data.image.length > 100) return toDataUrl(res.data.image);
+            if (typeof res.data?.data === 'string' && res.data.data.length > 100) return toDataUrl(res.data.data);
             
-            // API返回格式为chat.completion，图像在choices[0].message.content中
-            if (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content) {
-                const content = res.choices[0].message.content;
-                // content可能是base64编码的图像数据或URL
-                if (content.startsWith('data:') || content.startsWith('http')) {
-                    return content;
-                } else if (content.length > 100) {
-                    // 可能是纯base64数据，需要包装成data URL
-                    return toDataUrl(content);
+            if (res.url) return res.url;
+            if (res.image_url) return res.image_url;
+            if (res.base64) return toDataUrl(res.base64);
+            if (res.image_base64) return toDataUrl(res.image_base64);
+            if (typeof res.image === 'string' && res.image.length > 100) return toDataUrl(res.image);
+            if (typeof res.data === 'string' && res.data.length > 100) return toDataUrl(res.data);
+            
+            if (res.choices?.[0]?.message?.content) return res.choices[0].message.content;
+            if (res.choices?.[0]?.text) return res.choices[0].text;
+            
+            if (Array.isArray(res.data)) {
+                for (const item of res.data) {
+                    if (item.b64_json) return toDataUrl(item.b64_json);
+                    if (item.url) return item.url;
+                    if (item.image_url) return item.image_url;
+                    if (item.base64) return toDataUrl(item.base64);
+                    if (item.image_base64) return toDataUrl(item.image_base64);
+                    if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+                    if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
                 }
             }
             
-            // 备用解析方式
-            const data = (res.data && Array.isArray(res.data)) ? res.data : (res.data ? [res.data] : [res]);
-            return data.map((item: any) => {
-                if (item.b64_json) return toDataUrl(item.b64_json);
-                if (item.url) return item.url;
-                if (item.image_url) return item.image_url;
-                if (item.base64) return toDataUrl(item.base64);
-                if (item.image_base64) return toDataUrl(item.image_base64);
-                if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-                if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
-                return '';
-            }).filter((url: string) => !!url)[0];
+            if (Array.isArray(res.images)) {
+                for (const item of res.images) {
+                    if (item.b64_json) return toDataUrl(item.b64_json);
+                    if (item.url) return item.url;
+                    if (item.image_url) return item.image_url;
+                    if (item.base64) return toDataUrl(item.base64);
+                    if (item.image_base64) return toDataUrl(item.image_base64);
+                    if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+                    if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
+                }
+            }
+            
+            if (Array.isArray(res.output)) {
+                for (const item of res.output) {
+                    if (item.b64_json) return toDataUrl(item.b64_json);
+                    if (item.url) return item.url;
+                    if (item.image_url) return item.image_url;
+                    if (item.base64) return toDataUrl(item.base64);
+                    if (item.image_base64) return toDataUrl(item.image_base64);
+                    if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+                    if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
+                }
+            }
+            
+            return '';
         });
+        
         const results = await Promise.all(promises);
-        return results.filter(r => !!r);
+        return results.filter((url: string) => !!url);
     }
-
+    
     const payload: any = {
         model: config.modelId,
         prompt,
-        n: n,
-        size: calculatedSize
+        size: calculatedSize,
+        n: n || 1
     };
-
+    
     // GPT Image image-to-image support
     if (hasInputImage) {
         payload.image = inputImages[0];
@@ -143,28 +175,54 @@ export const generateGptImage = async (
     
     // 打印响应结构以便调试
     console.log('[GPT Image] Response structure:', Object.keys(res));
-    console.log('[GPT Image] Response:', JSON.stringify(res).substring(0, 500));
+
+    // 处理不同格式的响应
+    if (res.data?.b64_json) return [toDataUrl(res.data.b64_json)];
+    if (res.data?.url) return [res.data.url];
+    if (res.data?.image_url) return [res.data.image_url];
+    if (res.data?.base64) return [toDataUrl(res.data.base64)];
+    if (res.data?.image_base64) return [toDataUrl(res.data.image_base64)];
+    if (typeof res.data?.image === 'string' && res.data.image.length > 100) return [toDataUrl(res.data.image)];
+    if (typeof res.data?.data === 'string' && res.data.data.length > 100) return [toDataUrl(res.data.data)];
     
-    // API返回格式为chat.completion，图像在choices[0].message.content中
-    if (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content) {
-        const content = res.choices[0].message.content;
-        // content可能是base64编码的图像数据或URL
-        if (content.startsWith('data:') || content.startsWith('http')) {
-            return [content];
-        } else if (content.length > 100) {
-            // 可能是纯base64数据，需要包装成data URL
-            return [toDataUrl(content)];
-        }
-    }
+    if (res.url) return [res.url];
+    if (res.image_url) return [res.image_url];
+    if (res.base64) return [toDataUrl(res.base64)];
+    if (res.image_base64) return [toDataUrl(res.image_base64)];
+    if (typeof res.image === 'string' && res.image.length > 100) return [toDataUrl(res.image)];
+    if (typeof res.data === 'string' && res.data.length > 100) return [toDataUrl(res.data)];
     
-    // 检查是否有错误响应
-    if (res.error) {
-        throw new Error(res.error.message || 'GPT Image API error');
-    }
+    if (res.choices?.[0]?.message?.content) return [res.choices[0].message.content];
+    if (res.choices?.[0]?.text) return [res.choices[0].text];
     
-    // 检查标准图像响应格式
-    if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+    if (Array.isArray(res.data)) {
         return res.data.map((item: any) => {
+            if (item.b64_json) return toDataUrl(item.b64_json);
+            if (item.url) return item.url;
+            if (item.image_url) return item.image_url;
+            if (item.base64) return toDataUrl(item.base64);
+            if (item.image_base64) return toDataUrl(item.image_base64);
+            if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+            if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
+            return '';
+        }).filter((url: string) => !!url);
+    }
+    
+    if (Array.isArray(res.images)) {
+        return res.images.map((item: any) => {
+            if (item.b64_json) return toDataUrl(item.b64_json);
+            if (item.url) return item.url;
+            if (item.image_url) return item.image_url;
+            if (item.base64) return toDataUrl(item.base64);
+            if (item.image_base64) return toDataUrl(item.image_base64);
+            if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
+            if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
+            return '';
+        }).filter((url: string) => !!url);
+    }
+    
+    if (Array.isArray(res.output)) {
+        return res.output.map((item: any) => {
             if (item.b64_json) return toDataUrl(item.b64_json);
             if (item.url) return item.url;
             if (item.image_url) return item.image_url;
