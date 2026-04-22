@@ -1,13 +1,13 @@
 
 import { VideoModelRules, VideoConstraints } from "../types";
 
-export const videoModels = ['Sora2', 'Veo 3.1 Fast', 'Veo 3.1 Pro', '海螺2.0', '海螺2.3', 'Kling O1 Std', 'Kling O1 Pro', '即梦 3.5', 'Kling 2.6 ProNS', 'Kling 2.6 ProYS', 'Kling 2.5 Std', 'Kling 2.5 Pro', 'Wan2.6', 'Wan2.5', 'Doubao Video', 'Grok video 3'];
+export const videoModels = ['Sora 2', 'Veo 3.1', 'Veo 3.1 Fast', 'Veo 3.1 Pro', 'Veo 3.1 4K', 'Veo 3.1 Pro 4K', 'Veo 3.1 Fast Components', 'Veo 3.1 Components', '海螺2.0', '海螺2.3', 'Kling O1 Std', 'Kling O1 Pro', '即梦 3.5', 'Kling 2.6 ProNS', 'Kling 2.6 ProYS', 'Kling 2.5 Std', 'Kling 2.5 Pro', 'Wan2.6', 'Wan2.5', 'Doubao Video', 'Grok video 3'];
 export const videoDurations = ['3s', '4s', '5s', '6s', '7s', '8s', '10s', '12s', '15s', '25s'];
 
 export const getVideoConstraints = (modelName: string, resolution: string | undefined, duration: string | undefined, inputCount: number): VideoConstraints => {
     const isDoubaoVideo = modelName === 'Doubao Video';
     const isHailuo = modelName === '海螺2.0' || modelName === '海螺2.3';
-    const isVeo = modelName === 'Veo 3.1 Fast' || modelName === 'Veo 3.1 Pro';
+    const isVeo = modelName.startsWith('Veo 3.1');
     const isSeedance = modelName === '即梦 3.5';
     const isKlingO1 = modelName === 'Kling O1 Std' || modelName === 'Kling O1 Pro';
     const isKlingStd = modelName.includes('Kling 2.');
@@ -35,6 +35,10 @@ export const getVideoConstraints = (modelName: string, resolution: string | unde
         }
     } else if (isVeo) {
         // Veo: 禁用480p，禁用1:1/3:4/4:3（仅保留16:9, 9:16），仅支持8秒时长
+        // 4K 模型支持 4K 分辨率
+        if (modelName.includes('4K')) {
+            resOptions = ['720p', '1080p', '4K'];
+        }
         disabledRes = ['480p']; 
         disabledRatios = ['1:1', '3:4', '4:3'];
         disabledDurations = videoDurations.filter(d => d !== '8s');
@@ -82,7 +86,7 @@ export const getVideoConstraints = (modelName: string, resolution: string | unde
 
 export const getAutoCorrectedVideoSettings = (modelName: string, resolution: string | undefined, duration: string | undefined, inputCount: number): { resolution?: string, duration?: string, aspectRatio?: string } => {
     const isHailuo = modelName === '海螺2.0' || modelName === '海螺2.3';
-    const isVeo = modelName === 'Veo 3.1 Fast' || modelName === 'Veo 3.1 Pro';
+    const isVeo = modelName.startsWith('Veo 3.1');
     const isSeedance = modelName === '即梦 3.5';
     const isKlingO1 = modelName === 'Kling O1 Std' || modelName === 'Kling O1 Pro';
     const isKlingStd = modelName.includes('Kling 2.');

@@ -46,9 +46,14 @@ export const MODEL_REGISTRY: Record<string, ModelDef> = {
   //'kling image': { id: 'kling-image', name: 'Kling Image', type: 'KLING_OMNI', category: 'IMAGE', defaultEndpoint: '/kling/v1/images/generations' },
 
   // --- Video Models ---
-  'Sora 2': { id: 'sora-2', name: 'Sora 2', type: 'VIDEO_GEN_CHAT', category: 'VIDEO', defaultEndpoint: '/v1/chat/completions' },
-  'Veo 3.1 Fast': { id: 'veo3.1', name: 'Veo 3.1 Fast', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  'Sora 2': { id: 'sora-2-pro', name: 'Sora 2', type: 'VIDEO_GEN_CHAT', category: 'VIDEO', defaultEndpoint: '/v1/videos/create' },
+  'Veo 3.1': { id: 'veo3.1', name: 'Veo 3.1', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  'Veo 3.1 Fast': { id: 'veo3.1-fast', name: 'Veo 3.1 Fast', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
   'Veo 3.1 Pro': { id: 'veo3.1-pro', name: 'Veo 3.1 Pro', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  'Veo 3.1 4K': { id: 'veo3.1-4k', name: 'Veo 3.1 4K', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  'Veo 3.1 Pro 4K': { id: 'veo3.1-pro-4k', name: 'Veo 3.1 Pro 4K', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  'Veo 3.1 Fast Components': { id: 'veo3.1-fast-components', name: 'Veo 3.1 Fast Components', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  'Veo 3.1 Components': { id: 'veo3.1-components', name: 'Veo 3.1 Components', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
   '海螺2.0': { id: 'MiniMax-Hailuo-02', name: 'Hailuo 2.0',  type: 'VIDEO_GEN_MINIMAX', category: 'VIDEO', defaultEndpoint: '/v1/video_generation',defaultQueryEndpoint: '/v1/query/video_generation',defaultDownloadEndpoint: '/v1/files/retrieve'},
   '海螺2.3': { id: 'MiniMax-Hailuo-2.3', name: 'Hailuo 2.3', type: 'VIDEO_GEN_MINIMAX', category: 'VIDEO', defaultEndpoint: '/v1/video_generation',defaultQueryEndpoint: '/v1/query/video_generation',defaultDownloadEndpoint: '/v1/files/retrieve'},
   

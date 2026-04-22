@@ -66,9 +66,9 @@ export const generateGenericVideo = async (
         await new Promise(r => setTimeout(r, 5000));
         try {
             const check = await fetchThirdParty(qUrl.includes(taskId) || (config.queryEndpoint && config.queryEndpoint.includes('{id}')) ? qUrl : `${qUrl}?task_id=${taskId}`, 'GET', null, config, { timeout: 10000 });
-            const status = (check.status || check.task_status || check.state || '').toString().toUpperCase();
+            const status = (check.status || check.task_status || check.state || '').toString().toLowerCase();
             
-            if (['SUCCESS', 'SUCCEEDED', 'COMPLETED', 'OK'].includes(status)) {
+            if (['success', 'succeeded', 'completed', 'ok'].includes(status)) {
                  if (check.url) return check.url;
                  if (check.output?.url) return check.output.url;
                  if (check.result?.url) return check.result.url;
@@ -77,11 +77,22 @@ export const generateGenericVideo = async (
                  if (check.video?.url) return check.video.url;
                  if (Array.isArray(check.data) && check.data[0]?.url) return check.data[0].url;
                  if (check.data?.video?.url) return check.data.video.url;
-            } else if (['FAIL', 'FAILED', 'FAILURE', 'ERROR'].includes(status)) {
-                 throw new Error(`Video Gen failed: ${check.fail_reason || check.error || 'Unknown error'}`);
+            } else if (['fail', 'failed', 'failure', 'error'].includes(status)) {
+                 let errorMessage = 'Unknown error';
+                 if (check.error?.message) {
+                     errorMessage = check.error.message;
+                 } else if (check.error) {
+                     errorMessage = typeof check.error === 'string' ? check.error : JSON.stringify(check.error);
+                 } else if (check.fail_reason) {
+                     errorMessage = check.fail_reason;
+                 } else if (check.message) {
+                     errorMessage = check.message;
+                 }
+                 throw new Error(errorMessage);
             }
         } catch (e: any) {
             if (attempts > 10 && e.isNonRetryable) throw e;
+            if (e.message && e.message !== 'Unknown error') throw e;
         }
         attempts++;
      }
@@ -124,24 +135,57 @@ export const generateVeo3Video = async (
      while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         try {
-            // Veo特定查询格式：?id=TASK_ID
             const finalUrl = `${qUrl}?id=${taskId}`;
             
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
             
             const status = (check.status || check.state || '').toString().toLowerCase();
             
-            if (['completed', 'success', 'succeeded', 'ok'].includes(status)) {
+            // Veo3.1 成功状态检查：
+            // 1. status === 'video_downloading' - 视频正在下载中
+            // 2. detail.video_generation_status === 'MEDIA_GENERATION_STATUS_SUCCESSFUL' - 视频生成成功
+            // 3. 标准成功状态
+            const genStatus = check.detail?.video_generation_status || '';
+            const isGenerationSuccessful = genStatus.includes('MEDIA_GENERATION_STATUS_SUCCESSFUL');
+            const isVideoDownloading = status === 'video_downloading';
+            const isStandardSuccess = ['completed', 'success', 'succeeded', 'ok'].includes(status);
+            
+            if (isGenerationSuccessful || isVideoDownloading || isStandardSuccess) {
+                 // 优先检查 detail.video_download_url（Veo3.1 新格式）
+                 if (check.detail?.video_download_url) {
+                     console.log('[Veo3] Video download URL found:', check.detail.video_download_url);
+                     return check.detail.video_download_url;
+                 }
+                 
+                 // 检查其他可能的 URL 字段
                  if (check.video_url) return check.video_url;
                  if (check.detail?.video_url) return check.detail.video_url;
                  if (check.detail?.upsample_video_url) return check.detail.upsample_video_url;
                  if (check.url) return check.url;
                  if (check.data?.video_url) return check.data.video_url;
+                 
+                 // 如果是 video_downloading 但还没 URL，继续轮询
+                 if (isVideoDownloading && !check.detail?.video_download_url) {
+                     console.log('[Veo3] Video generation successful, waiting for download URL...');
+                 }
             } else if (['failed', 'failure', 'error'].includes(status)) {
-                 throw new Error(`Veo3 failed: ${check.fail_reason || check.error || 'Unknown error'}`);
+                 let errorMessage = 'Unknown error';
+                 if (check.error?.message) {
+                     errorMessage = check.error.message;
+                 } else if (check.error) {
+                     errorMessage = typeof check.error === 'string' ? check.error : JSON.stringify(check.error);
+                 } else if (check.fail_reason) {
+                     errorMessage = check.fail_reason;
+                 } else if (check.message) {
+                     errorMessage = check.message;
+                 } else if (check.detail?.error_message) {
+                     errorMessage = check.detail.error_message;
+                 }
+                 throw new Error(errorMessage);
             }
         } catch (e: any) {
             if (attempts > 20 && e.isNonRetryable) throw e;
+            if (e.message && e.message !== 'Unknown error') throw e;
         }
         attempts++;
      }
@@ -157,7 +201,6 @@ export const generateGrokVideo = async (
 ): Promise<string> => {
      const targetUrl = constructUrl(config.baseUrl, config.endpoint);
      
-     // Grok要求"size": "720P"（大写P）
      const size = (resolution || '720p').toUpperCase();
 
      const payload: any = {
@@ -187,7 +230,6 @@ export const generateGrokVideo = async (
      while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         try {
-            // 查询参数样式 ?id=...
             const finalUrl = `${qUrl}?id=${taskId}`;
             
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
@@ -198,13 +240,23 @@ export const generateGrokVideo = async (
                  if (check.url) return check.url;
                  if (check.data?.url) return check.data.url;
                  if (check.data?.video_url) return check.data.video_url;
-                 // 备用方案
                  if (check.video_url) return check.video_url;
             } else if (['failed', 'failure', 'error'].includes(status)) {
-                 throw new Error(`Grok failed: ${check.fail_reason || check.error || 'Unknown error'}`);
+                 let errorMessage = 'Unknown error';
+                 if (check.error?.message) {
+                     errorMessage = check.error.message;
+                 } else if (check.error) {
+                     errorMessage = typeof check.error === 'string' ? check.error : JSON.stringify(check.error);
+                 } else if (check.fail_reason) {
+                     errorMessage = check.fail_reason;
+                 } else if (check.message) {
+                     errorMessage = check.message;
+                 }
+                 throw new Error(errorMessage);
             }
         } catch (e: any) {
             if (attempts > 20 && e.isNonRetryable) throw e;
+            if (e.message && e.message !== 'Unknown error') throw e;
         }
         attempts++;
      }
@@ -221,9 +273,8 @@ export const generateSoraVideo = async (
 ): Promise<string> => {
      const targetUrl = constructUrl(config.baseUrl, config.endpoint);
      
-     // 映射参数
      const orientation = aspectRatio === '9:16' ? 'portrait' : 'landscape';
-     const size = resolution === '1080p' ? 'large' : 'small'; // small 是 720p
+     const size = resolution === '1080p' ? 'large' : 'small';
      const durationInt = parseInt(duration.replace('s', '')) || 10;
 
      const payload: any = {
@@ -265,12 +316,10 @@ export const generateSoraVideo = async (
      while (attempts < 120) {
         await new Promise(r => setTimeout(r, 5000));
         try {
-            // 假设此API代理使用类似于Grok/Veo的查询参数样式 ?id=...
             const finalUrl = `${qUrl}?id=${taskId}`;
             
             const check = await fetchThirdParty(finalUrl, 'GET', null, config, { timeout: 10000 });
             
-            // 检查状态（灵活处理）
             const status = (check.status || check.data?.status || check.state || '').toString().toLowerCase();
             
             console.log(`[Sora] Poll #${attempts + 1}, Status: "${status}", Response:`, JSON.stringify(check).substring(0, 300));
@@ -281,11 +330,22 @@ export const generateSoraVideo = async (
                  if (videoUrl) return videoUrl;
             } else if (['failed', 'failure', 'error'].includes(status)) {
                  console.error('[Sora] Generation failed:', check);
-                 throw new Error(`Sora failed: ${check.fail_reason || check.error || 'Unknown error'}`);
+                 let errorMessage = 'Unknown error';
+                 if (check.error?.message) {
+                     errorMessage = check.error.message;
+                 } else if (check.error) {
+                     errorMessage = typeof check.error === 'string' ? check.error : JSON.stringify(check.error);
+                 } else if (check.fail_reason) {
+                     errorMessage = check.fail_reason;
+                 } else if (check.message) {
+                     errorMessage = check.message;
+                 }
+                 throw new Error(errorMessage);
             }
         } catch (e: any) {
             console.warn(`[Sora] Poll error #${attempts + 1}:`, e.message);
             if (attempts > 20 && e.isNonRetryable) throw e;
+            if (e.message && e.message !== 'Unknown error') throw e;
         }
         attempts++;
      }

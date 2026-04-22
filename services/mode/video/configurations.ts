@@ -1,4 +1,3 @@
-
 import type { VideoModelRules, ModelConfig } from "../types";
 import { generateGenericVideo, generateVeo3Video, generateGrokVideo, generateSoraVideo } from "./veo";
 import { generateMinimaxVideo } from "./minimax";
@@ -91,56 +90,40 @@ export const Sora2Handler = {
     }
 };
 
-export const VeoFastHandler = {
-    rules: { resolutions: ['720p', '1080p'], durations: ['8s'], ratios: ['16:9', '9:16'], maxInputImages: 3 },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        let modelId = 'veo3.1'; // 默认文本到视频（快速模式）
-        let images = params.inputImages || [];
+// Veo 3.1 基础 Handler 生成器
+const createVeoHandler = (baseModelId: string, maxInputImages: number, fastModelId?: string, componentModelId?: string, resolutions?: string[]) => {
+    return {
+        rules: { resolutions: resolutions || ['720p', '1080p'], durations: ['8s'], ratios: ['16:9', '9:16'], maxInputImages },
+        generate: async (cfg: ModelConfig, prompt: string, params: any) => {
+            let modelId = baseModelId;
+            let images = params.inputImages || [];
 
-        // Veo 3.1 快速模式逻辑：
-        // 文本到视频 -> veo3.1
-        // 图像到视频 -> veo3.1-fast-components
-        
-        if (images.length > 0) {
-             modelId = 'veo3.1-fast-components';
-        }
-
-        // 强制最多3张图像
-        if (images.length > 3) {
-            images = images.slice(0, 3);
-        }
-
-        // 使用用户配置的 endpoint，如果是默认值才使用 /v1/video/create
-        const endpoint = cfg.endpoint && cfg.endpoint !== '/v1/video/create' ? cfg.endpoint : '/v1/video/create';
-        const newCfg = { ...cfg, modelId, endpoint };
-        return await generateVeo3Video(newCfg, prompt, params.aspectRatio, images);
-    }
-};
-
-export const VeoProHandler = {
-    rules: { resolutions: ['720p', '1080p'], durations: ['8s'], ratios: ['16:9', '9:16'], maxInputImages: 1 },
-    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-        let modelId = 'veo3.1-pro'; // 默认文本到视频（专业模式）
-        let images = params.inputImages || [];
-
-        // Veo 3.1 专业模式逻辑：
-        // 文本到视频 -> veo3.1-pro
-        // 图像到视频 -> veo3.1-components
-        
-        if (images.length > 0) {
-            modelId = 'veo3.1-components';
-            // 强制最多1张图像
-            if (images.length > 1) {
-                images = [images[0]];
+            // 如果有输入图片，使用适当的组件模型（如果提供了）
+            if (images.length > 0 && componentModelId) {
+                modelId = componentModelId;
+            } else if (fastModelId) {
+                modelId = fastModelId;
             }
-        }
 
-        // 使用用户配置的 endpoint，如果是默认值才使用 /v1/video/create
-        const endpoint = cfg.endpoint && cfg.endpoint !== '/v1/video/create' ? cfg.endpoint : '/v1/video/create';
-        const newCfg = { ...cfg, modelId, endpoint };
-        return await generateVeo3Video(newCfg, prompt, params.aspectRatio, images);
-    }
+            // 限制输入图片数量
+            if (images.length > maxInputImages) {
+                images = images.slice(0, maxInputImages);
+            }
+
+            const endpoint = cfg.endpoint && cfg.endpoint !== '/v1/video/create' ? cfg.endpoint : '/v1/video/create';
+            const newCfg = { ...cfg, modelId, endpoint };
+            return await generateVeo3Video(newCfg, prompt, params.aspectRatio, images);
+        }
+    };
 };
+
+export const Veo31Handler = createVeoHandler('veo3.1', 0);
+export const VeoFastHandler = createVeoHandler('veo3.1-fast', 3, 'veo3.1-fast', 'veo3.1-fast-components');
+export const VeoProHandler = createVeoHandler('veo3.1-pro', 1, 'veo3.1-pro', 'veo3.1-components');
+export const Veo314KHandler = createVeoHandler('veo3.1-4k', 0, undefined, undefined, ['720p', '1080p', '4K']);
+export const Veo31Pro4KHandler = createVeoHandler('veo3.1-pro-4k', 0, undefined, undefined, ['720p', '1080p', '4K']);
+export const Veo31FastComponentsHandler = createVeoHandler('veo3.1-fast-components', 3);
+export const Veo31ComponentsHandler = createVeoHandler('veo3.1-components', 3);
 
 export const HailuoHandler = {
     rules: { resolutions: ['768p', '1080p'], durations: ['6s'], ratios: ['16:9', '9:16', '1:1'], maxInputImages: 2, hasPromptExtend: true },
@@ -215,7 +198,7 @@ export const SeedanceHandler = {
 };
 
 export const WanHandler = {
-    rules: { resolutions: ['720p', '1080p'], durations: ['5s', '10s'], ratios: BASE_RATIOS, maxInputImages: 1 },
+    rules: { resolutions: ['720p', '1080p', '480p'], durations: ['5s', '10s'], ratios: BASE_RATIOS, maxInputImages: 1 },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
         return await generateAlibailianVideo(cfg, prompt, params.resolution, params.duration, params.inputImages);
     }
@@ -230,8 +213,13 @@ export const Grok3Handler = {
 
 export const VIDEO_HANDLERS: Record<string, any> = {
     'Sora 2': Sora2Handler,
+    'Veo 3.1': Veo31Handler,
     'Veo 3.1 Fast': VeoFastHandler,
     'Veo 3.1 Pro': VeoProHandler,
+    'Veo 3.1 4K': Veo314KHandler,
+    'Veo 3.1 Pro 4K': Veo31Pro4KHandler,
+    'Veo 3.1 Fast Components': Veo31FastComponentsHandler,
+    'Veo 3.1 Components': Veo31ComponentsHandler,
     '海螺2.0': HailuoHandler,
     '海螺2.3': HailuoHandler,
     
@@ -251,6 +239,8 @@ export const VIDEO_HANDLERS: Record<string, any> = {
 
     'Wan2.6': WanHandler,
     'Wan2.5': WanHandler,
+    'Wan2.6-i2v': WanHandler,
+    'Wan2.5-i2v-preview': WanHandler,
     
     'Grok video 3': Grok3Handler
 };
