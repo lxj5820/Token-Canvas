@@ -1,4 +1,3 @@
-
 import { EnvConfig } from "../env";
 import type { ModelDef, ModelConfig } from "./types";
 
@@ -32,7 +31,8 @@ export const MODEL_REGISTRY: Record<string, ModelDef> = {
   'Banana 2': { id: 'gemini-3.1-flash-image-preview', name: 'Banana 2 ', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3.1-flash-image-preview:generateContent' },
   'BananaPro': { id: 'gemini-3-pro-image-preview', name: 'Banana Pro', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3-pro-image-preview:generateContent' },
   
-  'gpt-image-2': { id: 'gpt-image-2-all', name: 'gpt-image-2', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
+  'gpt-image-2': { id: 'gpt-image-2', name: 'gpt-image-2', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
+  'gpt-image-2-all': { id: 'gpt-image-2-all', name: 'gpt-image-2-all', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
   //'gpt-image-1.5': { id: 'gpt-image-1.5-all', name: 'gpt-image-1.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
 
 
