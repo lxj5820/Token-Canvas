@@ -10,7 +10,7 @@ const toDataUrl = (base64Str: string, defaultMimeType = 'image/png'): string => 
 };
 
 // GPT Image 模型特定尺寸
-const GPT_IMAGE_SIZES = ['1:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16', '5:4', '4:5', '21:9', '9:21'];
+const GPT_IMAGE_SIZES = ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'];
 
 /**
  * GPT Image 2 模型处理器
@@ -20,7 +20,19 @@ export const GPTImage2Handler = {
     rules: { resolutions: ['1k'], ratios: GPT_IMAGE_SIZES },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
         const size = calculateImageSize(params.aspectRatio, params.resolution, 'gpt-image-2');
-        return await generateGptImage(cfg, { id: 'gpt-image-2-all', name: 'gpt-image-2', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
+        return await generateGptImage(cfg, { id: 'gpt-image-2', name: 'gpt-image-2', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
+    }
+};
+
+/**
+ * GPT Image 2 All (dall-e-3) 模型处理器
+ * 使用与 gpt-image-2 相同的比例
+ */
+export const GPTImage2AllHandler = {
+    rules: { resolutions: ['1k'], ratios: GPT_IMAGE_SIZES },
+    generate: async (cfg: ModelConfig, prompt: string, params: any) => {
+        const size = calculateImageSize(params.aspectRatio, params.resolution, 'gpt-image-2-all');
+        return await generateGptImage(cfg, { id: 'gpt-image-2-all', name: 'gpt-image-2-all', type: 'IMAGE_GEN' } as any, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count, params.promptOptimize);
     }
 };
 
@@ -75,168 +87,137 @@ export const generateGptImage = async (
     n: number,
     promptOptimize?: boolean
 ): Promise<string[]> => {
-    const targetUrl = constructUrl(config.baseUrl, config.endpoint);
+    // 使用正确的 API 端点
+    const endpoint = config.endpoint && config.endpoint !== '/images/generations'
+        ? config.endpoint
+        : '/images/generations';
+    const targetUrl = constructUrl(config.baseUrl, endpoint);
+
     const hasInputImage = inputImages.length > 0;
 
-    if (n > 1) {
-        const promises = Array(n).fill(null).map(async () => {
-            const payload: any = {
-                model: config.modelId,
-                prompt,
-                size: calculatedSize,
-                n: 1
-            };
-            
-            // GPT Image image-to-image support
-            if (hasInputImage) {
-                payload.image = inputImages[0];
-            }
-
-            const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 300000 });
-            
-            // 打印响应结构以便调试
-            console.log('[GPT Image] Response structure:', Object.keys(res));
-
-            // 处理不同格式的响应
-            if (res.data?.b64_json) return toDataUrl(res.data.b64_json);
-            if (res.data?.url) return res.data.url;
-            if (res.data?.image_url) return res.data.image_url;
-            if (res.data?.base64) return toDataUrl(res.data.base64);
-            if (res.data?.image_base64) return toDataUrl(res.data.image_base64);
-            if (typeof res.data?.image === 'string' && res.data.image.length > 100) return toDataUrl(res.data.image);
-            if (typeof res.data?.data === 'string' && res.data.data.length > 100) return toDataUrl(res.data.data);
-            
-            if (res.url) return res.url;
-            if (res.image_url) return res.image_url;
-            if (res.base64) return toDataUrl(res.base64);
-            if (res.image_base64) return toDataUrl(res.image_base64);
-            if (typeof res.image === 'string' && res.image.length > 100) return toDataUrl(res.image);
-            if (typeof res.data === 'string' && res.data.length > 100) return toDataUrl(res.data);
-            
-            if (res.choices?.[0]?.message?.content) return res.choices[0].message.content;
-            if (res.choices?.[0]?.text) return res.choices[0].text;
-            
-            if (Array.isArray(res.data)) {
-                for (const item of res.data) {
-                    if (item.b64_json) return toDataUrl(item.b64_json);
-                    if (item.url) return item.url;
-                    if (item.image_url) return item.image_url;
-                    if (item.base64) return toDataUrl(item.base64);
-                    if (item.image_base64) return toDataUrl(item.image_base64);
-                    if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-                    if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
-                }
-            }
-            
-            if (Array.isArray(res.images)) {
-                for (const item of res.images) {
-                    if (item.b64_json) return toDataUrl(item.b64_json);
-                    if (item.url) return item.url;
-                    if (item.image_url) return item.image_url;
-                    if (item.base64) return toDataUrl(item.base64);
-                    if (item.image_base64) return toDataUrl(item.image_base64);
-                    if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-                    if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
-                }
-            }
-            
-            if (Array.isArray(res.output)) {
-                for (const item of res.output) {
-                    if (item.b64_json) return toDataUrl(item.b64_json);
-                    if (item.url) return item.url;
-                    if (item.image_url) return item.image_url;
-                    if (item.base64) return toDataUrl(item.base64);
-                    if (item.image_base64) return toDataUrl(item.image_base64);
-                    if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-                    if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
-                }
-            }
-            
-            return '';
-        });
-        
-        const results = await Promise.all(promises);
-        return results.filter((url: string) => !!url);
-    }
-    
+    // 构建请求参数
     const payload: any = {
         model: config.modelId,
-        prompt,
+        prompt: prompt,
+        n: n || 1,
         size: calculatedSize,
-        n: n || 1
+        // GPT Image 模型特有参数
+        background: 'auto', // 自动背景
+        moderation: 'auto', // 自动内容审核
+        output_format: 'png', // 默认输出格式
+        quality: 'auto', // 自动质量
+        user: 'user-1234' // 用户标识符
     };
-    
-    // GPT Image image-to-image support
+
+    // 如果有输入图片，使用 image 字段
     if (hasInputImage) {
         payload.image = inputImages[0];
     }
 
-    const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 300000 });
-    
-    // 打印响应结构以便调试
-    console.log('[GPT Image] Response structure:', Object.keys(res));
+    console.log('[GPT Image] Creating image task...');
+    console.log('[GPT Image] URL:', targetUrl);
+    console.log('[GPT Image] Model:', config.modelId);
+    console.log('[GPT Image] Payload:', JSON.stringify(payload, null, 2));
 
-    // 处理不同格式的响应
-    if (res.data?.b64_json) return [toDataUrl(res.data.b64_json)];
-    if (res.data?.url) return [res.data.url];
-    if (res.data?.image_url) return [res.data.image_url];
-    if (res.data?.base64) return [toDataUrl(res.data.base64)];
-    if (res.data?.image_base64) return [toDataUrl(res.data.image_base64)];
-    if (typeof res.data?.image === 'string' && res.data.image.length > 100) return [toDataUrl(res.data.image)];
-    if (typeof res.data?.data === 'string' && res.data.data.length > 100) return [toDataUrl(res.data.data)];
-    
-    if (res.url) return [res.url];
-    if (res.image_url) return [res.image_url];
-    if (res.base64) return [toDataUrl(res.base64)];
-    if (res.image_base64) return [toDataUrl(res.image_base64)];
-    if (typeof res.image === 'string' && res.image.length > 100) return [toDataUrl(res.image)];
-    if (typeof res.data === 'string' && res.data.length > 100) return [toDataUrl(res.data)];
-    
-    if (res.choices?.[0]?.message?.content) return [res.choices[0].message.content];
-    if (res.choices?.[0]?.text) return [res.choices[0].text];
-    
-    if (Array.isArray(res.data)) {
+    const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 300000 });
+
+    console.log('[GPT Image] Create Response:', JSON.stringify(res, null, 2));
+
+    // 处理响应
+    if (res.data && Array.isArray(res.data)) {
         return res.data.map((item: any) => {
             if (item.b64_json) return toDataUrl(item.b64_json);
             if (item.url) return item.url;
             if (item.image_url) return item.image_url;
-            if (item.base64) return toDataUrl(item.base64);
-            if (item.image_base64) return toDataUrl(item.image_base64);
-            if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-            if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
             return '';
         }).filter((url: string) => !!url);
     }
-    
-    if (Array.isArray(res.images)) {
-        return res.images.map((item: any) => {
-            if (item.b64_json) return toDataUrl(item.b64_json);
-            if (item.url) return item.url;
-            if (item.image_url) return item.image_url;
-            if (item.base64) return toDataUrl(item.base64);
-            if (item.image_base64) return toDataUrl(item.image_base64);
-            if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-            if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
-            return '';
-        }).filter((url: string) => !!url);
+
+    // 处理其他响应格式
+    if (res.b64_json) return [toDataUrl(res.b64_json)];
+    if (res.url) return [res.url];
+    if (res.image_url) return [res.image_url];
+
+    // 处理流式响应
+    if (res.event && res.event === 'image_generation.completed' && res.data?.b64_json) {
+        return [toDataUrl(res.data.b64_json)];
     }
-    
-    if (Array.isArray(res.output)) {
-        return res.output.map((item: any) => {
-            if (item.b64_json) return toDataUrl(item.b64_json);
-            if (item.url) return item.url;
-            if (item.image_url) return item.image_url;
-            if (item.base64) return toDataUrl(item.base64);
-            if (item.image_base64) return toDataUrl(item.image_base64);
-            if (typeof item.image === 'string' && item.image.length > 100) return toDataUrl(item.image);
-            if (typeof item.data === 'string' && item.data.length > 100) return toDataUrl(item.data);
-            return '';
-        }).filter((url: string) => !!url);
-    }
-    
+
     // 如果没有任何有效响应，抛出错误
     console.error('[GPT Image] No valid response format found:', res);
     throw new Error('GPT Image API returned an unrecognized response format');
+};
+
+/**
+ * GPT Image 模型编辑函数
+ * @param config 模型配置
+ * @param modelDef 模型定义
+ * @param prompt 提示词
+ * @param inputImages 输入图像
+ * @param n 生成数量
+ * @returns 生成的图像URL数组
+ */
+export const generateGptImageEdit = async (
+    config: ModelConfig,
+    modelDef: ModelDef,
+    prompt: string,
+    inputImages: string[],
+    n: number = 1
+): Promise<string[]> => {
+    // 使用正确的 API 端点
+    const endpoint = config.endpoint && config.endpoint !== '/images/edits'
+        ? config.endpoint
+        : '/images/edits';
+    const targetUrl = constructUrl(config.baseUrl, endpoint);
+
+    // 构建请求参数
+    const payload: any = {
+        model: config.modelId,
+        prompt: prompt,
+        images: inputImages.map((img, index) => ({
+            image_url: img
+        })),
+        n: n,
+        size: '1024x1024', // 默认尺寸
+        background: 'auto',
+        moderation: 'auto',
+        output_format: 'png',
+        quality: 'auto',
+        user: 'user-1234'
+    };
+
+    console.log('[GPT Image Edit] Creating edit task...');
+    console.log('[GPT Image Edit] URL:', targetUrl);
+    console.log('[GPT Image Edit] Model:', config.modelId);
+    console.log('[GPT Image Edit] Payload:', JSON.stringify(payload, null, 2));
+
+    const res = await fetchThirdParty(targetUrl, 'POST', payload, config, { timeout: 300000 });
+
+    console.log('[GPT Image Edit] Response:', JSON.stringify(res, null, 2));
+
+    // 处理响应
+    if (res.data && Array.isArray(res.data)) {
+        return res.data.map((item: any) => {
+            if (item.b64_json) return toDataUrl(item.b64_json);
+            if (item.url) return item.url;
+            if (item.image_url) return item.image_url;
+            return '';
+        }).filter((url: string) => !!url);
+    }
+
+    // 处理其他响应格式
+    if (res.b64_json) return [toDataUrl(res.b64_json)];
+    if (res.url) return [res.url];
+    if (res.image_url) return [res.image_url];
+
+    // 处理流式响应
+    if (res.event && res.event === 'image_edit.completed' && res.data?.b64_json) {
+        return [toDataUrl(res.data.b64_json)];
+    }
+
+    // 如果没有任何有效响应，抛出错误
+    console.error('[GPT Image Edit] No valid response format found:', res);
+    throw new Error('GPT Image Edit API returned an unrecognized response format');
 };
 
 /**

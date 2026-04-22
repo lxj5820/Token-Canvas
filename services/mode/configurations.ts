@@ -1,5 +1,5 @@
 import type { ModelConfig, ModelDef, ModelHandler, ModelRuleSet } from "./types";
-import { GPTImage2Handler, GPTImage15Handler } from "./image/gpt";
+import { GPTImage2Handler, GPTImage2AllHandler, GPTImage15Handler } from "./image/gpt";
 import { GeminiImageHandler, GeminiImageProHandler } from "./image/gemini";
 import { QwenImageHandler } from "./image/qwen";
 import { DallE3Handler } from "./image/dall-e";
@@ -17,10 +17,10 @@ import { generateGrokVideo, GrokVideoHandler } from "./video/grok";
 
 import { getImageModelRules, getVideoModelRules, getAudioModelRules } from "./rules";
 
-// --- 图像模型处理器 --- 
+// --- 图像模型处理器 ---
 export const IMAGE_HANDLERS: Record<string, ModelHandler> = {
     'gpt-image-2': GPTImage2Handler,
-    'gpt-image-2-all': GPTImage2Handler,
+    'gpt-image-2-all': GPTImage2AllHandler,
     'gpt-image-1.5': GPTImage15Handler,
     'Banana 2': GeminiImageHandler,
     'BananaPro': GeminiImageProHandler,
@@ -35,7 +35,7 @@ export const IMAGE_HANDLERS: Record<string, ModelHandler> = {
     'Kling Image': KlingImageHandler
 };
 
-// --- 视频模型处理器 --- 
+// --- 视频模型处理器 ---
 export const VIDEO_HANDLERS: Record<string, ModelHandler> = {
     'Sora 2': { rules: getVideoModelRules('Sora 2'), generate: generateSoraVideo },
     'Veo 3.1': { rules: getVideoModelRules('Veo 3.1'), generate: generateVeo3Video },
@@ -55,22 +55,22 @@ export const VIDEO_HANDLERS: Record<string, ModelHandler> = {
     '海螺2.3': { rules: getVideoModelRules('海螺2.3'), generate: generateMinimaxVideo }
 };
 
-// --- 音频模型处理器 --- 
+// --- 音频模型处理器 ---
 export const AUDIO_HANDLERS: Record<string, ModelHandler> = {
     'suno_music': { rules: getAudioModelRules('suno_music'), generate: generateGenericAudio }
 };
 
-// --- 文本模型处理器 --- 
+// --- 文本模型处理器 ---
 export const TEXT_HANDLERS: Record<string, ModelHandler> = {
     'Default': { rules: {}, generate: generateGenericText }
 };
 
-// --- 聊天模型处理器 --- 
+// --- 聊天模型处理器 ---
 export const CHAT_HANDLERS: Record<string, ModelHandler> = {
     'Default': { rules: {}, generate: generateGenericChat }
 };
 
-// --- 通用模型处理器 --- 
+// --- 通用模型处理器 ---
 export const getGenericHandler = (type: string): ModelHandler => {
     switch (type) {
         case 'IMAGE_GEN':
@@ -91,7 +91,7 @@ export const getGenericHandler = (type: string): ModelHandler => {
     }
 };
 
-// --- 处理器工厂 --- 
+// --- 处理器工厂 ---
 export const getModelHandler = (modelName: string, modelType: string): ModelHandler => {
     switch (modelType) {
         case 'IMAGE_GEN':
@@ -115,11 +115,11 @@ export const getModelHandler = (modelName: string, modelType: string): ModelHand
     }
 };
 
-// --- 模型能力检查 --- 
+// --- 模型能力检查 ---
 export const checkModelCapability = (modelName: string, capability: string): boolean => {
     const handler = IMAGE_HANDLERS[modelName] || VIDEO_HANDLERS[modelName] || AUDIO_HANDLERS[modelName];
     if (!handler) return false;
-    
+
     // 检查处理器是否支持特定能力
     switch (capability) {
         case 'imageInput':
@@ -131,7 +131,7 @@ export const checkModelCapability = (modelName: string, capability: string): boo
     }
 };
 
-// --- 工具函数 --- 
+// --- 工具函数 ---
 export const isImageModel = (modelType: string): boolean => {
     return modelType === 'IMAGE_GEN';
 };

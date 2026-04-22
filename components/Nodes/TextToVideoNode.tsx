@@ -40,7 +40,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
 
     const updateModels = useCallback(() => {
         const visibleModels = getVisibleModels();
-        const models = visibleModels.filter(k => MODEL_REGISTRY[k]?.category === 'VIDEO');
+        const models = visibleModels.filter(k => VIDEO_HANDLERS[k]);
         setVideoModels(models);
     }, []);
 

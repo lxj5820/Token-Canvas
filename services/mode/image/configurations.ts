@@ -3,7 +3,7 @@ import type { ImageModelRules, ModelConfig } from "../types";
 import { generateBananaChatImage, generateBananaEdit } from "./banana";
 import { generateStandardImage, generateMjModal } from "./flux";
 import { calculateImageSize } from "./rules";
-import { GPTImage2Handler, GPTImage15Handler } from "./gpt";
+import { GPTImage2Handler, GPTImage2AllHandler, GPTImage15Handler } from "./gpt";
 
 // --- 基础规则配置 ---
 // 基础比例列表
@@ -160,6 +160,7 @@ export const IMAGE_HANDLERS: Record<string, any> = {
     'Zimage': ZimageHandler,
     'kling image': KlingImageHandler,
     'gpt-image-2': GPTImage2Handler,
+    'gpt-image-2-all': GPTImage2AllHandler,
     'gpt-image-1.5': GPTImage15Handler
 };
 

@@ -10,7 +10,7 @@ import { GPT_IMAGE_CONFIG } from "./gpt";
  * 默认比例列表
  * 包含常用的图像比例
  */
-const DEFAULT_RATIOS = ['1:1', '3:4', '4:3', '9:16', '16:9'];
+const DEFAULT_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'];
 
 /**
  * 图像模型能力配置
@@ -30,6 +30,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<string, ImageModelRules> = {
     'Qwenedit': { resolutions: ['1k'], ratios: DEFAULT_RATIOS },
     'kling image': { resolutions: ['1k'], ratios: DEFAULT_RATIOS },
     'gpt-image-2': { resolutions: GPT_IMAGE_CONFIG.supportedResolutions, ratios: GPT_IMAGE_CONFIG.supportedRatios, supportsEdit: true },
+    'gpt-image-2-all': { resolutions: GPT_IMAGE_CONFIG.supportedResolutions, ratios: GPT_IMAGE_CONFIG.supportedRatios },
     'gpt-image-1.5': { resolutions: GPT_IMAGE_CONFIG.supportedResolutions, ratios: GPT_IMAGE_CONFIG.supportedRatios, supportsEdit: true }
 };
 
@@ -58,19 +59,15 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
   }
 
   // GPT Image 模型特殊处理
-  // 支持多种比例的尺寸映射
+  // 支持尺寸：1024x1024、1536x1024（横版）、1024x1536（竖版）
   if (modelName.includes('gpt-image')) {
       if (aspectRatio === '1:1') return '1024x1024';
-      if (aspectRatio === '3:2') return '1536x1024';
-      if (aspectRatio === '2:3') return '1024x1536';
-      if (aspectRatio === '4:3') return '1536x1152';
-      if (aspectRatio === '3:4') return '1152x1536';
-      if (aspectRatio === '16:9') return '1792x1024';
-      if (aspectRatio === '9:16') return '1024x1792';
-      if (aspectRatio === '5:4') return '1280x1024';
-      if (aspectRatio === '4:5') return '1024x1280';
-      if (aspectRatio === '21:9') return '1920x810';
-      if (aspectRatio === '9:21') return '810x1920';
+      if (aspectRatio === '3:2' || aspectRatio === '4:3' || aspectRatio === '16:9') {
+          return '1536x1024'; // 横版
+      }
+      if (aspectRatio === '2:3' || aspectRatio === '3:4' || aspectRatio === '9:16') {
+          return '1024x1536'; // 竖版
+      }
       // 对于其他比例，默认使用 1:1
       return '1024x1024';
   }
@@ -99,7 +96,7 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
   // 2k 分辨率：约 2000 像素
   // 4k 分辨率：约 4000 像素
   const baseSize = resolution === '1k' ? 1024 : resolution === '2k' ? 2048 : 4096;
-  
+
   // 解析比例
   const [widthRatio, heightRatio] = aspectRatio.split(':').map(Number);
   if (widthRatio && heightRatio) {
