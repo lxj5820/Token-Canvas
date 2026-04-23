@@ -137,7 +137,9 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
     }, [data.model, data.resolution, data.duration, data.aspectRatio, resOptions, durOptions, ratioOptions, currentModel, inputs.length, updateData, data.id]);
 
     const containerBg = isDark ? 'bg-[#1e1e1e]' : 'bg-white';
-    const containerBorder = selected ? 'border-orange-500 ring-1 ring-orange-500' : (isDark ? 'border-zinc-800' : 'border-gray-200');
+    const containerBorder = selected
+        ? 'border-yellow-400/80 node-selected-glow'
+        : (isDark ? 'border-zinc-800' : 'border-gray-200');
     const overlayToolbarBg = isDark ? 'bg-black/50 border-white/5 text-gray-400' : 'bg-white/50 border-black/5 text-gray-600';
     const controlPanelBg = isDark ? 'bg-[#1e1e1e] border-zinc-700/80' : 'bg-white border-gray-200';
     const inputBg = isDark ? 'bg-zinc-900/50 hover:bg-zinc-900 border-transparent focus:border-orange-500/50 text-zinc-200 placeholder-zinc-500' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 focus:border-orange-400 text-gray-900 placeholder-gray-400';

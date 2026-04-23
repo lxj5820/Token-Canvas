@@ -257,7 +257,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
             {/* Header */}
             <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                 <div className="flex items-center gap-2">
-                    <Icons.Sparkles size={18} className={isDark ? 'text-pink-400' : 'text-pink-600'} />
+                    <Icons.Sparkles size={18} className={isDark ? 'text-yellow-400' : 'text-yellow-600'} />
                     <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>AI 助手</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                     </button>
                     <button 
                         onClick={() => setShowSettings(!showSettings)}
-                        className={`p-1.5 rounded-lg transition-colors ${showSettings ? (isDark ? 'bg-pink-500/20 text-pink-400' : 'bg-pink-50 text-pink-600') : (isDark ? 'hover:bg-zinc-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}`}
+                        className={`p-1.5 rounded-lg transition-colors ${showSettings ? (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-600') : (isDark ? 'hover:bg-zinc-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600')}`}
                         title="API 设置"
                     >
                         <Icons.Settings size={16} />
@@ -357,16 +357,16 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
 
                         <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-zinc-800 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
                             <p className="font-medium mb-1">提示：</p>
-                            <p>• 使用 New 词元: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
-                            <p>• 使用 OpenAI API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://api.openai.com/v1</code></p>
-                            <p>• 使用智谱 API: URL 填 <code className={`${isDark ? 'text-pink-400' : 'text-pink-600'}`}>https://newapi.asia/v1</code></p>
+                            <p>• 使用 New 词元: URL 填 <code className={`${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>https://newapi.asia/v1</code></p>
+                            <p>• 使用 OpenAI API: URL 填 <code className={`${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>https://api.openai.com/v1</code></p>
+                            <p>• 使用智谱 API: URL 填 <code className={`${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>https://newapi.asia/v1</code></p>
                         </div>
                     </div>
                     
                     <div className="mt-4">
                         <button
                             onClick={saveAllConfigs}
-                            className="w-full py-2 text-sm font-medium rounded-lg bg-pink-500 text-white hover:bg-pink-600 transition-colors"
+                            className="w-full py-2 text-sm font-medium rounded-lg bg-yellow-500 text-white hover:bg-yellow-400 transition-colors"
                         >
                             保存配置
                         </button>
@@ -386,7 +386,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                                     onClick={() => setSelectedModel(model.id)}
                                     className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
                                         isSelected
-                                            ? (isDark ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-pink-50 text-pink-600 border border-pink-200')
+                                            ? (isDark ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-yellow-50 text-yellow-600 border border-yellow-200')
                                             : (isDark ? 'bg-zinc-800 text-gray-400 border border-zinc-700 hover:border-zinc-600' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')
                                     }`}
                                 >
@@ -413,7 +413,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                                 双击模型按钮配置 API，双击后即可开始对话
                             </p>
                             {!hasApiKey && (
-                                <p className={`text-xs mt-2 ${isDark ? 'text-pink-400' : 'text-pink-500'}`}>
+                                <p className={`text-xs mt-2 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`}>
                                     当前模型未配置 API Key
                                 </p>
                             )}
@@ -430,14 +430,14 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                         <div key={msg.id} className={`flex gap-3 mb-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
                                 msg.role === 'user' 
-                                    ? (isDark ? 'bg-pink-500/20' : 'bg-pink-100')
+                                    ? (isDark ? 'bg-yellow-500/20' : 'bg-yellow-100')
                                     : (isDark ? 'bg-zinc-800' : 'bg-gray-100')
                             }`}>
                                 {msg.role === 'user' ? '👤' : <Icons.Cpu size={16} />}
                             </div>
                             <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
                                 msg.role === 'user'
-                                    ? (isDark ? 'bg-pink-500 text-white rounded-tr-sm' : 'bg-pink-500 text-white rounded-tr-sm')
+                                    ? (isDark ? 'bg-yellow-500 text-white rounded-tr-sm' : 'bg-yellow-500 text-white rounded-tr-sm')
                                     : (isDark ? 'bg-zinc-800 text-gray-200 rounded-tl-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm')
                             }`}>
                                 {msg.content}
@@ -479,7 +479,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                             disabled={!input.trim() || loading}
                             className={`absolute right-2 bottom-2 p-2 rounded-lg transition-colors ${
                                 input.trim() && !loading
-                                    ? (isDark ? 'bg-pink-500 hover:bg-pink-400 text-white' : 'bg-pink-500 hover:bg-pink-600 text-white')
+                                    ? (isDark ? 'bg-yellow-500 hover:bg-yellow-400 text-white' : 'bg-yellow-500 hover:bg-yellow-400 text-white')
                                     : (isDark ? 'bg-zinc-800 text-gray-500' : 'bg-gray-100 text-gray-400')
                             }`}
                         >
@@ -489,7 +489,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                     <div className={`flex items-center justify-between mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                         <div className="flex items-center gap-2">
                             <span>{MODELS.find(m => m.id === selectedModel)?.name}</span>
-                            {!hasApiKey && <span className="text-pink-500">⚠️</span>}
+                            {!hasApiKey && <span className="text-yellow-500">⚠️</span>}
                         </div>
                         <div className="flex items-center gap-1">
                             <Icons.Cpu size={12} />

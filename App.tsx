@@ -15,6 +15,7 @@ import { StorageModal } from './components/Settings/StorageModal';
 import { ExportImportModal } from './components/Settings/ExportImportModal';
 import { WelcomeModal, hasShownWelcome } from './components/Settings/WelcomeModal';
 import { AIPanel } from './components/AIPanel';
+import { toPng } from 'html-to-image';
 
 const DEFAULT_NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 240; 
@@ -142,16 +143,43 @@ const CanvasWithSidebar: React.FC = () => {
       setDragMode('PAN');
   }, []);
   
-  // 缩放控制 - 扩大范围 0.2x 到 5x
+  // 缩放控制 - 扩大范围 0.2x 到 5x，自适应步长
+  const ZOOM_MIN = 0.2;
+  const ZOOM_MAX = 5;
+  const getZoomStep = (currentK: number) => {
+    const baseStep = 0.08;
+    return baseStep * (currentK / 1);
+  };
+
   const handleZoomIn = useCallback(() => {
-      const newK = Math.min(transform.k + 0.1, 5);
-      setTransform(prev => ({ ...prev, k: newK }));
-  }, [transform.k]);
-  
+    setTransform(prev => {
+      const step = getZoomStep(prev.k);
+      const newK = Math.min(prev.k + step, ZOOM_MAX);
+      const container = containerRef.current;
+      if (!container) return { ...prev, k: newK };
+      const rect = container.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const worldX = (centerX - prev.x) / prev.k;
+      const worldY = (centerY - prev.y) / prev.k;
+      return { x: centerX - worldX * newK, y: centerY - worldY * newK, k: newK };
+    });
+  }, []);
+
   const handleZoomOut = useCallback(() => {
-      const newK = Math.max(transform.k - 0.1, 0.2);
-      setTransform(prev => ({ ...prev, k: newK }));
-  }, [transform.k]);
+    setTransform(prev => {
+      const step = getZoomStep(prev.k);
+      const newK = Math.max(prev.k - step, ZOOM_MIN);
+      const container = containerRef.current;
+      if (!container) return { ...prev, k: newK };
+      const rect = container.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const worldX = (centerX - prev.x) / prev.k;
+      const worldY = (centerY - prev.y) / prev.k;
+      return { x: centerX - worldX * newK, y: centerY - worldY * newK, k: newK };
+    });
+  }, []);
   
   const handleZoomReset = useCallback(() => {
       if (nodes.length === 0) {
@@ -229,45 +257,47 @@ const CanvasWithSidebar: React.FC = () => {
   // 本地存储警告横幅状态
   const [showStorageWarning, setShowStorageWarning] = useState(true);
 
-  // 截图功能
-  const handleScreenshot = useCallback(() => {
+  const [isScreenshotting, setIsScreenshotting] = useState(false);
+
+  const handleScreenshot = useCallback(async () => {
       const container = containerRef.current;
-      if (!container) return;
-      
-      // 创建一个离屏 canvas
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      
-      // 获取画布区域
-      const rect = container.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      
-      // 绘制背景
-      ctx.fillStyle = canvasBg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // 绘制网格
-      const gridSize = 20 * transform.k;
-      const offsetX = transform.x % gridSize;
-      const offsetY = transform.y % gridSize;
-      ctx.strokeStyle = isDark ? '#27272a' : '#E4E4E7';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let x = offsetX; x < canvas.width; x += gridSize) {
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, canvas.height);
+      if (!container || isScreenshotting) return;
+
+      setIsScreenshotting(true);
+      try {
+          const rect = container.getBoundingClientRect();
+          const pixelRatio = window.devicePixelRatio || 1;
+
+          const dataUrl = await toPng(container, {
+              width: rect.width,
+              height: rect.height,
+              pixelRatio: pixelRatio,
+              backgroundColor: canvasBg,
+              style: {
+                  transform: 'none',
+              },
+              filter: (node: HTMLElement) => {
+                  if (node.classList && (
+                      node.classList.contains('minimap-container') ||
+                      node.classList.contains('absolute') && node.closest('.minimap-container')
+                  )) {
+                      return false;
+                  }
+                  return true;
+              }
+          });
+
+          const link = document.createElement('a');
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          link.download = `token-canvas-${timestamp}.png`;
+          link.href = dataUrl;
+          link.click();
+      } catch (err) {
+          console.error('[Screenshot] Failed:', err);
+      } finally {
+          setIsScreenshotting(false);
       }
-      for (let y = offsetY; y < canvas.height; y += gridSize) {
-          ctx.moveTo(0, y);
-          ctx.lineTo(canvas.width, y);
-      }
-      ctx.stroke();
-      
-      // 使用 html2canvas 或简单绘制节点（这里简化处理）
-      alert('截图功能：Ctrl+S 保存当前视图');
-  }, [canvasBg, isDark]);
+  }, [canvasBg, isScreenshotting]);
   
   // 同步body类以使用CSS变量
   useEffect(() => {
@@ -692,15 +722,15 @@ const CanvasWithSidebar: React.FC = () => {
             if (e.key === 'h' || e.key === 'H') {
                 handlePanMode();
             }
-            // +/- 缩放
-            if (e.key === '=' || e.key === '+') {
+            // [ ] 缩放
+            if (e.key === '[') {
                 handleZoomIn();
             }
-            if (e.key === '-' || e.key === '_') {
+            if (e.key === ']') {
                 handleZoomOut();
             }
-            // 0 重置缩放
-            if (e.key === '0') {
+            // Z/0 重置缩放
+            if (e.key === 'z' || e.key === 'Z' || e.key === '0') {
                 handleZoomReset();
             }
             if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -728,6 +758,13 @@ const CanvasWithSidebar: React.FC = () => {
                 if (e.key === 'ArrowDown') { e.preventDefault(); handleAlign('DOWN'); }
                 if (e.key === 'ArrowLeft') { e.preventDefault(); handleAlign('LEFT'); }
                 if (e.key === 'ArrowRight') { e.preventDefault(); handleAlign('RIGHT'); }
+            }
+            // 方向键排列 (单独使用)
+            if (!(e.ctrlKey || e.metaKey)) {
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('UP'); }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('DOWN'); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('LEFT'); }
+                if (e.key === 'ArrowRight') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('RIGHT'); }
             }
         }
         
@@ -1265,6 +1302,16 @@ const CanvasWithSidebar: React.FC = () => {
       if (!selectedNodeIds.has(id)) setSelectedNodeIds(new Set([id]));
   };
 
+  const getCanvasCursor = () => {
+    if (dragMode === 'PAN') return 'cursor-grabbing';
+    if (dragMode === 'DRAG_NODE') return 'cursor-move';
+    if (dragMode === 'SELECT') return 'cursor-default';
+    if (dragMode === 'CONNECT') return 'cursor-crosshair';
+    if (dragMode === 'RESIZE_NODE') return 'cursor-nwse-resize';
+    if (currentMode === 'pan' || spacePressed.current) return 'cursor-grab';
+    return 'cursor-default';
+  };
+
   const handleCanvasContextMenu = (e: React.MouseEvent) => {
       e.preventDefault();
       const worldPos = screenToWorld(e.clientX, e.clientY);
@@ -1368,13 +1415,13 @@ const CanvasWithSidebar: React.FC = () => {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowNewWorkflowDialog(false)}>
             <div className={`w-[400px] p-6 rounded-2xl shadow-2xl border flex flex-col gap-4 transform transition-all scale-100 ${isDark ? 'bg-[#1A1D21] border-zinc-700 text-gray-200' : 'bg-white border-gray-200 text-gray-800'}`} onClick={(e) => e.stopPropagation()}>
                 <div>
-                    <h3 className="text-lg font-bold flex items-center gap-2"><Icons.FilePlus size={20} className="text-blue-500"/>新建工作流</h3>
+                    <h3 className="text-lg font-bold flex items-center gap-2"><Icons.FilePlus size={20} className="text-yellow-500"/>新建工作流</h3>
                     <p className={`text-xs mt-2 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>是否在创建新工作流之前保存当前工作流？<br/>任何未保存的更改将永久丢失。</p>
                 </div>
                 <div className={`flex justify-end gap-2 mt-2 pt-4 border-t ${isDark ? 'border-zinc-800' : 'border-gray-100'}`}>
                     <button onClick={() => setShowNewWorkflowDialog(false)} className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${isDark ? 'hover:bg-zinc-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}>取消</button>
                     <button onClick={() => handleConfirmNew(false)} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${isDark ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'}`}>不保存</button>
-                    <button onClick={() => handleConfirmNew(true)} className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-1.5 ${isDark ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-500 hover:bg-blue-400'}`}><Icons.Save size={14}/>保存并新建</button>
+                    <button onClick={() => handleConfirmNew(true)} className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-colors shadow-lg shadow-yellow-500/20 flex items-center gap-1.5 ${isDark ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-yellow-500 hover:bg-yellow-400'}`}><Icons.Save size={14}/>保存并新建</button>
                 </div>
             </div>
         </div>
@@ -1425,11 +1472,11 @@ const CanvasWithSidebar: React.FC = () => {
                         <div className={`h-px my-1.5 mx-2 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`}></div>
                         <div className={`px-3 py-1 text-[9px] font-semibold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}>添加节点</div>
                         <button className={menuItemClass} onClick={() => { addNode(NodeType.TEXT_TO_IMAGE, contextMenu.worldX, contextMenu.worldY); setContextMenu(null); }}>
-                            <div className="w-5 h-5 rounded bg-cyan-500/10 flex items-center justify-center"><Icons.Image size={12} className="text-cyan-400"/></div>
+                            <div className="w-5 h-5 rounded bg-yellow-500/10 flex items-center justify-center"><Icons.Image size={12} className="text-yellow-400"/></div>
                             <span>生图</span>
                         </button>
                         <button className={menuItemClass} onClick={() => { addNode(NodeType.TEXT_TO_VIDEO, contextMenu.worldX, contextMenu.worldY); setContextMenu(null); }}>
-                            <div className="w-5 h-5 rounded bg-purple-500/10 flex items-center justify-center"><Icons.Video size={12} className="text-purple-400"/></div>
+                            <div className="w-5 h-5 rounded bg-yellow-500/10 flex items-center justify-center"><Icons.Video size={12} className="text-yellow-400"/></div>
                             <span>生视频</span>
                         </button>
                         <button className={menuItemClass} onClick={() => { addNode(NodeType.TEXT_TO_AUDIO, contextMenu.worldX, contextMenu.worldY); setContextMenu(null); }}>
@@ -1465,11 +1512,11 @@ const CanvasWithSidebar: React.FC = () => {
             
             <div className={groupLabelClass}>生成</div>
             <button className={menuItemClass} onClick={() => handleQuickAddNode(NodeType.TEXT_TO_IMAGE)}>
-                <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center"><Icons.Image size={14} className="text-cyan-400"/></div>
+                <div className="w-6 h-6 rounded-md bg-yellow-500/10 flex items-center justify-center"><Icons.Image size={14} className="text-yellow-400"/></div>
                 <span>生图</span>
             </button>
             <button className={menuItemClass} onClick={() => handleQuickAddNode(NodeType.TEXT_TO_VIDEO)}>
-                <div className="w-6 h-6 rounded-md bg-purple-500/10 flex items-center justify-center"><Icons.Video size={14} className="text-purple-400"/></div>
+                <div className="w-6 h-6 rounded-md bg-yellow-500/10 flex items-center justify-center"><Icons.Video size={14} className="text-yellow-400"/></div>
                 <span>生视频</span>
             </button>
             <button className={menuItemClass} onClick={() => handleQuickAddNode(NodeType.TEXT_TO_AUDIO)}>
@@ -1547,7 +1594,7 @@ const CanvasWithSidebar: React.FC = () => {
                     className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
                         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
-                    title="缩小 (-)"
+                    title="缩小 ([)"
                 >
                     <Icons.MinusCircle size={18} />
                 </button>
@@ -1568,7 +1615,7 @@ const CanvasWithSidebar: React.FC = () => {
                     className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
                         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
-                    title="放大 (+)"
+                    title="放大 (])"
                 >
                     <Icons.PlusCircle size={18} />
                 </button>
@@ -1581,7 +1628,7 @@ const CanvasWithSidebar: React.FC = () => {
                     className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
                         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
-                    title="重置缩放 (0)"
+                    title="重置缩放 (Z/0)"
                 >
                     <Icons.Maximize size={16} />
                 </button>
@@ -1593,7 +1640,7 @@ const CanvasWithSidebar: React.FC = () => {
                     onClick={() => setShowShortcutsPanel(!showShortcutsPanel)}
                     className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-all ${
                         showShortcutsPanel 
-                            ? (isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600')
+                            ? (isDark ? 'bg-blue-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600')
                             : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
                     }`}
                     title="快捷键"
@@ -1620,15 +1667,23 @@ const CanvasWithSidebar: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>放大</span>
-                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>+</kbd>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>[</kbd>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>缩小</span>
-                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>-</kbd>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>]</kbd>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>重置缩放</span>
-                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>0</kbd>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Z</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>上下排列</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>↑/↓</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>左右排列</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>←/→</kbd>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>删除</span>
@@ -1655,7 +1710,7 @@ const CanvasWithSidebar: React.FC = () => {
                     onClick={() => setShowAIPanel(!showAIPanel)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                         showAIPanel 
-                            ? (isDark ? 'bg-purple-500/10 text-purple-400' : 'bg-purple-50 text-purple-600')
+                            ? (isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600')
                             : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
                     }`}
                 >
@@ -1693,7 +1748,7 @@ const CanvasWithSidebar: React.FC = () => {
         <input type="file" ref={replaceImageRef} hidden accept="image/*" onChange={handleReplaceImage} />
         <div 
             ref={containerRef}
-            className={`flex-1 w-full h-full relative grid-pattern select-none ${dragMode === 'PAN' ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`flex-1 w-full h-full relative grid-pattern select-none ${getCanvasCursor()}`}
             style={{ 
                 backgroundColor: canvasBg,
                 '--grid-color': isDark ? '#27272a' : '#E4E4E7'
@@ -1928,19 +1983,19 @@ const CanvasWithSidebar: React.FC = () => {
                 <div className={`fixed z-50 border rounded-xl shadow-2xl p-2 flex flex-col gap-1 w-48 pointer-events-auto ${isDark ? 'bg-[#1A1D21] border-zinc-700' : 'bg-white border-gray-200'}`} style={{ left: lastMousePosRef.current.x + 20, top: lastMousePosRef.current.y }}>
                     <div className={`text-[10px] uppercase font-bold px-2 py-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Quick Connect</div>
                     {suggestedNodes.map(node => (
-                        <button key={node.id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors ${isDark ? 'hover:bg-zinc-800 text-gray-300 hover:text-cyan-400' : 'hover:bg-gray-100 text-gray-700 hover:text-cyan-600'}`} onClick={(e) => { e.stopPropagation(); createConnection(connectionStartRef.current!.nodeId, node.id); }}>
+                        <button key={node.id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs transition-colors ${isDark ? 'hover:bg-zinc-800 text-gray-300 hover:text-yellow-400' : 'hover:bg-gray-100 text-gray-700 hover:text-yellow-600'}`} onClick={(e) => { e.stopPropagation(); createConnection(connectionStartRef.current!.nodeId, node.id); }}>
                             {node.type === NodeType.TEXT_TO_VIDEO ? <Icons.Video size={12} /> : <Icons.Image size={12} />}<span className="truncate">{node.title}</span>
                         </button>
                     ))}
                 </div>
             )}
             {dragMode === 'SELECT' && selectionBox && (
-                <div className="fixed border border-cyan-500/50 bg-cyan-500/10 pointer-events-none z-50" style={{ left: containerRef.current!.getBoundingClientRect().left + selectionBox.x, top: containerRef.current!.getBoundingClientRect().top + selectionBox.y, width: selectionBox.w, height: selectionBox.h }}/>
+                <div className="fixed border border-yellow-500/50 bg-yellow-500/10 pointer-events-none z-50" style={{ left: containerRef.current!.getBoundingClientRect().left + selectionBox.x, top: containerRef.current!.getBoundingClientRect().top + selectionBox.y, width: selectionBox.w, height: selectionBox.h }}/>
             )}
 
             {/* Canvas Help Hint - Show when zoomed out */}
             {transform.k < 0.5 && (
-                <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-xs backdrop-blur-xl border z-50 ${
+                <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-xs backdrop-blur-xl border z-[999] pointer-events-none ${
                     isDark ? 'bg-zinc-800/90 border-zinc-700 text-gray-400' : 'bg-white/90 border-gray-200 text-gray-500'
                 }`}>
                     按住鼠标中键或空格键拖动画布 · 滚轮缩放
@@ -1986,9 +2041,9 @@ const CanvasWithSidebar: React.FC = () => {
                 }`}>
                     {/* Logo */}
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                        isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                        isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-500/20 text-yellow-600'
                     }`}>
-                        <Icons.Sparkles size={16} />
+                        <Icons.Coins size={16} />
                     </div>
 
                     {/* Project Name */}
@@ -2033,7 +2088,7 @@ const CanvasWithSidebar: React.FC = () => {
                         onClick={() => setShowAIPanel(!showAIPanel)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                             showAIPanel 
-                                ? (isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600')
+                                ? (isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600')
                                 : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
                         }`}
                         title="AI 助手"

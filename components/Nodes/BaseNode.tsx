@@ -44,7 +44,7 @@ const ConnectionPort: React.FC<{
           : 'bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.1)]'
         }
         group-hover/port:scale-125 
-        group-hover/port:border-blue-500
+        group-hover/port:border-yellow-500
         group-hover/port:shadow-[0_0_8px_rgba(59,130,246,0.5)]
       `}>
         {/* Inner dot */}
@@ -52,7 +52,7 @@ const ConnectionPort: React.FC<{
           absolute inset-[3px] rounded-full
           transition-all duration-200
           ${isDark ? 'bg-zinc-400' : 'bg-gray-400'}
-          group-hover/port:bg-blue-500
+          group-hover/port:bg-yellow-500
         `} />
       </div>
     </div>

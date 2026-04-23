@@ -88,7 +88,9 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
     };
 
     const containerBg = isDark ? 'bg-[#1a1a1a]' : 'bg-white';
-    const containerBorder = selected ? 'border-green-500 ring-2 ring-green-500/30' : (isDark ? 'border-zinc-700/50' : 'border-gray-200');
+    const containerBorder = selected
+        ? 'border-yellow-400/80 node-selected-glow'
+        : (isDark ? 'border-zinc-700/50' : 'border-gray-200');
     const controlPanelBg = isDark ? 'bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50' : 'bg-white/95 backdrop-blur-xl border-gray-200 shadow-xl';
     const inputBg = isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-green-500 text-white placeholder-zinc-500' : 'bg-gray-50 hover:bg-white border-gray-200 focus:border-green-500 text-gray-900 placeholder-gray-400';
     const emptyStateIconColor = isDark ? 'bg-zinc-800/50 text-zinc-500' : 'bg-gray-100 text-gray-400';

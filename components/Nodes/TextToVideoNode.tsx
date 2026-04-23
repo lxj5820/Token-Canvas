@@ -140,9 +140,11 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
     }, [data.model, data.resolution, data.duration, data.aspectRatio, resOptions, durOptions, ratioOptions, currentModel, inputs.length, updateData, data.id]);
 
     const containerBg = isDark ? 'bg-[#1a1a1a]' : 'bg-white';
-    const containerBorder = selected ? 'border-purple-500 ring-2 ring-purple-500/30' : (isDark ? 'border-zinc-700/50' : 'border-gray-200');
+    const containerBorder = selected
+        ? 'border-yellow-400/80 node-selected-glow'
+        : (isDark ? 'border-zinc-700/50' : 'border-gray-200');
     const controlPanelBg = isDark ? 'bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50' : 'bg-white/95 backdrop-blur-xl border-gray-200 shadow-xl';
-    const inputBg = isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-purple-500 text-white placeholder-zinc-500' : 'bg-gray-50 hover:bg-white border-gray-200 focus:border-purple-500 text-gray-900 placeholder-gray-400';
+    const inputBg = isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-yellow-500 text-white placeholder-zinc-500' : 'bg-gray-50 hover:bg-white border-gray-200 focus:border-purple-500 text-gray-900 placeholder-gray-400';
     const emptyStateIconColor = isDark ? 'bg-zinc-800/50 text-zinc-500' : 'bg-gray-100 text-gray-400';
     const emptyStateTextColor = isDark ? 'text-zinc-500' : 'text-gray-400';
     const hasResult = !!data.videoSrc && !data.isLoading;
@@ -223,7 +225,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
               <div className={`${controlPanelBg} rounded-2xl p-4 flex flex-col gap-3 border`}>
                   {/* Prompt Input */}
                   <textarea 
-                      className={`w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 min-h-[72px] no-scrollbar transition-all ${inputBg}`} 
+                      className={`w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500/20 min-h-[72px] no-scrollbar transition-all ${inputBg}`} 
                       placeholder="描述你想要生成的视频场景..." 
                       value={data.prompt || ''} 
                       onChange={(e) => updateData(data.id, { prompt: e.target.value })} 
@@ -250,9 +252,9 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
                       <button
                           className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${
                               data.isOptimizing
-                                  ? (isDark ? 'text-purple-400 bg-purple-500/20 border-purple-500/30 animate-pulse' : 'text-purple-600 bg-purple-100 border-purple-200 animate-pulse')
+                                  ? (isDark ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30 animate-pulse' : 'text-purple-600 bg-purple-100 border-purple-200 animate-pulse')
                                   : (data.promptOptimize
-                                      ? (isDark ? 'text-purple-400 bg-purple-500/20 border-purple-500/30' : 'text-purple-600 bg-purple-100 border-purple-200')
+                                      ? (isDark ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30' : 'text-yellow-600 bg-yellow-100 border-yellow-200')
                                       : (isDark ? 'text-zinc-400 hover:text-white border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700' : 'text-gray-400 hover:text-gray-600 border-gray-200 hover:bg-gray-100')
                                   )
                           }`}
@@ -292,7 +294,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
                            className={`shrink-0 h-8 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap transition-all active:scale-[0.98] ${
                                data.isLoading || !isConfigured 
                                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                                   : 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+                                   : 'bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40'
                            }`}
                        >
                            {data.isLoading ? <Icons.Loader2 className="animate-spin" size={15}/> : <Icons.Wand2 size={15} />}

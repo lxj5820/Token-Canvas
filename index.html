@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
     <title>词元 AI 画布平台</title>
     <meta name="description" content="taopipi - 免费 AI 画布平台，支持图片生成、视频创作" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>" />
@@ -86,6 +86,19 @@
       }
       .focus-ring:focus-visible {
         box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px #3b82f6;
+      }
+
+      /* 节点选中发光动画 */
+      @keyframes node-selected-glow {
+        0%, 100% {
+          box-shadow: 0 0 0 1px rgba(250,204,21,0.3), 0 0 15px rgba(250,204,21,0.12), 0 0 30px rgba(250,204,21,0.04);
+        }
+        50% {
+          box-shadow: 0 0 0 1px rgba(250,204,21,0.5), 0 0 20px rgba(250,204,21,0.2), 0 0 40px rgba(250,204,21,0.08);
+        }
+      }
+      .node-selected-glow {
+        animation: node-selected-glow 2s ease-in-out infinite;
       }
       
       /* 交互元素的平滑过渡 */

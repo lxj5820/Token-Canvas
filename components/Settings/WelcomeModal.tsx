@@ -68,14 +68,14 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
                     </div>
 
                     {/* 免责声明 */}
-                    <div className={`p-4 rounded-xl border ${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'}`}>
+                    <div className={`p-4 rounded-xl border ${isDark ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-yellow-50 border-yellow-200'}`}>
                         <div className="flex items-start gap-3">
-                            <Icons.Info size={20} className={isDark ? 'text-blue-400 shrink-0 mt-0.5' : 'text-blue-600 shrink-0 mt-0.5'} />
+                            <Icons.Info size={20} className={isDark ? 'text-yellow-400 shrink-0 mt-0.5' : 'text-yellow-600 shrink-0 mt-0.5'} />
                             <div>
-                                <h4 className={`text-sm font-bold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                                <h4 className={`text-sm font-bold ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
                                     免责声明
                                 </h4>
-                                <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-blue-300/80' : 'text-blue-600'}`}>
+                                <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-yellow-300/80' : 'text-yellow-600'}`}>
                                     词元 AI 画布为完全免费开源项目，仅供学习交流使用。使用过程中产生的任何内容均由用户自行负责，与本平台无关。
                                 </p>
                             </div>

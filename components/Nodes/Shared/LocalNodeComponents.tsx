@@ -74,7 +74,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
     const hoverClass = isDark ? 'hover:bg-zinc-700' : 'hover:bg-gray-100';
     const iconColor = isDark ? 'text-zinc-400 group-hover:text-white' : 'text-gray-500 group-hover:text-gray-700';
     const optionHover = isDark ? 'hover:bg-zinc-700 hover:text-white' : 'hover:bg-gray-100 hover:text-gray-900';
-    const activeItem = isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600';
+    const activeItem = isDark ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-50 text-yellow-600';
     const flyoutBg = isDark ? 'bg-[#1a1a1a] border-zinc-700' : 'bg-white border-gray-200 shadow-xl';
 
     const activeGroupItems = hoveredGroup ? (options.find((o: any) => typeof o === 'object' && o.label === hoveredGroup)?.items || []) : [];
@@ -90,7 +90,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
                 } ${hoverClass}`} 
                 onClick={(e) => { e.stopPropagation(); onToggle(); }}
             >
-                {Icon && <Icon size={15} className={`transition-colors ${isOpen ? (isDark ? 'text-blue-400' : 'text-blue-600') : iconColor}`} />}
+                {Icon && <Icon size={15} className={`transition-colors ${isOpen ? (isDark ? 'text-yellow-400' : 'text-yellow-600') : iconColor}`} />}
                 <span className={`text-xs font-medium transition-colors select-none ${
                     isOpen 
                         ? (isDark ? 'text-white' : 'text-gray-900') 
@@ -98,7 +98,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
                 } ${Icon ? 'min-w-[20px] text-center' : 'max-w-[90px] truncate'}`}>
                     {value}
                 </span>
-                {!Icon && <Icons.ChevronRight size={12} className={`transition-all duration-200 ${isOpen ? 'rotate-[-90deg] text-blue-400' : `rotate-90 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}`} />}
+                {!Icon && <Icons.ChevronRight size={12} className={`transition-all duration-200 ${isOpen ? 'rotate-[-90deg] text-yellow-400' : `rotate-90 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}`} />}
             </button>
 
             {/* Main Dropdown Body */}
@@ -123,7 +123,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
                                             : (isSelected || (isGroup && isGroupHovered)
                                                 ? activeItem 
                                                 : (containsSelection 
-                                                    ? (isDark ? 'text-blue-400' : 'text-blue-600') + ` ${optionHover}`
+                                                    ? (isDark ? 'text-yellow-400' : 'text-yellow-600') + ` ${optionHover}`
                                                     : (isDark ? 'text-zinc-300' : 'text-gray-600') + ` ${optionHover}`
                                                   )
                                             )
@@ -137,8 +137,8 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
                                     }}
                                 >
                                     <span className="whitespace-nowrap pr-2">{label}</span>
-                                    {isSelected && <Icons.Check size={12} className="text-blue-400 shrink-0 ml-2" />}
-                                    {isGroup && <Icons.ChevronRight size={12} className={`shrink-0 ml-2 ${isGroupHovered ? 'text-blue-400' : (isDark ? 'text-zinc-500' : 'text-gray-400')}`} />}
+                                    {isSelected && <Icons.Check size={12} className="text-yellow-400 shrink-0 ml-2" />}
+                                    {isGroup && <Icons.ChevronRight size={12} className={`shrink-0 ml-2 ${isGroupHovered ? 'text-yellow-400' : (isDark ? 'text-zinc-500' : 'text-gray-400')}`} />}
                                 </div>
                             );
                         })}
@@ -169,7 +169,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
                                             }}
                                         >
                                             <span className="truncate">{subItem}</span>
-                                            {isSubSelected && <Icons.Check size={12} className="text-blue-400 shrink-0 ml-2" />}
+                                            {isSubSelected && <Icons.Check size={12} className="text-yellow-400 shrink-0 ml-2" />}
                                         </div>
                                     );
                                 })}

@@ -322,7 +322,7 @@ const Canvas: React.FC = () => {
 
                 return (
                     <g key={conn.id} className="pointer-events-auto cursor-pointer group" onClick={() => removeConnection(conn.id)}>
-                        <path d={d} stroke="#71717a" strokeWidth={2 * transform.k} fill="none" className="group-hover:stroke-cyan-500 transition-colors"/>
+                        <path d={d} stroke="#71717a" strokeWidth={2 * transform.k} fill="none" className="group-hover:stroke-yellow-500 transition-colors"/>
                         <path d={d} stroke="transparent" strokeWidth={15 * transform.k} fill="none" /> {/* Hit area */}
                         <foreignObject x={(sx+tx)/2 - 10} y={(sy+ty)/2 - 10} width={20} height={20} className="opacity-0 group-hover:opacity-100 transition-opacity">
                              <div className="w-5 h-5 bg-zinc-800 rounded-full shadow flex items-center justify-center text-red-500 border border-zinc-600">
@@ -349,11 +349,20 @@ const Canvas: React.FC = () => {
     );
   };
 
+  // --- Cursor Style ---
+  const getCursorClass = () => {
+    if (dragMode === 'PAN') return 'cursor-grabbing';
+    if (dragMode === 'DRAG_NODE') return 'cursor-move';
+    if (dragMode === 'CONNECT') return 'cursor-crosshair';
+    if (spacePressed.current) return 'cursor-grab';
+    return 'cursor-default';
+  };
+
   return (
     <div className="w-full h-screen overflow-hidden flex relative">
-        <div 
+        <div
             ref={containerRef}
-            className="flex-1 w-full h-full relative grid-pattern cursor-grab active:cursor-grabbing"
+            className={`flex-1 w-full h-full relative grid-pattern select-none ${getCursorClass()}`}
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}

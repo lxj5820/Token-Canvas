@@ -326,7 +326,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
                                     activeTab === tab.id
-                                        ? `${isDark ? 'bg-blue-600 text-white' : 'bg-white text-gray-900 shadow-sm'}`
+                                        ? `${isDark ? 'bg-yellow-600 text-white' : 'bg-white text-gray-900 shadow-sm'}`
                                         : `${textSub} ${isDark ? 'hover:text-white' : 'hover:text-gray-700'}`
                                 }`}
                             >
@@ -352,8 +352,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                     onChange={(e) => setLocalProjectName(e.target.value)}
                                     className={`w-full px-3 py-2 rounded-lg text-sm outline-none border transition-all ${
                                         isDark 
-                                            ? 'bg-[#131316] border-[#1f1f24] focus:border-blue-500/50 text-white placeholder-gray-600' 
-                                            : 'bg-gray-50 border-gray-200 focus:border-blue-500 text-gray-900 placeholder-gray-400'
+                                            ? 'bg-[#131316] border-[#1f1f24] focus:border-yellow-500/50 text-white placeholder-gray-600' 
+                                            : 'bg-gray-50 border-gray-200 focus:border-yellow-500 text-gray-900 placeholder-gray-400'
                                     }`}
                                     placeholder="输入项目名称..."
                                 />
@@ -369,14 +369,14 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                         onClick={() => setExportMode('json')}
                                         className={`w-full p-3 rounded-lg border transition-all text-left ${
                                             exportMode === 'json'
-                                                ? (isDark ? 'border-blue-500/50 bg-blue-500/5' : 'border-blue-500 bg-blue-50')
+                                                ? (isDark ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-yellow-500 bg-yellow-50')
                                                 : (isDark ? 'border-[#1f1f24] hover:border-[#2a2a32] bg-[#131316]' : 'border-gray-200 hover:border-gray-300 bg-white')
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
                                                 exportMode === 'json' 
-                                                    ? 'bg-blue-500/20 text-blue-500' 
+                                                    ? 'bg-yellow-500/20 text-yellow-500' 
                                                     : (isDark ? 'bg-[#1f1f24] text-gray-500' : 'bg-gray-100 text-gray-400')
                                             }`}>
                                                 <Icons.FileText size={16} />
@@ -387,7 +387,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                             </div>
                                             <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
                                                 exportMode === 'json'
-                                                    ? 'border-blue-500 bg-blue-500'
+                                                    ? 'border-yellow-500 bg-yellow-500'
                                                     : (isDark ? 'border-zinc-600' : 'border-gray-300')
                                             }`}>
                                                 {exportMode === 'json' && <Icons.Check size={10} className="text-white" />}
@@ -399,14 +399,14 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                         onClick={() => setExportMode('folder')}
                                         className={`w-full p-3 rounded-lg border transition-all text-left ${
                                             exportMode === 'folder'
-                                                ? (isDark ? 'border-blue-500/50 bg-blue-500/5' : 'border-blue-500 bg-blue-50')
+                                                ? (isDark ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-yellow-500 bg-yellow-50')
                                                 : (isDark ? 'border-[#1f1f24] hover:border-[#2a2a32] bg-[#131316]' : 'border-gray-200 hover:border-gray-300 bg-white')
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
                                                 exportMode === 'folder' 
-                                                    ? 'bg-blue-500/20 text-blue-500' 
+                                                    ? 'bg-yellow-500/20 text-yellow-500' 
                                                     : (isDark ? 'bg-[#1f1f24] text-gray-500' : 'bg-gray-100 text-gray-400')
                                             }`}>
                                                 <Icons.FolderOpen size={16} />
@@ -417,7 +417,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                             </div>
                                             <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
                                                 exportMode === 'folder'
-                                                    ? 'border-blue-500 bg-blue-500'
+                                                    ? 'border-yellow-500 bg-yellow-500'
                                                     : (isDark ? 'border-zinc-600' : 'border-gray-300')
                                             }`}>
                                                 {exportMode === 'folder' && <Icons.Check size={10} className="text-white" />}
@@ -454,7 +454,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                 >
                                     <div className="flex flex-col items-center gap-3 text-center">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                            isDark ? 'bg-zinc-800 text-blue-400' : 'bg-gray-200 text-blue-500'
+                                            isDark ? 'bg-zinc-800 text-yellow-400' : 'bg-gray-200 text-yellow-500'
                                         }`}>
                                             <Icons.Loader2 size={22} className="animate-spin" />
                                         </div>
@@ -468,10 +468,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                 <div 
                                     className={`relative p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer group ${
                                         isDragging 
-                                            ? (isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-500 bg-blue-50') 
+                                            ? (isDark ? 'border-yellow-500 bg-yellow-500/10' : 'border-yellow-500 bg-yellow-50') 
                                             : (isDark 
-                                                ? 'border-zinc-700 hover:border-blue-500/50 bg-[#131316] hover:bg-blue-500/5' 
-                                                : 'border-gray-300 hover:border-blue-500 bg-gray-50 hover:bg-blue-50')
+                                                ? 'border-zinc-700 hover:border-yellow-500/50 bg-[#131316] hover:bg-yellow-500/5' 
+                                                : 'border-gray-300 hover:border-yellow-500 bg-gray-50 hover:bg-yellow-50')
                                     }`}
                                     onClick={() => importInputRef.current?.click()}
                                     onDragOver={handleDragOver}
@@ -481,13 +481,13 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                                     <div className="flex flex-col items-center gap-3 text-center">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                                             isDragging 
-                                                ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-500') 
-                                                : (isDark ? 'bg-zinc-800 group-hover:bg-blue-500/20' : 'bg-gray-200 group-hover:bg-blue-100')
+                                                ? (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-500') 
+                                                : (isDark ? 'bg-zinc-800 group-hover:bg-yellow-500/20' : 'bg-gray-200 group-hover:bg-yellow-100')
                                         }`}>
                                             <Icons.Upload size={22} className={`transition-colors ${
                                                 isDragging 
-                                                    ? (isDark ? 'text-blue-400' : 'text-blue-500') 
-                                                    : (isDark ? 'text-gray-500 group-hover:text-blue-400' : 'text-gray-400 group-hover:text-blue-500')
+                                                    ? (isDark ? 'text-yellow-400' : 'text-yellow-500') 
+                                                    : (isDark ? 'text-gray-500 group-hover:text-yellow-400' : 'text-gray-400 group-hover:text-yellow-500')
                                             }`} />
                                         </div>
                                         <div>
@@ -541,8 +541,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                             disabled={isExporting || !localProjectName.trim()}
                             className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                                 isExporting || !localProjectName.trim()
-                                    ? 'bg-blue-500/50 text-white/50 cursor-not-allowed'
-                                    : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                    ? 'bg-yellow-500/50 text-white/50 cursor-not-allowed'
+                                     : 'bg-yellow-600 hover:bg-yellow-500 text-white'
                             }`}
                         >
                             {isExporting ? (

@@ -10,15 +10,15 @@ import { GPT_IMAGE_CONFIG } from "./gpt";
  * 默认比例列表
  * 包含常用的图像比例
  */
-const DEFAULT_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'];
+const DEFAULT_RATIOS = ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'];
 
 /**
  * 图像模型能力配置
  * 定义了每个模型支持的分辨率和比例
  */
 export const IMAGE_MODEL_CAPABILITIES: Record<string, ImageModelRules> = {
-    'BananaPro': { resolutions: ['1k', '2k', '4k'], ratios: DEFAULT_RATIOS },
-    'Banana Pro Edit': { resolutions: ['1k', '2k', '4k'], ratios: ['1:1', '3:4', '4:3', '9:16', '16:9', '21:9', '9:21'], supportsEdit: true },
+    'BananaPro': { resolutions: ['1k', '2k', '4k'], ratios: ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] },
+    'Banana Pro Edit': { resolutions: ['1k', '2k', '4k'], ratios: ['auto', '1:1', '3:4', '4:3', '9:16', '16:9', '21:9', '9:21'], supportsEdit: true },
     'Banana': { resolutions: ['1k'], ratios: DEFAULT_RATIOS },
     'Flux2': { resolutions: ['1k', '2k'], ratios: DEFAULT_RATIOS },
     'Fluxpro': { resolutions: ['1k', '2k'], ratios: DEFAULT_RATIOS },
@@ -61,6 +61,7 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
   // GPT Image 模型特殊处理
   // 支持尺寸：1024x1024、1536x1024（横版）、1024x1536（竖版）
   if (modelName.includes('gpt-image')) {
+      if (aspectRatio === 'auto') return 'auto';
       if (aspectRatio === '1:1') return '1024x1024';
       if (aspectRatio === '3:2' || aspectRatio === '4:3' || aspectRatio === '16:9') {
           return '1536x1024'; // 横版
@@ -68,7 +69,6 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
       if (aspectRatio === '2:3' || aspectRatio === '3:4' || aspectRatio === '9:16') {
           return '1024x1536'; // 竖版
       }
-      // 对于其他比例，默认使用 1:1
       return '1024x1024';
   }
 
@@ -89,6 +89,11 @@ export const calculateImageSize = (aspectRatio: string, resolution: string, mode
       if (aspectRatio === '9:16') return '720x1280';
       if (aspectRatio === '4:3') return '1024x768';
       if (aspectRatio === '3:4') return '768x1024';
+  }
+
+  // 如果是 auto，返回 auto 让 API 决定
+  if (aspectRatio === 'auto') {
+      return 'auto';
   }
 
   // 通用尺寸计算逻辑

@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const textSub = isDark ? 'text-gray-400' : 'text-gray-500';
   const textMuted = isDark ? 'text-gray-600' : 'text-gray-400';
   const hoverBg = isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100';
-  const activeBg = isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600';
+  const activeBg = isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600';
   const activeBgOrange = isDark ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600';
 
   // 侧边栏按钮
@@ -181,7 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
         }`}
       >
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600'}`}>
           <Icons.ArrowRightLeft size={18} className="rotate-90" />
         </div>
         <div className="text-left">
@@ -262,7 +262,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         onClick={() => { onNewWorkflow(); setActivePanel(null); }}
         className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${hoverBg}`}
       >
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600'}`}>
           <Icons.FilePlus size={18} />
         </div>
         <div className="text-left">
@@ -300,8 +300,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Header */}
           <div className={`px-5 py-4 border-b ${borderColor} flex items-center justify-between shrink-0`}>
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
-                <Icons.Clock size={18} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
+              <div className={`p-2 rounded-lg ${isDark ? 'bg-yellow-500/10' : 'bg-yellow-50'}`}>
+                <Icons.Clock size={18} className={isDark ? 'text-yellow-400' : 'text-yellow-600'} />
               </div>
               <h3 className={`text-base font-bold ${textMain}`}>生成历史</h3>
             </div>

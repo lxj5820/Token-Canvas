@@ -352,7 +352,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                     value={globalBaseUrl}
                                     onChange={e => setGlobalBaseUrl(e.target.value)}
                                     onBlur={saveGlobalConfig}
-                                    className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                    className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                     placeholder="https://newapi.asia"
                                 />
                                 <p className={`text-xs ${textMuted}`}>
@@ -370,7 +370,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                         href="https://newapi.asia/console/token" 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="text-xs font-medium text-blue-500 hover:text-blue-600 transition-colors"
+                                        className="text-xs font-medium text-yellow-500 hover:text-yellow-600 transition-colors"
                                     >
                                         获取 Key
                                     </a>
@@ -381,7 +381,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                         value={globalApiKey}
                                         onChange={e => setGlobalApiKey(e.target.value)}
                                         onBlur={saveGlobalConfig}
-                                        className={`w-full px-4 py-3 pr-10 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                        className={`w-full px-4 py-3 pr-10 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                         placeholder="sk-..."
                                     />
                                     <button
@@ -420,7 +420,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                     type="text"
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
-                                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                     placeholder="搜索模型..."
                                 />
                             </div>
@@ -431,7 +431,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                         onClick={() => setFilterType(type)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                             filterType === type
-                                                ? 'bg-blue-500 text-white shadow-sm'
+                                                ? 'bg-yellow-500 text-white shadow-sm'
                                                 : `${textSub} hover:text-white`
                                         }`}
                                     >
@@ -441,7 +441,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                             </div>
                             <button
                                 onClick={() => setShowAddModel(true)}
-                                className={`px-3 py-2.5 rounded-xl text-xs font-medium border ${borderColor} ${textSub} hover:text-white hover:border-blue-500/50 transition-all flex items-center gap-1.5`}
+                                className={`px-3 py-2.5 rounded-xl text-xs font-medium border ${borderColor} ${textSub} hover:text-white hover:border-yellow-500/50 transition-all flex items-center gap-1.5`}
                             >
                                 <Icons.Plus size={14} /> 添加
                             </button>
@@ -491,7 +491,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                         ? (isDark ? 'bg-purple-500/10 text-purple-400' : 'bg-purple-50 text-purple-600')
                                                         : def.category === 'AUDIO'
                                                         ? (isDark ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600')
-                                                        : (isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600')
+                                                        : (isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600')
                                                 }`}>
                                                     {def.category === 'IMAGE' ? 'Image' : def.category === 'VIDEO' ? 'Video' : def.category === 'AUDIO' ? 'Audio' : 'Chat'}
                                                 </span>
@@ -522,7 +522,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                         type="text"
                                                         value={config.modelId || ''}
                                                         onChange={e => updateConfig(key, 'modelId', e.target.value)}
-                                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                                         placeholder={def.id}
                                                     />
                                                 </div>
@@ -535,7 +535,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                             type={config.key === localStorage.getItem('model_key_visible_' + key) ? 'text' : 'password'}
                                                             value={config.key || ''}
                                                             onChange={e => updateConfig(key, 'key', e.target.value)}
-                                                            className={`w-full px-4 py-2.5 pr-10 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                                            className={`w-full px-4 py-2.5 pr-10 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                                             placeholder={globalApiKey ? '使用全局 KEY' : 'sk-...'}
                                                         />
                                                         <button
@@ -570,7 +570,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                         type="text"
                                                         value={config.baseUrl || ''}
                                                         onChange={e => updateConfig(key, 'baseUrl', e.target.value)}
-                                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                                         placeholder={globalBaseUrl || 'https://newapi.asia'}
                                                     />
                                                 </div>
@@ -582,7 +582,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                         type="text"
                                                         value={config.endpoint || ''}
                                                         onChange={e => updateConfig(key, 'endpoint', e.target.value)}
-                                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all`}
+                                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
                                                         placeholder={def.defaultEndpoint || '/v1/chat/completions'}
                                                     />
                                                 </div>
@@ -606,7 +606,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                                                 ? (isDark ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-emerald-600 hover:bg-emerald-50')
                                                                 : testResult === 'error'
                                                                 ? (isDark ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50')
-                                                                : `${textSub} hover:text-blue-500`
+                                                                : `${textSub} hover:text-yellow-500`
                                                         }`}
                                                     >
                                                         {testing ? (
@@ -679,7 +679,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                     type="text"
                                     value={newModelName}
                                     onChange={e => setNewModelName(e.target.value)}
-                                    className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20`}
+                                    className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20`}
                                     placeholder="My Custom Model"
                                     autoFocus
                                 />
@@ -691,7 +691,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                     type="text"
                                     value={newModelId}
                                     onChange={e => setNewModelId(e.target.value)}
-                                    className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-blue-500/20`}
+                                    className={`w-full px-4 py-3 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20`}
                                     placeholder="custom-model-v1"
                                 />
                             </div>
@@ -705,7 +705,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                                             onClick={() => setNewModelType(type)}
                                             className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-all ${
                                                 newModelType === type
-                                                    ? 'border-blue-500 bg-blue-500/10 text-blue-500'
+                                                    ? 'border-yellow-500 bg-yellow-500/10 text-yellow-500'
                                                     : `${borderColor} ${textSub}`
                                             }`}
                                         >
@@ -726,7 +726,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                             <button
                                 onClick={handleAddModel}
                                 disabled={!newModelName || !newModelId}
-                                className={`flex-1 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white hover:bg-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                                className={`flex-1 py-3 rounded-xl text-sm font-medium bg-yellow-500 text-white hover:bg-yellow-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
                                 添加
                             </button>

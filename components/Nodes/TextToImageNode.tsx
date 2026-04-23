@@ -94,9 +94,11 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     }, [data.model, data.aspectRatio, data.resolution, data.id, updateData, supportedRatios, supportedResolutions]);
 
     const containerBg = isDark ? 'bg-[#1a1a1a]' : 'bg-white';
-    const containerBorder = selected ? 'border-blue-500 ring-2 ring-blue-500/30' : (isDark ? 'border-zinc-700/50' : 'border-gray-200');
+    const containerBorder = selected
+        ? 'border-yellow-400/80 node-selected-glow'
+        : (isDark ? 'border-zinc-700/50' : 'border-gray-200');
     const controlPanelBg = isDark ? 'bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50' : 'bg-white/95 backdrop-blur-xl border-gray-200 shadow-xl';
-    const inputBg = isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-blue-500 text-white placeholder-zinc-500' : 'bg-gray-50 hover:bg-white border-gray-200 focus:border-blue-500 text-gray-900 placeholder-gray-400';
+    const inputBg = isDark ? 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-yellow-500 text-white placeholder-zinc-500' : 'bg-gray-50 hover:bg-white border-gray-200 focus:border-yellow-500 text-gray-900 placeholder-gray-400';
     const emptyStateIconColor = isDark ? 'bg-zinc-800/50 text-zinc-500' : 'bg-gray-100 text-gray-400';
     const emptyStateTextColor = isDark ? 'text-zinc-500' : 'text-gray-400';
 
@@ -149,7 +151,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
              {/* Loading Overlay */}
              {data.isLoading && (
                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20">
-                     <Icons.Loader2 size={32} className="text-blue-500 animate-spin mb-3" />
+                     <Icons.Loader2 size={32} className="text-yellow-500 animate-spin mb-3" />
                      <span className="text-white/80 text-sm font-medium">生成中...</span>
                  </div>
              )}
@@ -162,7 +164,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                  <div className={`${controlPanelBg} rounded-2xl p-4 flex flex-col gap-3 border`}>
                       {/* Prompt Input */}
                       <textarea 
-                          className={`w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-h-[72px] no-scrollbar transition-all ${inputBg}`} 
+                          className={`w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500/20 min-h-[72px] no-scrollbar transition-all ${inputBg}`} 
                           placeholder="描述你想要生成的图片..." 
                           value={data.prompt || ''} 
                           onChange={(e) => updateData(data.id, { prompt: e.target.value })} 
@@ -188,9 +190,9 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                           <button
                               className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${
                                   data.isOptimizing
-                                      ? (isDark ? 'text-blue-400 bg-blue-500/20 border-blue-500/30 animate-pulse' : 'text-blue-600 bg-blue-100 border-blue-200 animate-pulse')
+                                      ? (isDark ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30 animate-pulse' : 'text-yellow-600 bg-yellow-100 border-yellow-200 animate-pulse')
                                       : (data.promptOptimize
-                                          ? (isDark ? 'text-blue-400 bg-blue-500/20 border-blue-500/30' : 'text-blue-600 bg-blue-100 border-blue-200')
+                                          ? (isDark ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30' : 'text-yellow-600 bg-yellow-100 border-yellow-200')
                                           : (isDark ? 'text-zinc-400 hover:text-white border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700' : 'text-gray-400 hover:text-gray-600 border-gray-200 hover:bg-gray-100')
                                       )
                               }`}
@@ -230,7 +232,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                               className={`shrink-0 h-8 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 whitespace-nowrap transition-all active:scale-[0.98] ${
                                   data.isLoading || !isConfigured 
                                       ? 'bg-gray-400 text-white cursor-not-allowed' 
-                                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'
+                                      : 'bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40'
                               }`}
                           >
                               {data.isLoading ? <Icons.Loader2 className="animate-spin" size={15}/> : <Icons.Wand2 size={15} />}
