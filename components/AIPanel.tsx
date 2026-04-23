@@ -17,6 +17,7 @@ interface ModelInfo {
     defaultModel: string;
 }
 
+// AI 模型配置列表
 const MODELS: ModelInfo[] = [
     { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini-3.1', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'gemini-3.1-flash-lite-preview' },
     { id: 'gpt-5.4', name: 'gpt-5.4', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'gpt-5.4' },
@@ -28,12 +29,14 @@ const MODELS: ModelInfo[] = [
     { id: 'deepseek-v3.2', name: 'DeepSeek', defaultUrl: 'https://newapi.asia/v1', defaultModel: 'deepseek-v3.2' },
 ];
 
+// AI 模型配置
 interface ModelConfig {
     apiKey: string;
     baseUrl: string;
     model: string;
 }
 
+// 消息配置
 interface Message {
     id: string;
     role: 'user' | 'assistant';
@@ -254,7 +257,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                 isDark ? 'bg-[#0B0C0E] border-zinc-800' : 'bg-white border-gray-200'
             }`}
         >
-            {/* Header */}
+            {/* 标题栏 */}
             <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                 <div className="flex items-center gap-2">
                     <Icons.Sparkles size={18} className={isDark ? 'text-yellow-400' : 'text-yellow-600'} />
@@ -399,9 +402,9 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                 </div>
             </div>
 
-            {/* Content */}
+            {/* 内容区域 */}
             <div className="flex-1 flex flex-col">
-                {/* Messages */}
+                {/* 消息区域 */}
                 <div className="flex-1 overflow-y-auto p-4">
                     {messages.length === 0 && !error && (
                         <div className="flex flex-col items-center justify-center h-full text-center">
@@ -459,7 +462,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({ isOpen, onClose, isDark, onOpt
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input */}
+                {/* 输入区域 */}
                 <div className={`p-4 border-t ${isDark ? 'border-zinc-800' : 'border-gray-200'}`}>
                     <div className={`relative rounded-xl border ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-gray-200'}`}>
                         <textarea

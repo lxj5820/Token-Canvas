@@ -5,41 +5,40 @@ import { NodeContent } from './Nodes/NodeContent';
 import { Icons } from './Icons';
 import { generateCreativeDescription, generateImage, generateVideo } from '../services/geminiService';
 
-const DEFAULT_NODE_WIDTH = 360; // Slightly wider for 16:9 look
-const DEFAULT_NODE_HEIGHT = 200; // Visual height, actual DOM height is flex
+const DEFAULT_NODE_WIDTH = 360; // 稍微加宽以获得16:9的视觉效果
+const DEFAULT_NODE_HEIGHT = 200; // 节点高度，实际高度为flex布局
 
 const Canvas: React.FC = () => {
-  // --- State ---
+  // --- 状态管理 ---
   const [nodes, setNodes] = useState<NodeData[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [transform, setTransform] = useState<CanvasTransform>({ x: 0, y: 0, k: 1 });
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [dragMode, setDragMode] = useState<DragMode>('NONE');
   
-  // Interaction Refs
+  // --- 交互引用 ---
   const containerRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<Point>({ x: 0, y: 0 });
   const initialTransformRef = useRef<CanvasTransform>({ x: 0, y: 0, k: 1 });
   const initialNodePositionsRef = useRef<{id: string, x: number, y: number}[]>([]);
   
-  // Connection Refs
+  // --- 连接引用 ---
   const connectionStartRef = useRef<{ nodeId: string, type: 'source' | 'target' } | null>(null);
   const [tempConnection, setTempConnection] = useState<Point | null>(null);
   
   const spacePressed = useRef(false);
 
-  // --- Helpers ---
-  const screenToWorld = (x: number, y: number) => ({
-    x: (x - transform.x) / transform.k,
+  // --- 辅助函数 ---
+  const screenToWorld = (x: number, y: number): (x -: (x - transform.x) / transform.k,
     y: (y - transform.y) / transform.k,
   });
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
-  // --- Actions ---
+  // --- 操作函数 ---
 
   const addNode = (type: NodeType, x?: number, y?: number) => {
-    // Center if no coords provided
+    // 居中添加节点
     if (x === undefined || y === undefined) {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
@@ -51,6 +50,7 @@ const Canvas: React.FC = () => {
       }
     }
 
+    // 创建新节点
     const newNode: NodeData = {
       id: generateId(),
       type,
@@ -69,6 +69,7 @@ const Canvas: React.FC = () => {
     setNodes(prev => [...prev, newNode]);
   };
 
+  // --- 粘贴函数 ---
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -81,12 +82,12 @@ const Canvas: React.FC = () => {
           reader.onload = (event) => {
              const img = new Image();
              img.onload = () => {
-                 // Calculate size maintaining aspect ratio, max 300px width
+                 // 计算节点大小，保持比例，最大300px宽度
                  const ratio = img.width / img.height;
                  const width = Math.min(300, img.width);
                  const height = width / ratio;
                  
-                 // Paste at mouse center or center screen
+                 // 粘贴到鼠标中心或屏幕中心
                  const center = screenToWorld(window.innerWidth/2, window.innerHeight/2);
                  
                  const newNode: NodeData = {
@@ -133,7 +134,7 @@ const Canvas: React.FC = () => {
     setNodes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
   };
 
-  // --- Gemini Generation ---
+  // --- Gemini 生成函数 ---
   const handleGenerate = async (nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
@@ -146,10 +147,10 @@ const Canvas: React.FC = () => {
         updateNodeData(nodeId, { optimizedPrompt: res, isLoading: false });
       } else if (node.type === NodeType.TEXT_TO_IMAGE) {
         const res = await generateImage(node.prompt || '', node.aspectRatio);
-        // Set result as imageSrc
+        // 设置结果为节点的图片源
         updateNodeData(nodeId, { imageSrc: res[0], isLoading: false });
       } else if (node.type === NodeType.TEXT_TO_VIDEO) {
-        // Find connected input image if any
+        // 查找连接的输入图片
         const connection = connections.find(c => c.targetId === nodeId);
         let inputImage = undefined;
         if (connection) {
@@ -167,24 +168,25 @@ const Canvas: React.FC = () => {
     }
   };
 
-  // --- Interaction Handlers ---
+  // --- 交互处理函数 ---
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
-        e.preventDefault(); // Browser zoom
+        e.preventDefault(); // 浏览器缩放
     }
     const zoomIntensity = 0.1;
     const direction = e.deltaY > 0 ? -1 : 1;
     let newK = transform.k + direction * zoomIntensity;
-    newK = Math.min(Math.max(0.5, newK), 2); // Clamp 50% - 200%
+    newK = Math.min(Math.max(0.5, newK), 2); // 限制缩放比例在 50% 到 200% 之间
 
-    // Zoom towards mouse
+    // 缩放到鼠标位置
     const rect = containerRef.current!.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
     const worldX = (mouseX - transform.x) / transform.k;
     const worldY = (mouseY - transform.y) / transform.k;
+
 
     const newX = mouseX - worldX * newK;
     const newY = mouseY - worldY * newK;
@@ -193,16 +195,16 @@ const Canvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Middle click or Space+Left for Pan
+    // 点击中间键或按空格+左键进行平移
     if (e.button === 1 || (e.button === 0 && spacePressed.current)) {
       setDragMode('PAN');
       dragStartRef.current = { x: e.clientX, y: e.clientY };
       initialTransformRef.current = { ...transform };
-      e.preventDefault(); // Prevent text select
+      e.preventDefault(); // 防止文本选择
       return;
     }
 
-    // Canvas Click (Deselect)
+    // 点击画布（取消选择）
     if (e.target === containerRef.current) {
         setSelectedNodeIds(new Set());
     }
@@ -213,7 +215,7 @@ const Canvas: React.FC = () => {
     setDragMode('DRAG_NODE');
     dragStartRef.current = { x: e.clientX, y: e.clientY };
     
-    // Selection Logic
+    // 选择逻辑
     const newSelection = new Set(selectedNodeIds);
     if (!e.shiftKey && !newSelection.has(id)) {
         newSelection.clear();
@@ -223,7 +225,7 @@ const Canvas: React.FC = () => {
     }
     setSelectedNodeIds(newSelection);
 
-    // Snapshot positions for dragging
+    // 拖动节点时的初始位置
     initialNodePositionsRef.current = nodes.map(n => ({ id: n.id, x: n.x, y: n.y }));
   };
 
@@ -266,7 +268,7 @@ const Canvas: React.FC = () => {
 
   const handleMouseUp = (e: React.MouseEvent) => {
     if (dragMode === 'CONNECT' && connectionStartRef.current) {
-        // Check if dropped on a port
+        // 检查是否释放到端口
     }
     setDragMode('NONE');
     setTempConnection(null);
@@ -277,7 +279,7 @@ const Canvas: React.FC = () => {
       e.stopPropagation();
       if (dragMode === 'CONNECT' && connectionStartRef.current) {
           const start = connectionStartRef.current;
-          // Validate: Output -> Input only
+          // 验证连接方向是否为输出端口到输入端口的单向连接
           if (start.type === 'source' && type === 'target' && start.nodeId !== nodeId) {
               setConnections(prev => [...prev, {
                   id: generateId(),
@@ -297,9 +299,9 @@ const Canvas: React.FC = () => {
       setConnections(prev => prev.filter(c => c.id !== id));
   };
 
-  // --- Rendering ---
+  // --- 渲染 ---
 
-  // SVG Paths
+  // 渲染连接路径
   const renderConnections = () => {
     return (
         <svg className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-visible">
@@ -308,22 +310,22 @@ const Canvas: React.FC = () => {
                 const target = nodes.find(n => n.id === conn.targetId);
                 if (!source || !target) return null;
 
-                // Adjust connection start/end points to better align with new visual structure
-                // Assume ports are at approx top:100px relative to nodeY
+                // 调整连接起始点和结束点以更好地对新的视觉结构进行对齐
+                // 假设端口在节点Y的顶部约100px
                 const portYOffset = 110; 
 
                 const sx = source.x + source.width;
-                const sy = source.y + portYOffset; // source.height / 2 in old logic
+                const sy = source.y + portYOffset; // 旧逻辑中的高度的一半
                 const tx = target.x;
                 const ty = target.y + portYOffset;
                 
-                // Bezier Curve
+                // 渲染贝塞尔曲线连接
                 const d = `M ${sx} ${sy} C ${sx + 80} ${sy}, ${tx - 80} ${ty}, ${tx} ${ty}`;
 
                 return (
                     <g key={conn.id} className="pointer-events-auto cursor-pointer group" onClick={() => removeConnection(conn.id)}>
                         <path d={d} stroke="#71717a" strokeWidth={2 * transform.k} fill="none" className="group-hover:stroke-yellow-500 transition-colors"/>
-                        <path d={d} stroke="transparent" strokeWidth={15 * transform.k} fill="none" /> {/* Hit area */}
+                        <path d={d} stroke="transparent" strokeWidth={15 * transform.k} fill="none" /> {/* 点击区域 */}
                         <foreignObject x={(sx+tx)/2 - 10} y={(sy+ty)/2 - 10} width={20} height={20} className="opacity-0 group-hover:opacity-100 transition-opacity">
                              <div className="w-5 h-5 bg-zinc-800 rounded-full shadow flex items-center justify-center text-red-500 border border-zinc-600">
                                  <Icons.Scissors size={12}/>
@@ -349,7 +351,7 @@ const Canvas: React.FC = () => {
     );
   };
 
-  // --- Cursor Style ---
+  // --- 渲染样式 ---
   const getCursorClass = () => {
     if (dragMode === 'PAN') return 'cursor-grabbing';
     if (dragMode === 'DRAG_NODE') return 'cursor-move';
@@ -369,7 +371,7 @@ const Canvas: React.FC = () => {
             onMouseUp={handleMouseUp}
             onDoubleClick={(e) => addNode(NodeType.TEXT_TO_IMAGE, screenToWorld(e.clientX, e.clientY).x, screenToWorld(e.clientX, e.clientY).y)}
         >
-            {/* World Container */}
+            {/* 世界容器 */}
             <div 
                 className="absolute origin-top-left"
                 style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})` }}
@@ -386,7 +388,7 @@ const Canvas: React.FC = () => {
                         onConnectStart={(e, type) => handleConnectStart(e, node.id, type)}
                         onContextMenu={(e) => e.preventDefault()}
                     >
-                        {/* Port Hit Areas for Drop are now inside BaseNode */}
+                        {/* 节点内容区域 */}
                         <NodeContent 
                             data={node} 
                             updateData={updateNodeData} 
@@ -396,7 +398,7 @@ const Canvas: React.FC = () => {
                 ))}
             </div>
 
-            {/* Sticky Zoom Indicator / Reset */}
+            {/* Sticky 缩放指示器和 / 重置按钮 */}
             <div className="absolute bottom-6 right-6 bg-[#1A1D21] border border-zinc-700 px-3 py-1 rounded-full shadow-md text-xs text-gray-400 font-mono select-none">
                 {Math.round(transform.k * 100)}%
             </div>

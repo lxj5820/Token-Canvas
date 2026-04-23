@@ -85,19 +85,23 @@ const CanvasWithSidebar: React.FC = () => {
   // 历史状态（保存已删除的包含内容的节点）
   const [deletedNodes, setDeletedNodes] = useState<NodeData[]>([]);
 
+  // 撤销/重做历史记录
+  const [history, setHistory] = useState<{ nodes: NodeData[]; connections: Connection[] }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   // 加载保存的工作流
   useEffect(() => {
       const loadWorkflow = async () => {
           try {
               const saved = await indexedDbService.getWorkflow();
-              if (saved) {
-                  if (saved.nodes && saved.connections) {
-                      setNodes(saved.nodes);
-                      setConnections(saved.connections);
-                      if (saved.transform) setTransform(saved.transform);
-                      if (saved.projectName) setProjectName(saved.projectName);
-                      console.log('[App] 已从IndexedDB加载工作流');
-                  }
+              if (saved && saved.nodes && saved.connections) {
+                  setNodes(saved.nodes);
+                  setConnections(saved.connections);
+                  if (saved.transform) setTransform(saved.transform);
+                  if (saved.projectName) setProjectName(saved.projectName);
+                  console.log('[App] 已从IndexedDB加载工作流');
+                  setHistory([{ nodes: saved.nodes, connections: saved.connections }]);
+                  setHistoryIndex(0);
               }
           } catch (e) {
               console.warn('[App] 加载工作流失败:', e);
@@ -123,8 +127,8 @@ const CanvasWithSidebar: React.FC = () => {
           }
       };
 
-      // 防抖保存：节点或连接变化后 1 秒再保存
-      const timeoutId = setTimeout(saveWorkflow, 1000);
+      // 立即保存：节点或连接变化后立即保存
+      const timeoutId = setTimeout(saveWorkflow, 0);
       return () => clearTimeout(timeoutId);
   }, [nodes, connections, transform, projectName]);
 
@@ -229,6 +233,37 @@ const CanvasWithSidebar: React.FC = () => {
 
       setTransform({ x: newX, y: newY, k: newScale });
   }, [nodes]);
+
+  // 保存历史记录
+  const saveToHistory = useCallback((nodes: NodeData[], connections: Connection[]) => {
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({ nodes: JSON.parse(JSON.stringify(nodes)), connections: JSON.parse(JSON.stringify(connections)) });
+      if (newHistory.length > 50) newHistory.shift();
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [historyIndex]);
+
+  // 撤销
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      setNodes(prevState.nodes);
+      setConnections(prevState.connections);
+      setHistoryIndex(prev => prev - 1);
+    }
+  }, [history, historyIndex]);
+
+  // 重做
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      setNodes(nextState.nodes);
+      setConnections(nextState.connections);
+      setHistoryIndex(prev => prev + 1);
+    }
+  }, [history, historyIndex]);
 
   // 清除 Sora 2 的旧配置（修复 endpoint 问题）
   useEffect(() => {
@@ -423,6 +458,7 @@ const CanvasWithSidebar: React.FC = () => {
           targetId: idMap.get(c.targetId)!
       }));
 
+      saveToHistory(nodes, connections);
       setNodes(prev => [...prev, ...newNodes]);
       setConnections(prev => [...prev, ...newConnections]);
       setSelectedNodeIds(new Set(newNodes.map(n => n.id)));
@@ -587,7 +623,8 @@ const CanvasWithSidebar: React.FC = () => {
       videoSrc: dataOverride?.videoSrc,
       outputArtifacts: dataOverride?.outputArtifacts || (dataOverride?.imageSrc || dataOverride?.videoSrc ? [dataOverride.imageSrc || dataOverride.videoSrc!] : [])
     };
-    
+
+    saveToHistory(nodes, connections);
     setNodes(prev => [...prev, newNode]);
     setSelectedNodeIds(new Set([newNode.id]));
   };
@@ -647,6 +684,7 @@ const CanvasWithSidebar: React.FC = () => {
           outputArtifacts: []
       };
 
+      saveToHistory(nodes, connections);
       setNodes(prev => [...prev, newNode]);
       setConnections(prev => [...prev, { id: generateId(), sourceId: quickAddMenu.sourceId, targetId: newId }]);
       setQuickAddMenu(null);
@@ -729,8 +767,8 @@ const CanvasWithSidebar: React.FC = () => {
             if (e.key === ']') {
                 handleZoomOut();
             }
-            // Z/0 重置缩放
-            if (e.key === 'z' || e.key === 'Z' || e.key === '0') {
+            // 0 重置缩放
+            if (e.key === '0') {
                 handleZoomReset();
             }
             if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -740,11 +778,13 @@ const CanvasWithSidebar: React.FC = () => {
                      if (withContent.length > 0) {
                          setDeletedNodes(prev => [...prev, ...withContent]);
                      }
+                     saveToHistory(nodes, connections);
                      setNodes(prev => prev.filter(n => !selectedNodeIds.has(n.id)));
                      setConnections(prev => prev.filter(c => !selectedNodeIds.has(c.sourceId) && !selectedNodeIds.has(c.targetId)));
                      setSelectedNodeIds(new Set());
                  }
                  if (selectedConnectionId) {
+                     saveToHistory(nodes, connections);
                      setConnections(prev => prev.filter(c => c.id !== selectedConnectionId));
                      setSelectedConnectionId(null);
                  }
@@ -752,6 +792,14 @@ const CanvasWithSidebar: React.FC = () => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
                 e.preventDefault();
                 performCopy();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                handleUndo();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                handleRedo();
             }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
                 if (e.key === 'ArrowUp') { e.preventDefault(); handleAlign('UP'); }
@@ -1391,7 +1439,10 @@ const CanvasWithSidebar: React.FC = () => {
   };
 
   const createConnection = (sourceId: string, targetId: string) => {
-      if (!connections.some(c => c.sourceId === sourceId && c.targetId === targetId)) setConnections(prev => [...prev, { id: generateId(), sourceId, targetId }]);
+      if (!connections.some(c => c.sourceId === sourceId && c.targetId === targetId)) {
+          saveToHistory(nodes, connections);
+          setConnections(prev => [...prev, { id: generateId(), sourceId, targetId }]);
+      }
       setDragMode('NONE'); setTempConnection(null); connectionStartRef.current = null; setSuggestedNodes([]);
   };
 
@@ -1403,11 +1454,16 @@ const CanvasWithSidebar: React.FC = () => {
   const deleteNode = (id: string) => {
       const node = nodes.find(n => n.id === id);
       if (node && (node.imageSrc || node.videoSrc)) setDeletedNodes(prev => [...prev, node]);
+      saveToHistory(nodes, connections);
       setNodes(prev => prev.filter(n => n.id !== id));
       setConnections(prev => prev.filter(c => c.sourceId !== id && c.targetId !== id));
   };
 
-  const removeConnection = (id: string) => { setConnections(prev => prev.filter(c => c.id !== id)); setSelectedConnectionId(null); };
+  const removeConnection = (id: string) => {
+      saveToHistory(nodes, connections);
+      setConnections(prev => prev.filter(c => c.id !== id));
+      setSelectedConnectionId(null);
+  };
 
   const renderNewWorkflowDialog = () => {
       if (!showNewWorkflowDialog) return null;
@@ -1621,20 +1677,50 @@ const CanvasWithSidebar: React.FC = () => {
                 </button>
                 
                 <div className={`w-px h-5 mx-1 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
-                
+
                 {/* 重置缩放 */}
                 <button
                     onClick={handleZoomReset}
                     className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
                         isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
-                    title="重置缩放 (Z/0)"
+                    title="重置缩放 (0)"
                 >
                     <Icons.Maximize size={16} />
                 </button>
-                
+
                 <div className={`w-px h-5 mx-1 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
-                
+
+                {/* 撤销 */}
+                <button
+                    onClick={handleUndo}
+                    disabled={historyIndex <= 0}
+                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                        historyIndex <= 0 
+                            ? (isDark ? 'text-zinc-600 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed')
+                            : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+                    }`}
+                    title="撤销 (Ctrl+Z)"
+                >
+                    <Icons.RotateCcw size={16} />
+                </button>
+
+                {/* 重做 */}
+                <button
+                    onClick={handleRedo}
+                    disabled={historyIndex >= history.length - 1}
+                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                        historyIndex >= history.length - 1 
+                            ? (isDark ? 'text-zinc-600 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed')
+                            : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+                    }`}
+                    title="重做 (Ctrl+Y)"
+                >
+                    <Icons.RotateCw size={16} />
+                </button>
+
+                <div className={`w-px h-5 mx-1 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+
                 {/* 快捷键说明 */}
                 <button
                     onClick={() => setShowShortcutsPanel(!showShortcutsPanel)}
@@ -1675,7 +1761,7 @@ const CanvasWithSidebar: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>重置缩放</span>
-                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Z</kbd>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>0</kbd>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>上下排列</span>
@@ -1692,6 +1778,14 @@ const CanvasWithSidebar: React.FC = () => {
                         <div className="flex items-center justify-between">
                             <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>复制</span>
                             <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Ctrl+C</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>撤销</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Ctrl+Z</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>重做</span>
+                            <kbd className={`px-2 py-1 rounded ${isDark ? 'bg-zinc-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Ctrl+Y</kbd>
                         </div>
                     </div>
                 </div>

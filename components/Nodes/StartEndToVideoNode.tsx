@@ -8,49 +8,75 @@ import { getVideoConstraints, getAutoCorrectedVideoSettings } from '../../servic
 import { LocalEditableTitle, LocalCustomDropdown, LocalMediaStack } from './Shared/LocalNodeComponents';
 import { getOptimizePrompt } from '../AIPanel';
 
+/**
+ * 首尾帧生成视频节点组件接口
+ */
 interface StartEndToVideoNodeProps {
+  // 节点数据
   data: NodeData;
+  // 更新节点数据的回调函数
   updateData: (id: string, updates: Partial<NodeData>) => void;
+  // 生成视频的回调函数
   onGenerate: (id: string) => void;
+  // 是否选中
   selected?: boolean;
+  // 是否显示控制面板
   showControls?: boolean;
+  // 输入连接的图片URL数组
   inputs?: string[];
+  // 最大化视频的回调函数
   onMaximize?: (id: string) => void;
+  // 下载视频的回调函数
   onDownload?: (id: string) => void;
+  // 是否为暗黑模式
   isDark?: boolean;
+  // 是否正在选择中
   isSelecting?: boolean;
 }
 
+/**
+ * 首尾帧生成视频节点组件
+ * 用于通过首帧和尾帧图片生成过渡视频
+ */
 export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
     data, updateData, onGenerate, selected, showControls, inputs = [], onMaximize, onDownload, isDark = true, isSelecting
 }) => {
+    // 激活的下拉菜单
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+    // 生成进度
     const [progress, setProgress] = useState(0);
+    // 模型配置是否有效
     const [isConfigured, setIsConfigured] = useState(true);
+    // 可用的视频模型列表
     const [videoModels, setVideoModels] = useState<string[]>([]);
 
+    // 节点是否选中且稳定
     const isSelectedAndStable = selected && !isSelecting;
     
-    // Apply swap if needed
+    // 应用帧交换逻辑
     const swapped = data.swapFrames || false;
     const orderedInputs = swapped && inputs.length >= 2 ? [inputs[1], inputs[0]] : inputs;
     
+    // 输入状态检查
     const hasStartFrame = orderedInputs.length >= 1;
     const hasEndFrame = orderedInputs.length >= 2;
     const hasValidInputs = hasStartFrame && hasEndFrame;
 
+    // 检查模型配置
     const checkConfig = useCallback(() => {
          const mName = data.model || 'Sora 2';
          const cfg = getModelConfig(mName);
          setIsConfigured(!!cfg.key);
     }, [data.model]);
 
+    // 更新视频模型列表
     const updateModels = useCallback(() => {
         const visibleModels = getVisibleModels();
         const models = visibleModels.filter(k => MODEL_REGISTRY[k]?.category === 'VIDEO');
         setVideoModels(models);
     }, []);
 
+    // 初始化和监听模型配置变化
     useEffect(() => { 
         checkConfig(); 
         updateModels();
@@ -62,7 +88,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
         };
     }, [checkConfig, updateModels]);
 
-    // Group models for dropdown
+    // 对视频模型进行分组
     const groupedVideoModels = useMemo(() => {
         const groups: Record<string, string[]> = {
             'Kling': [],
@@ -94,8 +120,21 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
         return [...result, ...ungrouped];
     }, [videoModels]);
 
-    useEffect(() => { let interval: any; if (data.isLoading) { setProgress(0); interval = setInterval(() => { setProgress(prev => (prev >= 95 ? 95 : prev + Math.max(0.5, (95 - prev) / 20))); }, 200); } else setProgress(0); return () => clearInterval(interval); }, [data.isLoading]);
+    // 处理生成进度
+    useEffect(() => { 
+        let interval: any; 
+        if (data.isLoading) {
+            setProgress(0);
+            interval = setInterval(() => {
+                setProgress(prev => (prev >= 95 ? 95 : prev + Math.max(0.5, (95 - prev) / 20)));
+            }, 200);
+        } else {
+            setProgress(0);
+        }
+        return () => clearInterval(interval); 
+    }, [data.isLoading]);
 
+    // 处理视频比例变化
     const handleRatioChange = (ratio: string) => {
         const currentShort = Math.min(data.width, data.height);
         const baseSize = Math.max(currentShort, 400);
@@ -116,19 +155,22 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
         updateData(data.id, { aspectRatio: ratio, width: Math.round(newW), height: Math.round(newH) });
     };
 
+    // 当前模型和规则
     const currentModel = data.model || 'Sora 2';
     const handler = VIDEO_HANDLERS[currentModel] || VIDEO_HANDLERS['Sora 2'];
     const rules = handler.rules;
 
+    // 视频参数选项
     const resOptions = rules.resolutions || ['720p'];
     const durOptions = rules.durations || ['4s', '8s', '12s'];
     const ratioOptions = rules.ratios || ['16:9'];
     const canOptimize = !!rules.hasPromptExtend;
 
-    // Constraints & Auto-Correction
+    // 视频约束和自动修正
     const constraints = getVideoConstraints(currentModel, data.resolution, data.duration, inputs.length);
     const displayResValue = (data.model?.includes('海螺') && (data.resolution === '720p' || data.resolution === '768p')) ? '768p' : data.resolution;
 
+    // 自动修正视频设置
     useEffect(() => {
         let updates: Partial<NodeData> = {};
         const corrections = getAutoCorrectedVideoSettings(currentModel, data.resolution, data.duration, inputs.length);
@@ -142,6 +184,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
         if (Object.keys(updates).length > 0) updateData(data.id, updates);
     }, [data.model, data.resolution, data.duration, data.aspectRatio, resOptions, durOptions, ratioOptions, currentModel, inputs.length, updateData, data.id]);
 
+    // 样式变量
     const containerBg = isDark ? 'bg-[#1a1a1a]' : 'bg-white';
     const containerBorder = selected
         ? 'border-yellow-400/80 node-selected-glow'
@@ -153,7 +196,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
     const warningColor = isDark ? 'text-amber-400' : 'text-amber-600';
     const hasResult = !!data.videoSrc && !data.isLoading;
 
-    // Custom input thumbnails for start/end frames
+    // 渲染首尾帧缩略图
     const renderFrameThumbnails = () => {
         const thumbBg = isDark ? 'bg-zinc-800/80 border-zinc-700' : 'bg-gray-50 border-gray-200';
         const labelColor = isDark ? 'text-zinc-400' : 'text-gray-500';
@@ -161,7 +204,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
         
         return (
             <div className={`mb-3 p-3 rounded-xl border ${thumbBg} flex items-center justify-center gap-4`}>
-                {/* Start Frame */}
+                {/* 首帧 */}
                 <div className="flex items-center gap-2">
                     <span className={`text-xs font-semibold ${labelColor}`}>首帧</span>
                     {hasStartFrame ? (
@@ -175,7 +218,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                     )}
                 </div>
 
-                {/* Swap Button */}
+                {/* 交换按钮 */}
                 <button 
                     className={`p-2 rounded-lg transition-all ${
                         inputs.length >= 2
@@ -193,7 +236,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                     <Icons.ArrowRightLeft size={18} />
                 </button>
 
-                {/* End Frame */}
+                {/* 尾帧 */}
                 <div className="flex items-center gap-2">
                     {hasEndFrame ? (
                         <div className="w-14 h-14 rounded-lg overflow-hidden border-2 border-emerald-500/50 shadow-sm">
@@ -212,22 +255,24 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
 
     return (
       <>
+        {/* 节点容器 */}
         <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
+            {/* 有结果时显示视频 */}
             {hasResult ? (
                  <>
                      <LocalMediaStack data={data} updateData={updateData} currentSrc={data.videoSrc} onMaximize={onMaximize} isDark={isDark} selected={selected} />
                      
-                     {/* Hover Overlay with Title & Actions */}
+                     {/* 悬停覆盖层 - 包含标题和操作按钮 */}
                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                         {/* Top Gradient */}
+                         {/* 顶部渐变 */}
                          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
                          
-                         {/* Title */}
+                         {/* 标题 */}
                          <div className="absolute top-3 left-3 pointer-events-auto">
                              <LocalEditableTitle title={data.title} onUpdate={(t) => updateData(data.id, { title: t })} isDark={true} />
                          </div>
                          
-                         {/* Action Buttons */}
+                         {/* 操作按钮 */}
                          <div className="absolute top-3 right-3 flex items-center gap-1.5 pointer-events-auto">
                              <button 
                                  title="最大化" 
@@ -263,7 +308,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                 </div>
             )}
             
-            {/* Loading Overlay with Progress */}
+            {/* 加载覆盖层 - 显示进度 */}
             {data.isLoading && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20">
                     <div className="relative w-16 h-16 mb-4">
@@ -286,10 +331,13 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
             )}
         </div>
 
-        {/* Control Panel */}
+        {/* 控制面板 */}
         {isSelectedAndStable && showControls && (
           <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
+               {/* 渲染首尾帧缩略图 */}
                {renderFrameThumbnails()}
+               
+               {/* 输入错误提示 */}
                {!hasValidInputs && (
                    <div className={`mb-3 px-4 py-2.5 rounded-xl border flex items-center gap-2 text-xs ${isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'}`}>
                        <Icons.AlertCircle size={14} />
@@ -299,8 +347,10 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                        </span>
                    </div>
                )}
+              
+               {/* 控制面板内容 */}
               <div className={`${controlPanelBg} rounded-2xl p-4 flex flex-col gap-3 border`}>
-                  {/* Prompt Input */}
+                  {/* 提示词输入 */}
                   <textarea 
                       className={`w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-h-[72px] no-scrollbar transition-all ${inputBg}`} 
                       placeholder="描述从首帧到尾帧的运动变化..." 
@@ -309,8 +359,9 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                       onWheel={(e) => e.stopPropagation()} 
                   />
                   
-                  {/* Parameters Row - All in one line */}
+                  {/* 参数行 - 所有选项在同一行 */}
                   <div className="flex items-center gap-2">
+                       {/* 模型选择 */}
                        <LocalCustomDropdown 
                            options={groupedVideoModels} 
                            value={data.model || 'Sora 2'} 
@@ -322,10 +373,59 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                            width="w-[130px]" 
                            isDark={isDark} 
                        />
-                      <LocalCustomDropdown icon={Icons.Crop} options={ratioOptions} value={data.aspectRatio || '16:9'} onChange={handleRatioChange} isOpen={activeDropdown === 'ratio'} onToggle={() => setActiveDropdown(activeDropdown === 'ratio' ? null : 'ratio')} onClose={() => setActiveDropdown(null)} disabledOptions={constraints.disabledRatios} isDark={isDark} />
-                      <LocalCustomDropdown icon={Icons.Monitor} options={resOptions} value={displayResValue || '720p'} onChange={(val: any) => updateData(data.id, { resolution: val })} isOpen={activeDropdown === 'res'} onToggle={() => setActiveDropdown(activeDropdown === 'res' ? null : 'res')} onClose={() => setActiveDropdown(null)} disabledOptions={constraints.disabledRes} isDark={isDark} />
-                      <LocalCustomDropdown icon={Icons.Clock} options={durOptions} value={data.duration || '8s'} onChange={(val: any) => updateData(data.id, { duration: val })} isOpen={activeDropdown === 'duration'} onToggle={() => setActiveDropdown(activeDropdown === 'duration' ? null : 'duration')} onClose={() => setActiveDropdown(null)} disabledOptions={constraints.disabledDurations} isDark={isDark} />
-                      <LocalCustomDropdown icon={Icons.Layers} options={[1, 2, 3, 4]} value={data.count || 1} onChange={(val: any) => updateData(data.id, { count: val })} isOpen={activeDropdown === 'count'} onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} onClose={() => setActiveDropdown(null)} isDark={isDark} />
+                       
+                       {/* 比例选择 */}
+                      <LocalCustomDropdown 
+                          icon={Icons.Crop} 
+                          options={ratioOptions} 
+                          value={data.aspectRatio || '16:9'} 
+                          onChange={handleRatioChange} 
+                          isOpen={activeDropdown === 'ratio'} 
+                          onToggle={() => setActiveDropdown(activeDropdown === 'ratio' ? null : 'ratio')} 
+                          onClose={() => setActiveDropdown(null)} 
+                          disabledOptions={constraints.disabledRatios} 
+                          isDark={isDark} 
+                      />
+                      
+                      {/* 分辨率选择 */}
+                      <LocalCustomDropdown 
+                          icon={Icons.Monitor} 
+                          options={resOptions} 
+                          value={displayResValue || '720p'} 
+                          onChange={(val: any) => updateData(data.id, { resolution: val })} 
+                          isOpen={activeDropdown === 'res'} 
+                          onToggle={() => setActiveDropdown(activeDropdown === 'res' ? null : 'res')} 
+                          onClose={() => setActiveDropdown(null)} 
+                          disabledOptions={constraints.disabledRes} 
+                          isDark={isDark} 
+                      />
+                      
+                      {/* 时长选择 */}
+                      <LocalCustomDropdown 
+                          icon={Icons.Clock} 
+                          options={durOptions} 
+                          value={data.duration || '8s'} 
+                          onChange={(val: any) => updateData(data.id, { duration: val })} 
+                          isOpen={activeDropdown === 'duration'} 
+                          onToggle={() => setActiveDropdown(activeDropdown === 'duration' ? null : 'duration')} 
+                          onClose={() => setActiveDropdown(null)} 
+                          disabledOptions={constraints.disabledDurations} 
+                          isDark={isDark} 
+                      />
+                      
+                      {/* 生成数量选择 */}
+                      <LocalCustomDropdown 
+                          icon={Icons.Layers} 
+                          options={[1, 2, 3, 4]} 
+                          value={data.count || 1} 
+                          onChange={(val: any) => updateData(data.id, { count: val })} 
+                          isOpen={activeDropdown === 'count'} 
+                          onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} 
+                          onClose={() => setActiveDropdown(null)} 
+                          isDark={isDark} 
+                      />
+                      
+                      {/* AI 优化提示词按钮 */}
                       <button
                           className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${
                               data.isOptimizing
@@ -359,11 +459,11 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
                       >
                           {data.isOptimizing ? <Icons.Loader2 size={15} className="animate-spin" /> : <Icons.Sparkles size={15} fill={data.promptOptimize ? "currentColor" : "none"} />}
                       </button>
-                       
-                       {/* Spacer */}
+                        
+                       {/* 间距 */}
                        <div className="flex-1" />
-                       
-                       {/* Generate Button */}
+                        
+                       {/* 生成按钮 */}
                        <button 
                            onClick={() => onGenerate(data.id)} 
                            disabled={data.isLoading || !isConfigured || !hasValidInputs}

@@ -14,7 +14,7 @@ interface BaseNodeProps {
   isDark?: boolean;
 }
 
-// Port component for cleaner code
+// 自定义连接端口组件
 const ConnectionPort: React.FC<{
   type: 'input' | 'output';
   isDark: boolean;
@@ -32,10 +32,10 @@ const ConnectionPort: React.FC<{
       }}
       onMouseUp={onMouseUp}
     >
-      {/* Hover area for easier targeting */}
+      {/* 鼠标悬停区域，方便目标定位 */}
       <div className="absolute -inset-4 cursor-crosshair" />
       
-      {/* Port visual */}
+      {/* 连接端口视觉 */}
       <div className={`
         relative w-3.5 h-3.5 rounded-full cursor-crosshair
         transition-all duration-200 ease-out
@@ -47,7 +47,7 @@ const ConnectionPort: React.FC<{
         group-hover/port:border-yellow-500
         group-hover/port:shadow-[0_0_8px_rgba(59,130,246,0.5)]
       `}>
-        {/* Inner dot */}
+        {/* 连接端口内部点 */}
         <div className={`
           absolute inset-[3px] rounded-full
           transition-all duration-200
@@ -63,7 +63,7 @@ const BaseNode: React.FC<BaseNodeProps> = ({
   data, selected, onMouseDown, onContextMenu, onConnectStart, onPortMouseUp, children, onResizeStart, isDark = true
 }) => {
   
-  // Get accent color based on node type
+  // 获取节点类型的强调颜色
   const getAccentColor = () => {
     switch (data.type) {
       case NodeType.TEXT_TO_IMAGE: return 'cyan';
@@ -92,11 +92,11 @@ const BaseNode: React.FC<BaseNodeProps> = ({
       onMouseDown={onMouseDown}
       onContextMenu={onContextMenu}
     >
-      {/* Main Content Area */}
+      {/* 主内容区域，包含节点内容 */}
       <div className="relative w-full h-full">
           {children}
 
-          {/* Connection Ports */}
+          {/* 连接端口 */}
           {showInputPort && (
             <ConnectionPort 
               type="input" 
@@ -111,7 +111,7 @@ const BaseNode: React.FC<BaseNodeProps> = ({
             onMouseDown={(e) => onConnectStart(e, 'source')}
           />
 
-          {/* Resize Handle */}
+          {/* 调整大小句柄 */}
           <div 
               className={`
                 absolute -right-1 -bottom-1 w-5 h-5 cursor-se-resize z-50 

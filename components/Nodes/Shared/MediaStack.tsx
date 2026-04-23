@@ -22,7 +22,7 @@ export const MediaStack: React.FC<MediaStackProps> = ({
     const sortedArtifacts = currentSrc ? [currentSrc, ...artifacts.filter(a => a !== currentSrc)] : artifacts;
     const showBadge = !data.isStackOpen && artifacts.length > 1;
 
-    // Handle click outside to close stack
+    // 处理点击外部关闭栈
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (data.isStackOpen && stackRef.current && !stackRef.current.contains(event.target as Node)) {
@@ -33,7 +33,7 @@ export const MediaStack: React.FC<MediaStackProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [data.isStackOpen, data.id, updateData]);
 
-    // Close stack when deselected
+    // 当节点取消选中时关闭栈
     useEffect(() => {
         if (!selected && data.isStackOpen) updateData(data.id, { isStackOpen: false });
     }, [selected, data.isStackOpen, data.id, updateData]);
@@ -78,8 +78,8 @@ export const MediaStack: React.FC<MediaStackProps> = ({
         );
     }
     
-    // Improved detection logic: Use type prop first, then node type, then file extension. 
-    // Avoid naive .includes('video') which flags signed URLs containing 'video' in hash.
+    // 改进的检测逻辑：优先使用类型属性，然后是节点类型，最后是文件扩展名。
+    // 避免使用简单的.includes('video')，因为它会将包含'video'的签名URL标记为视频。
     const isVideo = type === 'video' || data.type === 'TEXT_TO_VIDEO' || (currentSrc && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(currentSrc));
 
     return (

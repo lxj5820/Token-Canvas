@@ -4,9 +4,11 @@ import { NodeData } from '../../types';
 import { Icons } from '../Icons';
 import { getModelConfig, MODEL_REGISTRY, getVisibleModels } from '../../services/geminiService';
 import { IMAGE_HANDLERS } from '../../services/mode/image/configurations';
-import { LocalEditableTitle, LocalCustomDropdown, LocalInputThumbnails, LocalMediaStack } from './Shared/LocalNodeComponents';
+import { LocalEditableTitle, LocalCustomDropdown, LocalInputThumbnails, LocalMediaStack, safeDownload } from './Shared/LocalNodeComponents';
+import { ImageNodeToolbar } from './Shared/ImageToolbar';
 import { getOptimizePrompt } from '../AIPanel';
 
+// 文本到图片节点属性
 interface TextToImageNodeProps {
   data: NodeData;
   updateData: (id: string, updates: Partial<NodeData>) => void;
@@ -20,6 +22,8 @@ interface TextToImageNodeProps {
   isSelecting?: boolean;
 }
 
+
+// 文本到图片节点组件
 export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     data, updateData, onGenerate, selected, showControls, inputs = [], onMaximize, onDownload, isDark = true, isSelecting
 }) => {
@@ -30,18 +34,24 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
     const isSelectedAndStable = selected && !isSelecting;
 
+    // 检查模型配置已加载
+    // 检查模型是否已配置
+    // 检查模型是否已注册
     const checkConfig = useCallback(() => {
          const mName = data.model || 'Banana 2';
          const cfg = getModelConfig(mName);
          setIsConfigured(!!cfg.key);
     }, [data.model]);
 
+    // 更新可见模型列表
+    // 更新模型注册列表
     const updateModels = useCallback(() => {
         const visibleModels = getVisibleModels();
         const models = visibleModels.filter(k => MODEL_REGISTRY[k]?.category === 'IMAGE');
         setImageModels(models);
     }, []);
 
+    // 初始化时检查模型配置和注册
     useEffect(() => { 
         checkConfig(); 
         updateModels();
@@ -55,17 +65,18 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
     useEffect(() => { if (isSelectedAndStable && showControls) { const t = setTimeout(() => setDeferredInputs(true), 100); return () => clearTimeout(t); } else setDeferredInputs(false); }, [isSelectedAndStable, showControls]);
 
-    // Get Rules for current model
+    // 获取当前模型的规则配置
     const currentModel = data.model || 'Banana 2';
-    const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['Banana 2']; // Fallback rules
+    const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['Banana 2']; // 回退规则
     const rules = handler.rules;
     const supportedResolutions = rules.resolutions || ['1k'];
     const supportedRatios = rules.ratios || ['1:1', '16:9'];
     const canOptimize = !!rules.hasPromptExtend;
 
+    // 处理比例变化
     const handleRatioChange = (ratio: string) => {
         const currentShort = Math.min(data.width, data.height);
-        const baseSize = Math.max(currentShort, 400); // Preserve current scale, min 400px
+        const baseSize = Math.max(currentShort, 400); // 保持当前比例，最小为 400px
 
         const [wStr, hStr] = ratio.split(':');
         const wR = parseFloat(wStr);
@@ -74,20 +85,22 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
         let newW, newH;
         if (r >= 1) {
-            // Landscape or Square: Height is limiting factor
+            // 横屏或正方形: 高度是限制因子
             newH = baseSize;
             newW = baseSize * r;
         } else {
-            // Portrait: Width is limiting factor
+            // 竖屏: 高度是限制因子
             newW = baseSize;
             newH = baseSize / r;
         }
         updateData(data.id, { aspectRatio: ratio, width: Math.round(newW), height: Math.round(newH) });
     };
 
+
+
     const hasResult = !!data.imageSrc && !data.isLoading;
     
-    // Auto-correct
+    // 自动修正参数
     useEffect(() => { 
         if (data.aspectRatio && !supportedRatios.includes(data.aspectRatio)) updateData(data.id, { aspectRatio: '1:1' }); 
         if (data.resolution && !supportedResolutions.includes(data.resolution)) updateData(data.id, { resolution: supportedResolutions[0] });
@@ -104,38 +117,34 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
     return (
       <>
-        <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
+        <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || (hasResult && isSelectedAndStable) ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
+             {/* 顶部工具栏 */}
+             {hasResult && isSelectedAndStable && (
+                 <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto">
+                     <ImageNodeToolbar 
+                         imageSrc={data.imageSrc} 
+                         nodeId={data.id}
+                         onMaximize={onMaximize} 
+                         isDark={isDark} 
+                     />
+                 </div>
+             )}
+             
              {hasResult ? (
                  <>
                      <LocalMediaStack data={data} updateData={updateData} currentSrc={data.imageSrc} onMaximize={onMaximize} isDark={isDark} selected={selected} />
-                     
-                     {/* Hover Overlay with Title & Actions */}
+                      
+                     {/* 悬停覆盖层（标题和操作） */}
                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                         {/* Top Gradient */}
+                         {/* Top Gradient顶部渐变 */}
                          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
-                         
-                         {/* Title */}
+                          
+                         {/* 标题 */}
                          <div className="absolute top-3 left-3 pointer-events-auto">
                              <LocalEditableTitle title={data.title} onUpdate={(t) => updateData(data.id, { title: t })} isDark={true} />
                          </div>
-                         
-                         {/* Action Buttons */}
-                         <div className="absolute top-3 right-3 flex items-center gap-1.5 pointer-events-auto">
-                             <button 
-                                 title="最大化" 
-                                 className="w-8 h-8 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/80 hover:text-white flex items-center justify-center transition-all"
-                                 onClick={(e) => { e.stopPropagation(); onMaximize?.(data.id); }}
-                             >
-                                 <Icons.Maximize2 size={16} />
-                             </button>
-                             <button 
-                                 title="下载" 
-                                 className="w-8 h-8 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/80 hover:text-white flex items-center justify-center transition-all"
-                                 onClick={(e) => { e.stopPropagation(); onDownload?.(data.id); }}
-                             >
-                                 <Icons.Download size={16} />
-                             </button>
-                         </div>
+                          
+
                      </div>
                  </>
              ) : (
@@ -148,7 +157,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                  </div>
              )}
              
-             {/* Loading Overlay */}
+             {/* 加载覆盖层 */}
              {data.isLoading && (
                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-20">
                      <Icons.Loader2 size={32} className="text-yellow-500 animate-spin mb-3" />
@@ -157,12 +166,12 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
              )}
         </div>
 
-        {/* Control Panel */}
+        {/* 控制面板 */}
         {isSelectedAndStable && showControls && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                  {inputs.length > 0 && <LocalInputThumbnails inputs={inputs} ready={deferredInputs} isDark={isDark} />}
                  <div className={`${controlPanelBg} rounded-2xl p-4 flex flex-col gap-3 border`}>
-                      {/* Prompt Input */}
+                      {/* 提示词输入框 */}
                       <textarea 
                           className={`w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500/20 min-h-[72px] no-scrollbar transition-all ${inputBg}`} 
                           placeholder="描述你想要生成的图片..." 
@@ -171,7 +180,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                           onWheel={(e) => e.stopPropagation()} 
                       />
                       
-                      {/* Parameters Row - All in one line */}
+                      {/* 参数行 - 全部在一行 */}
                       <div className="flex items-center gap-2">
                           <LocalCustomDropdown 
                               options={imageModels} 
@@ -221,10 +230,10 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                               {data.isOptimizing ? <Icons.Loader2 size={15} className="animate-spin" /> : <Icons.Sparkles size={15} fill={data.promptOptimize ? "currentColor" : "none"} />}
                           </button>
                           
-                          {/* Spacer */}
+                          {/* 占位符 */}
                           <div className="flex-1" />
                           
-                          {/* Generate Button */}
+                          {/* 生成按钮 */}
                           <button 
                               onClick={() => onGenerate(data.id)} 
                               disabled={data.isLoading || !isConfigured}

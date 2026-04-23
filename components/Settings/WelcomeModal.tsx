@@ -7,16 +7,18 @@ interface WelcomeModalProps {
     isDark: boolean;
 }
 
+// 欢迎弹窗是否显示过
 const WELCOME_SHOWN_KEY = 'WELCOME_MODAL_SHOWN_V1';
 
+// 检查欢迎弹窗是否显示过
 export const hasShownWelcome = (): boolean => {
     return localStorage.getItem(WELCOME_SHOWN_KEY) === 'true';
 };
-
+// 标记欢迎弹窗已显示
 export const markWelcomeShown = (): void => {
     localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
 };
-
+// 欢迎弹窗组件
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isDark }) => {
     if (!isOpen) return null;
 
@@ -39,7 +41,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
                 className={`w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border ${bgCard} ${borderColor} animate-in zoom-in-95 duration-300`}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
+                {/* 标题栏 */}
                 <div className={`px-6 py-5 border-b ${borderColor} text-center`}>
                     <div className={`w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center ${isDark ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20' : 'bg-gradient-to-br from-yellow-100 to-orange-100'}`}>
                         <Icons.Coins size={32} className={isDark ? 'text-yellow-400' : 'text-yellow-600'} />
@@ -48,7 +50,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
                     <p className={`text-sm mt-1 ${textSub}`}>你的 AI 创意工具箱</p>
                 </div>
 
-                {/* Content */}
+                {/* 内容区域 */}
                 <div className="p-6 space-y-4">
                     
                     {/* 警告区域 */}
@@ -95,7 +97,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, isD
                     </div>
                 </div>
 
-                {/* Footer */}
+                {/* 底部按钮 */}
                 <div className={`px-6 py-4 border-t ${borderColor} flex justify-center`}>
                     <button
                         onClick={handleClose}

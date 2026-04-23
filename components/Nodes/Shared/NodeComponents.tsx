@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, memo } from 'react';
 import { Icons } from '../../Icons';
 import { storageService } from '../../../services/storageService';
 
-// --- Helper Functions ---
+// --- 辅助函数 ---
 
 export const safeDownload = async (src: string, type: 'image' | 'video') => {
     const ext = type === 'video' ? 'mp4' : 'png';
@@ -12,7 +12,7 @@ export const safeDownload = async (src: string, type: 'image' | 'video') => {
       const response = await fetch(src);
       const blob = await response.blob();
 
-      // Try storage service first
+      // 先尝试使用存储服务保存文件
       const saved = await storageService.saveFile(blob, filename);
       if (saved) return;
 
@@ -29,7 +29,7 @@ export const safeDownload = async (src: string, type: 'image' | 'video') => {
     }
 };
 
-// --- Components ---
+// --- 组件组件 ---
 
 export const ThumbnailItem = memo(({ src, index, isDark }: { src: string, index: number, isDark: boolean }) => {
     const [loaded, setLoaded] = useState(false);

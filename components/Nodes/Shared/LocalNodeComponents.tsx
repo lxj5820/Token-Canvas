@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import { Icons } from '../../Icons';
 import { NodeData } from '../../../types';
 
-// --- Local Components (Extracted) ---
+// --- 本地组件（提取） ---
 
 export const LocalEditableTitle: React.FC<{ title: string; onUpdate: (newTitle: string) => void, isDark?: boolean }> = ({ title, onUpdate, isDark = true }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -37,6 +37,7 @@ export const LocalEditableTitle: React.FC<{ title: string; onUpdate: (newTitle: 
     );
 };
 
+    // 自定义下拉菜单组件
 export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle, onClose, icon: Icon, width = "w-max", align = "center", disabledOptions = [], isDark = true }: any) => {
     const ref = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
@@ -144,7 +145,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
                         })}
                     </div>
 
-                    {/* Flyout Menu */}
+                    {/* 弹出菜单 */}
                     {hoveredGroup && activeGroupItems.length > 0 && (
                         <div 
                             className={`absolute left-full ml-2 w-[150px] ${flyoutBg} border rounded-xl shadow-2xl py-1.5 z-[110] animate-in fade-in slide-in-from-left-2 duration-150 before:absolute before:-left-4 before:top-0 before:h-full before:w-4 before:bg-transparent`}
@@ -182,6 +183,7 @@ export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle
     );
 };
 
+// 自定义缩略图项组件
 export const LocalThumbnailItem = memo(({ src, index, isDark }: { src: string, index: number, isDark: boolean }) => {
     const [loaded, setLoaded] = useState(false);
     return (
@@ -193,6 +195,7 @@ export const LocalThumbnailItem = memo(({ src, index, isDark }: { src: string, i
     );
 });
 
+// 自定义下拉菜单组件
 export const LocalInputThumbnails = memo(({ inputs, ready, isDark, label }: { inputs: string[], ready: boolean, isDark: boolean, label?: string }) => {
     if (!inputs || inputs.length === 0) return null;
     const labelColor = isDark ? 'text-zinc-500' : 'text-gray-400';
@@ -208,6 +211,7 @@ export const LocalInputThumbnails = memo(({ inputs, ready, isDark, label }: { in
     );
 });
 
+// 自定义视频预览组件
 export const VideoPreview = ({ src, isDark }: { src: string, isDark: boolean }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -224,6 +228,11 @@ export const VideoPreview = ({ src, isDark }: { src: string, isDark: boolean }) 
     );
 };
 
+// 自定义安全下载组件
+// 安全下载视频或图片文件
+// 安全下载视频或图片文件
+// 安全下载视频或图片文件
+// 安全下载视频或图片文件
 export const safeDownload = async (src: string) => {
     try {
       const isVideo = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(src);
@@ -239,6 +248,11 @@ export const safeDownload = async (src: string) => {
     }
 };
 
+// 自定义媒体栈组件
+// 安全下载视频或图片文件
+// 安全下载视频或图片文件
+// 安全下载视频或图片文件
+// 安全下载视频或图片文件
 export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, currentSrc: string | undefined, onMaximize?: any, isDark?: boolean, selected?: boolean }> = ({ 
     data, updateData, currentSrc, onMaximize, isDark = true, selected
 }) => {
@@ -282,8 +296,8 @@ export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, curren
         );
     }
     
-    // Improved detection: Prioritize strict node type check, then file extension.
-    // Removed naive .includes('video') which triggers on random signatures in URLs.
+    // 改进的检测逻辑：优先严格检查节点类型，然后检查文件扩展名。
+    // 移除了简单的 .includes('video') 方法，避免在 URL 中的随机签名触发误检测。
     const isVideo = data.type === 'TEXT_TO_VIDEO' || data.type === 'START_END_TO_VIDEO' || (currentSrc && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(currentSrc));
 
     return (

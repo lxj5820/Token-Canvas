@@ -47,7 +47,7 @@ export const NodeContent = memo(NodeContentComponent, (prev, next) => {
     if (prev.isSelecting !== next.isSelecting) return false;
     if (prev.isDark !== next.isDark) return false;
     
-    // Check Inputs
+    // 检查输入端口是否变化
     if (prev.inputs !== next.inputs) {
          if (prev.inputs?.length !== next.inputs?.length) return false;
          if (prev.inputs && next.inputs) { 
@@ -57,14 +57,14 @@ export const NodeContent = memo(NodeContentComponent, (prev, next) => {
          }
     }
     
-    // Check Selection/Visibility State
+    // 检查选择状态是否变化
     if (prev.selected !== next.selected || prev.showControls !== next.showControls) return false;
 
-    // Check Data *Excluding* X/Y to prevent re-renders on drag
+    // 检查数据是否变化，排除 X/Y 坐标
     if (prev.data === next.data) return true;
     
     const keys = Object.keys(prev.data) as (keyof NodeData)[];
-    // Check if keys length changed (rare but possible)
+    // 检查键名数量是否变化（罕见但可能）
     if (keys.length !== Object.keys(next.data).length) return false;
 
     for (const key of keys) {
