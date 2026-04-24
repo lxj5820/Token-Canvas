@@ -513,7 +513,7 @@ const CanvasWithSidebar: React.FC = () => {
       if (v <= 30) return '俯视';
       return '鸟瞰';
     };
-    const ZOOM_LABELS: Record<number, string> = { 0: '全景', 5: '中景', 10: '近景' };
+    const ZOOM_LABELS: Record<number, string> = { 0: '全景', 5: '中景', 10: '近景', 15: '特写' };
 
     const hLabel = H_LABELS[params.horizontalAngle] || `${params.horizontalAngle}°`;
     const vLabel = getVLabel(params.verticalAngle);
@@ -557,7 +557,7 @@ const CanvasWithSidebar: React.FC = () => {
     }
   };
 
-  // 打光生成处理
+  // 灯光生成处理
   const handleLightGenerate = async (nodeId: string, params: any) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
@@ -632,7 +632,7 @@ const CanvasWithSidebar: React.FC = () => {
               y: node.y + r * spacing,
               width: newNodeSize,
               height: newNodeSize,
-              title: `打光 #${i + 1}`,
+              title: `灯光 #${i + 1}`,
               imageSrc: results[i],
               outputArtifacts: [results[i]],
             });

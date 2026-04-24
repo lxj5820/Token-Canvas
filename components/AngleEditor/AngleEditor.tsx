@@ -15,7 +15,7 @@ const ANGLE_PRESETS = [
   { name: '右侧视角', h: 90, v: 0, z: 5 },
   { name: '背面视角', h: 180, v: 0, z: 0 },
   { name: '左侧视角', h: 270, v: 0, z: 5 },
-  { name: '仰视特写', h: 0, v: -30, z: 10 },
+  { name: '仰视特写', h: 0, v: -30, z: 15 },
   { name: '鸟瞰全景', h: 0, v: 60, z: 0 },
   { name: '自定义', h: -1, v: 0, z: 0 },
 ];
@@ -25,7 +25,7 @@ const H_LABELS: Record<number, string> = {
   180: '背面', 225: '左后方', 270: '左侧', 315: '左前方',
 };
 
-const ZOOM_LABELS: Record<number, string> = { 0: '全景', 5: '中景', 10: '近景' };
+const ZOOM_LABELS: Record<number, string> = { 0: '全景', 5: '中景', 10: '近景', 15: '特写' };
 
 const getVLabel = (v: number) => {
   if (v <= -30) return '仰视';
@@ -450,34 +450,59 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
                 transform: `translateZ(${cameraDistance}px)`,
               }}
             >
-              {/* Camera lens */}
+              {/* Camera indicator */}
               <div
-                className="absolute"
+                className="absolute flex items-center justify-center"
                 style={{
-                  left: -14,
+                  left: -16,
                   top: -14,
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
+                  width: 32,
+                  height: 26,
+                  borderRadius: 6,
                   background: 'rgba(234,179,8,0.9)',
                   border: '2px solid rgba(255,255,255,0.6)',
-                  boxShadow: '0 0 12px rgba(234,179,8,0.5)',
-                  transform: `translateZ(-4px) rotateX(${-displayV}deg) rotateY(${-displayH}deg)`,
+                  boxShadow: '0 0 14px rgba(234,179,8,0.5), 0 0 28px rgba(234,179,8,0.25)',
+                  transform: 'translateZ(-4px) rotateY(180deg)',
                 }}
               >
-                {/* Inner lens */}
+                {/* Viewfinder bump */}
+                <div
+                  className="absolute"
+                  style={{
+                    left: 6,
+                    top: -5,
+                    width: 10,
+                    height: 6,
+                    borderRadius: '3px 3px 0 0',
+                    background: 'rgba(234,179,8,0.9)',
+                    border: '2px solid rgba(255,255,255,0.6)',
+                    borderBottom: 'none',
+                  }}
+                />
+                {/* Lens */}
                 <div
                   style={{
-                    position: 'absolute',
-                    left: 6,
-                    top: 6,
                     width: 12,
                     height: 12,
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.4)',
-                    border: '1px solid rgba(255,255,255,0.6)',
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '2px solid rgba(255,255,255,0.7)',
+                    boxShadow: 'inset 0 0 3px rgba(0,0,0,0.4)',
                   }}
-                />
+                >
+                  {/* Lens reflection */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 2,
+                      top: 2,
+                      width: 4,
+                      height: 4,
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.4)',
+                    }}
+                  />
+                </div>
               </div>
               {/* Camera line to center */}
               <div
@@ -584,12 +609,12 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
           <input
             type="range"
             min={0}
-            max={10}
+            max={15}
             step={5}
             value={zoom}
             onChange={(e) => handleSliderChange('z', Number(e.target.value))}
             className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
-            style={{ background: getSliderGradient(zoom, 0, 10) }}
+            style={{ background: getSliderGradient(zoom, 0, 15) }}
           />
           <span className={`text-[12px] w-10 text-right font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{ZOOM_LABELS[zoom] || '全景'}</span>
         </div>

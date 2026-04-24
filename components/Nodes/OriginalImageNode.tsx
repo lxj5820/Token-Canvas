@@ -147,7 +147,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
       img.src = data.imageSrc;
     }, [gridSplit, data.imageSrc, data.title]);
 
-    // 打光编辑
+    // 灯光编辑
     const isLightEditing = !!data.isLightEditing;
     const toggleLightEdit = useCallback(() => {
       updateData(data.id, { isLightEditing: !data.isLightEditing });
@@ -180,7 +180,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
           </div>
           
           <div className={`w-full h-full relative group rounded-xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isLightEditing || isAngleEditing || (hasResult && isSelectedAndStable && showControls) ? 'overflow-visible' : 'overflow-hidden'} shadow-lg transition-all duration-200`}>
-              {/* 顶部工具栏（标注/宫格切分/打光编辑/多角度编辑模式下隐藏） */}
+              {/* 顶部工具栏（标注/宫格切分/灯光编辑/多角度编辑模式下隐藏） */}
               {hasResult && isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isLightEditing && !isAngleEditing && (
                   <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                       <ImageNodeToolbar
@@ -308,7 +308,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
               )}
           </div>
 
-          {/* 打光编辑器 - 与节点同级定位 */}
+          {/* 灯光编辑器 - 与节点同级定位 */}
           {isLightEditing && (
               <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel" onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
                   <LightingEditor

@@ -161,7 +161,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
       updateData(data.id, { isAngleEditing: false });
     }, [data.id, updateData]);
 
-    // 打光编辑
+    // 灯光编辑
     const isLightEditing = !!data.isLightEditing;
     const toggleLightEdit = useCallback(() => {
       updateData(data.id, { isLightEditing: !data.isLightEditing });
@@ -249,7 +249,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     return (
       <>
         <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || isLightEditing || (hasResult && isSelectedAndStable && showControls) ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
-             {/* 顶部工具栏（标注/宫格切分/角度编辑/打光编辑模式下隐藏） */}
+             {/* 顶部工具栏（标注/宫格切分/角度编辑/灯光编辑模式下隐藏） */}
              {hasResult && isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && !isLightEditing && (
                  <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                      <ImageNodeToolbar 
@@ -310,7 +310,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
              
              {hasResult ? (
                  <>
-                   {/* 标注模式/宫格切分/角度编辑/打光编辑模式显示原图+覆盖层，非标注模式显示烘焙图 */}
+                   {/* 标注模式/宫格切分/角度编辑/灯光编辑模式显示原图+覆盖层，非标注模式显示烘焙图 */}
                    <LocalMediaStack data={data} updateData={updateData} currentSrc={isAnnotating || isGridSplitting || isAngleEditing || isLightEditing ? data.imageSrc : (data.annotatedImageSrc || data.imageSrc)} onMaximize={onMaximize} isDark={isDark} selected={selected} />
 
                     {/* 悬停覆盖层（标题和操作） */}
@@ -485,7 +485,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
             </div>
         )}
 
-        {/* 打光编辑器 - 与控制面板同级定位 */}
+        {/* 灯光编辑器 - 与控制面板同级定位 */}
         {isLightEditing && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel" onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
                 <LightingEditor

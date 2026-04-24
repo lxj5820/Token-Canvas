@@ -3,6 +3,7 @@ import { Icons } from '../Icons';
 
 // ===== 常量 =====
 
+const GRID_SIZE = 240;
 const LIGHT_DISTANCE = 120;
 const PERSPECTIVE = 800;
 
@@ -98,9 +99,9 @@ const sphericalToCartesian = (azimuth: number, elevation: number, distance: numb
 
 // 默认灯光参数
 const DEFAULT_MAIN: LightSourceParams = {
-  azimuth: 45,
-  elevation: 32,
-  intensity: 80,
+  azimuth: 0,
+  elevation: 0,
+  intensity: 50,
   color: '#FFFFFF',
   enabled: true,
 };
@@ -121,34 +122,164 @@ const LightOrb3D: React.FC<{
   color: string;
   size: number;
   label: string;
+  intensity?: number;
   isDrag?: boolean;
-}> = ({ pos, color, size, label, isDrag }) => {
+}> = ({ pos, color, size, label, intensity = 80, isDrag }) => {
+  const px = pos.x;
+  const py = pos.y;
+  const pz = pos.z;
+  const dist3D = Math.sqrt(px * px + py * py + pz * pz);
+
+  const rotYAngle = Math.atan2(px, pz) * 180 / Math.PI;
+  const rotXAngle = -Math.asin(py / Math.max(dist3D, 0.001)) * 180 / Math.PI;
+
+  const intensityFactor = intensity / 100;
+
   return (
-    <div
-      className="absolute"
-      style={{
-        transformStyle: 'preserve-3d',
-        transform: `translate3d(${pos.x}px, ${pos.y}px, ${pos.z}px)`,
-      }}
-    >
-      {/* 灯光球体 */}
+    <>
+      {/* 3D光锥 - 从灯光球体中心到场景中心 */}
       <div
-        className="absolute rounded-full flex items-center justify-center"
+        className="absolute pointer-events-none"
         style={{
-          left: -size,
-          top: -size,
-          width: size * 2,
-          height: size * 2,
-          background: isDrag ? `${color}EE` : `${color}DD`,
-          border: `2px solid ${color}`,
-          boxShadow: `0 0 ${size}px ${color}90, 0 0 ${size * 2}px ${color}40`,
-          transform: 'translateZ(2px) rotateX(25deg) rotateY(30deg)',
+          transformStyle: 'preserve-3d',
+          transform: `translate3d(${pos.x}px, ${pos.y}px, ${pos.z}px)`,
+          zIndex: 1,
         }}
       >
-        <span className="text-[8px] font-bold text-black/60" style={{ transform: 'rotateX(-25deg) rotateY(-30deg)' }}>{label}</span>
+        {/* 旋转容器 - 让 -Z 轴指向场景中心 */}
+        <div
+          style={{
+            position: 'absolute',
+            transformStyle: 'preserve-3d',
+            transform: `rotateY(${rotYAngle}deg) rotateX(${rotXAngle}deg)`,
+          }}
+        >
+          {/* 光束线 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: -1,
+              top: 0,
+              width: 2,
+              height: dist3D,
+              background: `linear-gradient(to bottom, ${color}${Math.round(intensityFactor * 0.6 * 255).toString(16).padStart(2, '0')}, ${color}00)`,
+              transformOrigin: 'top center',
+              transform: 'rotateX(-90deg)',
+            }}
+          />
+
+          {/* 虚线辅助 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: -0.5,
+              top: 0,
+              width: 1,
+              height: dist3D,
+              background: `repeating-linear-gradient(to bottom, ${color}${Math.round(intensityFactor * 0.38 * 255).toString(16).padStart(2, '0')} 0px, ${color}${Math.round(intensityFactor * 0.38 * 255).toString(16).padStart(2, '0')} 4px, transparent 4px, transparent 8px)`,
+              transformOrigin: 'top center',
+              transform: 'rotateX(-90deg)',
+            }}
+          />
+
+          {/* 光锥截面 - 从光源到目标逐渐扩大，模拟体积光散射 */}
+          {Array.from({ length: 128 }, (_, i) => {
+            const t = (i + 0.5) / 128;
+            const zPos = -t * dist3D;
+            const radius = t * 40;
+            const edgeAlpha = intensityFactor * 0.12 * Math.pow(1 - t, 0.8);
+            const centerAlpha = intensityFactor * 0.06 * Math.pow(1 - t * 0.7, 1.2);
+            return (
+              <div
+                key={`slice-${i}`}
+                className="absolute rounded-full"
+                style={{
+                  left: -radius,
+                  top: -radius,
+                  width: radius * 2,
+                  height: radius * 2,
+                  background: `radial-gradient(circle, ${color}${Math.round(centerAlpha * 255).toString(16).padStart(2, '0')}, ${color}${Math.round(edgeAlpha * 255).toString(16).padStart(2, '0')} 50%, transparent 100%)`,
+                  transform: `translateZ(${zPos}px)`,
+                }}
+              />
+            );
+          })}
+
+          {/* 照射面光斑 - 柔和的圆形光斑 */}
+          <div
+            className="absolute rounded-full"
+            style={{
+              left: -52,
+              top: -52,
+              width: 104,
+              height: 104,
+              background: `radial-gradient(circle, ${color}${Math.round(intensityFactor * 0.25 * 255).toString(16).padStart(2, '0')}, ${color}${Math.round(intensityFactor * 0.12 * 255).toString(16).padStart(2, '0')} 35%, ${color}${Math.round(intensityFactor * 0.05 * 255).toString(16).padStart(2, '0')} 65%, transparent 100%)`,
+              transform: `translateZ(${-dist3D}px)`,
+            }}
+          />
+        </div>
       </div>
 
-    </div>
+      {/* 灯光球体 */}
+      <div
+        className="absolute"
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: `translate3d(${pos.x}px, ${pos.y}px, ${pos.z}px)`,
+        }}
+      >
+        {/* 简洁的3D球体 - 经纬线框架 */}
+        <div
+          style={{
+            position: 'absolute',
+            transformStyle: 'preserve-3d',
+            left: -size,
+            top: -size,
+            width: size * 2,
+            height: size * 2,
+          }}
+        >
+          {/* 经线 - 8个 */}
+          {Array.from({ length: 8 }, (_, i) => (
+            <div
+              key={`v${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: size * 2,
+                height: size * 2,
+                left: 0,
+                top: 0,
+                border: `1px solid ${color}60`,
+                transform: `rotateY(${i * 45}deg)`,
+                transformStyle: 'preserve-3d',
+              }}
+            />
+          ))}
+
+          {/* 纬线 - 3个 */}
+          {Array.from({ length: 3 }, (_, i) => {
+            const angle = (i - 1) * 90;
+            const yOffset = Math.sin(angle * Math.PI / 180) * size;
+            const ringSize = Math.cos(angle * Math.PI / 180) * size * 2;
+            return (
+              <div
+                key={`h${i}`}
+                className="absolute rounded-full"
+                style={{
+                  width: ringSize,
+                  height: ringSize,
+                  left: size - ringSize / 2,
+                  top: size - ringSize / 2,
+                  border: `1px solid ${color}50`,
+                  transform: `rotateX(90deg) translateY(${yOffset}px)`,
+                  transformStyle: 'preserve-3d',
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 };
 
@@ -160,25 +291,67 @@ const LightOrb2D: React.FC<{
   label: string;
   isDrag?: boolean;
 }> = ({ pos, color, size, label, isDrag }) => {
-  // 正面投影：x → x, y → y（忽略 z 深度）
   const px = pos.x;
   const py = pos.y;
   const dist = Math.sqrt(px ** 2 + py ** 2);
 
+  const beamLength = dist - 20;
+  const beamAngle = Math.atan2(py, px);
+  const coneHalfAngle = 0.18;
+  const coneEndX1 = px - Math.cos(beamAngle - coneHalfAngle) * beamLength;
+  const coneEndY1 = py - Math.sin(beamAngle - coneHalfAngle) * beamLength;
+  const coneEndX2 = px - Math.cos(beamAngle + coneHalfAngle) * beamLength;
+  const coneEndY2 = py - Math.sin(beamAngle + coneHalfAngle) * beamLength;
+
+  const svgSize = 400;
+  const cx = svgSize / 2;
+  const cy = svgSize / 2;
+
   return (
     <>
+      {/* 光锥 - 模拟灯光照射方向 */}
+      <svg
+        className="absolute pointer-events-none"
+        style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: svgSize, height: svgSize, overflow: 'visible' }}
+      >
+        <defs>
+          <linearGradient id={`beam-2d-${label}`} x1={cx + px} y1={cy + py} x2={cx} y2={cy} gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={color} stopOpacity="0.45" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon
+          points={`${cx + px},${cy + py} ${cx + coneEndX1},${cy + coneEndY1} ${cx + coneEndX2},${cy + coneEndY2}`}
+          fill={`url(#beam-2d-${label})`}
+        />
+      </svg>
       {/* 光束线 */}
       <svg
         className="absolute pointer-events-none"
         style={{ left: 0, top: 0, width: '100%', height: '100%', overflow: 'visible' }}
       >
+        <defs>
+          <linearGradient id={`line-2d-${label}`} x1={`${50 + px * 50 / 200}%`} y1={`${50 + py * 50 / 200}%`} x2="50%" y2="50%">
+            <stop offset="0%" stopColor={color} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line
+          x1="50%"
+          y1="50%"
+          x2={`calc(50% + ${px}px)`}
+          y2={`calc(50% + ${py}px)`}
+          stroke={`url(#line-2d-${label})`}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
         <line
           x1="50%"
           y1="50%"
           x2={`calc(50% + ${px}px)`}
           y2={`calc(50% + ${py}px)`}
           stroke={color}
-          strokeWidth={1.5}
+          strokeWidth={1}
           strokeOpacity={0.3}
           strokeDasharray="4 3"
         />
@@ -257,7 +430,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
       const newAz = ((dragStartRef.current.az + dx * 0.5) % 360 + 360) % 360;
-      const newEl = Math.max(-90, Math.min(90, dragStartRef.current.el + dy * 0.3));
+      const newEl = Math.max(-90, Math.min(90, dragStartRef.current.el - dy * 0.3));
       setDragAzimuth(newAz);
       setDragElevation(newEl);
     };
@@ -347,14 +520,14 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
     >
       {/* ===== Header ===== */}
       <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-zinc-700/50' : 'border-gray-200'}`}>
-        <h1 className={`text-[15px] font-semibold ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>打光编辑器</h1>
+        <h1 className={`text-[15px] font-semibold ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>灯光编辑器</h1>
         <div className="flex items-center gap-2">
           {/* 主光/辅光标签页 */}
           <div className={`flex gap-1 p-1 rounded-full ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`}>
             <button
               className={`px-3 py-1 rounded-full text-[12px] font-medium transition-colors cursor-pointer ${
                 activeTab === 'main'
-                  ? (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+                  ? (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-600')
                   : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-gray-500 hover:text-gray-700')
               }`}
               onClick={() => setActiveTab('main')}
@@ -364,14 +537,14 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             <button
               className={`px-3 py-1 rounded-full text-[12px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'fill'
-                  ? (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+                  ? (isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-600')
                   : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-gray-500 hover:text-gray-700')
               }`}
               onClick={() => setActiveTab('fill')}
             >
               辅光
               {fillLight.enabled && (
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" />
               )}
             </button>
           </div>
@@ -393,7 +566,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
           <button
             className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
               fillLight.enabled
-                ? 'bg-purple-500'
+                ? 'bg-yellow-500'
                 : (isDark ? 'bg-zinc-700' : 'bg-gray-300')
             }`}
             onClick={() => setFillLight(prev => ({ ...prev, enabled: !prev.enabled }))}
@@ -447,54 +620,65 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
               className="absolute inset-0 flex items-center justify-center"
               style={{ perspective: PERSPECTIVE }}
             >
+              {/* 3D球体网格 */}
               <div
                 className="absolute"
                 style={{
                   transformStyle: 'preserve-3d',
                   transform: 'rotateX(-25deg) rotateY(-30deg)',
-                  width: 0,
-                  height: 0,
                 }}
               >
-                {/* 地面参考圆 */}
+                {/* 经线 - 12条竖经线围绕球体 */}
+                {Array.from({ length: 12 }, (_, i) => (
+                  <div
+                    key={`m${i}`}
+                    className="absolute"
+                    style={{
+                      width: GRID_SIZE,
+                      height: GRID_SIZE,
+                      left: -GRID_SIZE / 2,
+                      top: -GRID_SIZE / 2,
+                      borderRadius: '50%',
+                      border: `1px solid rgba(234,179,8,0.12)`,
+                      transform: `rotateY(${i * 15}deg)`,
+                      transformStyle: 'preserve-3d',
+                    }}
+                  />
+                ))}
+                {/* 赤道 */}
                 <div
                   className="absolute"
                   style={{
-                    width: 220,
-                    height: 220,
-                    left: -110,
-                    top: -110,
+                    width: GRID_SIZE,
+                    height: GRID_SIZE,
+                    left: -GRID_SIZE / 2,
+                    top: -GRID_SIZE / 2,
                     borderRadius: '50%',
-                    border: '1px solid rgba(168,85,247,0.18)',
-                    transform: 'rotateX(90deg) translateZ(0px)',
+                    border: `1px solid rgba(234,179,8,0.15)`,
+                    transform: 'rotateX(90deg)',
                   }}
                 />
-                <div
-                  className="absolute"
-                  style={{
-                    width: 160,
-                    height: 160,
-                    left: -80,
-                    top: -80,
-                    borderRadius: '50%',
-                    border: '1px solid rgba(168,85,247,0.10)',
-                    transform: 'rotateX(90deg) translateZ(0px)',
-                  }}
-                />
-                {/* 方位十字线 */}
-                <div style={{ transformStyle: 'preserve-3d', transform: 'rotateX(90deg)' }}>
-                  <div className="absolute" style={{ left: -110, top: -0.5, width: 220, height: 1, background: 'rgba(168,85,247,0.10)' }} />
-                  <div className="absolute" style={{ left: -0.5, top: -110, width: 1, height: 220, background: 'rgba(168,85,247,0.10)' }} />
-                </div>
-                {/* 方位标注 */}
-                <div style={{ transformStyle: 'preserve-3d', transform: 'rotateX(90deg)' }}>
-                  <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: 112, top: -6 }}>右</span>
-                  <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: -120, top: -6 }}>左</span>
-                  <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: -4, top: -122 }}>后</span>
-                  <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: -4, top: 112 }}>前</span>
-                </div>
+                {/* 纬线 - 4条纬线 */}
+                {[19.5, -19.5, 37.5, -37.5].map((offset, i) => {
+                  const size = GRID_SIZE * (1 - Math.abs(offset) / 80);
+                  return (
+                    <div
+                      key={`p${i}`}
+                      className="absolute"
+                      style={{
+                        width: size,
+                        height: size,
+                        left: -size / 2,
+                        top: -size / 2,
+                        borderRadius: '50%',
+                        border: `1px solid rgba(234,179,8,0.08)`,
+                        transform: `translateY(${offset}px) rotateX(90deg)`,
+                      }}
+                    />
+                  );
+                })}
 
-                {/* 中心图片卡片 */}
+                {/* 中心球体 */}
                 <div
                   className="absolute overflow-hidden"
                   style={{
@@ -525,6 +709,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
                     color={mainLight.color}
                     size={14}
                     label="M"
+                    intensity={mainLight.intensity}
                   />
                 )}
 
@@ -535,6 +720,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
                     color={fillLight.color}
                     size={11}
                     label="F"
+                    intensity={fillLight.intensity}
                   />
                 )}
 
@@ -545,6 +731,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
                     color={currentLight.color}
                     size={16}
                     label={activeTab === 'main' ? 'M' : 'F'}
+                    intensity={currentLight.intensity}
                     isDrag
                   />
                 )}
@@ -557,13 +744,13 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             <div className="absolute inset-0 flex items-center justify-center">
               {/* 参考圆 + 十字线 */}
               <div className="absolute" style={{ width: 220, height: 220 }}>
-                <div className="absolute inset-0 rounded-full border border-purple-500/18" />
-                <div className="absolute" style={{ left: 0, top: '50%', width: '100%', height: 1, background: 'rgba(168,85,247,0.10)', marginTop: -0.5 }} />
-                <div className="absolute" style={{ left: '50%', top: 0, width: 1, height: '100%', background: 'rgba(168,85,247,0.10)', marginLeft: -0.5 }} />
-                <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ right: -18, top: '50%', marginTop: -6 }}>右</span>
-                <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: -18, top: '50%', marginTop: -6 }}>左</span>
-                <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: '50%', top: -16, marginLeft: -4 }}>上</span>
-                <span className="absolute text-[9px] text-purple-400/50 font-medium" style={{ left: '50%', bottom: -16, marginLeft: -4 }}>下</span>
+                <div className="absolute inset-0 rounded-full border border-yellow-500/18" />
+                <div className="absolute" style={{ left: 0, top: '50%', width: '100%', height: 1, background: 'rgba(234,179,8,0.10)', marginTop: -0.5 }} />
+                <div className="absolute" style={{ left: '50%', top: 0, width: 1, height: '100%', background: 'rgba(234,179,8,0.10)', marginLeft: -0.5 }} />
+                <span className="absolute text-[9px] text-yellow-400/50 font-medium" style={{ right: -18, top: '50%', marginTop: -6 }}>右</span>
+                <span className="absolute text-[9px] text-yellow-400/50 font-medium" style={{ left: -18, top: '50%', marginTop: -6 }}>左</span>
+                <span className="absolute text-[9px] text-yellow-400/50 font-medium" style={{ left: '50%', top: -16, marginLeft: -4 }}>上</span>
+                <span className="absolute text-[9px] text-yellow-400/50 font-medium" style={{ left: '50%', bottom: -16, marginLeft: -4 }}>下</span>
               </div>
 
               {/* 中心图片 */}
@@ -629,7 +816,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             key={preset.name}
             className={`shrink-0 h-7 px-3 rounded-full text-[12px] font-medium transition-colors cursor-pointer whitespace-nowrap border ${
               activePreset === preset.name
-                ? (isDark ? 'bg-purple-500/20 text-purple-400 border-purple-500/40' : 'bg-purple-50 text-purple-600 border-purple-300')
+                ? (isDark ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' : 'bg-yellow-50 text-yellow-600 border-yellow-300')
                 : (isDark ? 'bg-zinc-700/50 text-zinc-400 border-zinc-700/50 hover:text-zinc-200' : 'bg-gray-100 text-gray-500 border-gray-200 hover:text-gray-700')
             }`}
             onClick={() => handlePreset(preset)}
@@ -650,8 +837,8 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             max={360}
             value={currentLight.azimuth}
             onChange={(e) => handleParamChange('azimuth', Number(e.target.value))}
-            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
-            style={{ background: getSliderGradient(currentLight.azimuth, 0, 360, '#a855f7') }}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+            style={{ background: getSliderGradient(currentLight.azimuth, 0, 360, '#eab308') }}
           />
           <span className={`text-[12px] w-12 text-right tabular-nums font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{currentLight.azimuth}°</span>
         </div>
@@ -665,8 +852,8 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             max={90}
             value={currentLight.elevation}
             onChange={(e) => handleParamChange('elevation', Number(e.target.value))}
-            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
-            style={{ background: getSliderGradient(currentLight.elevation, -90, 90, '#a855f7') }}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+            style={{ background: getSliderGradient(currentLight.elevation, -90, 90, '#eab308') }}
           />
           <span className={`text-[12px] w-12 text-right tabular-nums font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{currentLight.elevation}°</span>
         </div>
@@ -680,8 +867,8 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             max={100}
             value={currentLight.intensity}
             onChange={(e) => handleParamChange('intensity', Number(e.target.value))}
-            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
-            style={{ background: getSliderGradient(currentLight.intensity, 0, 100, '#a855f7') }}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+            style={{ background: getSliderGradient(currentLight.intensity, 0, 100, '#eab308') }}
           />
           <span className={`text-[12px] w-12 text-right tabular-nums font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{currentLight.intensity}%</span>
         </div>
@@ -721,7 +908,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
           <button
             className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
               includePrompt
-                ? 'bg-purple-500'
+                ? 'bg-yellow-500'
                 : (isDark ? 'bg-zinc-700' : 'bg-gray-300')
             }`}
             onClick={() => setIncludePrompt(!includePrompt)}
@@ -735,7 +922,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
 
         {/* 灯光描述预览 */}
         <div className={`px-3 py-2 rounded-lg text-[11px] border ${
-          isDark ? 'bg-purple-500/8 border-purple-500/15 text-purple-400' : 'bg-purple-50 border-purple-200 text-purple-600'
+          isDark ? 'bg-yellow-500/8 border-yellow-500/15 text-yellow-400' : 'bg-yellow-50 border-yellow-200 text-yellow-600'
         }`}>
           主光：{mainLight.azimuth}°{getElevationLabel(mainLight.elevation)}，强度{mainLight.intensity}%，{mainLight.color}色光
           {fillLight.enabled && ` | 辅光：${fillLight.azimuth}°${getElevationLabel(fillLight.elevation)}，强度${fillLight.intensity}%，${fillLight.color}光`}
@@ -782,14 +969,14 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
                     key={n}
                     className={`relative px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5 ${
                       count === n
-                        ? 'bg-purple-500/15 text-purple-400'
+                        ? 'bg-yellow-500/15 text-yellow-400'
                         : 'text-zinc-300 hover:bg-zinc-700 hover:text-white'
                     }`}
                     onClick={() => { setCount(n); setCountDropdownOpen(false); }}
                   >
                     <span className="whitespace-nowrap pr-2">{n}</span>
                     {count === n && (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-purple-400 shrink-0 ml-2" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-yellow-400 shrink-0 ml-2" aria-hidden="true">
                         <path d="M20 6 9 17l-5-5"></path>
                       </svg>
                     )}
@@ -802,7 +989,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
 
         {/* 生成按钮 */}
         <button
-          className="h-8 px-5 rounded-lg text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.98]"
+          className="h-8 px-5 rounded-lg text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white shadow-lg shadow-yellow-500/25 hover:shadow-yellow-500/40 active:scale-[0.98]"
           onClick={handleGenerateClick}
           disabled={isLoading}
         >
