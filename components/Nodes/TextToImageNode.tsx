@@ -1,11 +1,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { NodeData } from '../../types';
+import { NodeData, AnnotationTool, AnnotationItem } from '../../types';
 import { Icons } from '../Icons';
 import { getModelConfig, MODEL_REGISTRY, getVisibleModels } from '../../services/geminiService';
 import { IMAGE_HANDLERS } from '../../services/mode/image/configurations';
 import { LocalEditableTitle, LocalCustomDropdown, LocalInputThumbnails, LocalMediaStack, safeDownload } from './Shared/LocalNodeComponents';
 import { ImageNodeToolbar } from './Shared/ImageToolbar';
+import { AnnotationOverlay, AnnotationRenderer, AnnotationToolbar } from '../Annotation';
+import { GridSplitOverlay, GridSplitToolbar } from '../GridSplit';
+import { AngleEditor, AngleGenerateParams } from '../AngleEditor';
+import { useAnnotation } from '../../hooks/useAnnotation';
+import { useGridSplit } from '../../hooks/useGridSplit';
 import { getOptimizePrompt } from '../AIPanel';
 
 // 文本到图片节点属性
@@ -20,23 +25,143 @@ interface TextToImageNodeProps {
   onDownload?: (id: string) => void;
   isDark?: boolean;
   isSelecting?: boolean;
+  onGridSplitCreateNodes?: (sourceNodeId: string, cells: { dataUrl: string; label: string; row: number; col: number }[]) => void;
+  onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
 }
 
 
 // 文本到图片节点组件
 export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
-    data, updateData, onGenerate, selected, showControls, inputs = [], onMaximize, onDownload, isDark = true, isSelecting
+    data, updateData, onGenerate, selected, showControls, inputs = [], onMaximize, onDownload, isDark = true, isSelecting, onGridSplitCreateNodes, onAngleGenerate
 }) => {
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const [deferredInputs, setDeferredInputs] = useState(false);
     const [isConfigured, setIsConfigured] = useState(true);
     const [imageModels, setImageModels] = useState<string[]>([]);
 
+    // 标注功能
+    const { isAnnotating, toggleAnnotate, handleAnnotationsChange, handleCloseAnnotation } = useAnnotation(data, updateData);
+
+    // 标注工具栏状态（提升到此处以便工具栏独立定位）
+    const [annotationTool, setAnnotationTool] = useState<AnnotationTool>('pen');
+    const [annotationColor, setAnnotationColor] = useState('#FFD700');
+    const [annotationStrokeWidth, setAnnotationStrokeWidth] = useState(3);
+    const [undoneAnnotations, setUndoneAnnotations] = useState<AnnotationItem[]>([]);
+
+    const handleAnnotationsChangeWithRedo = useCallback((annotations: AnnotationItem[]) => {
+        // 记录被移除的项以支持重做
+        const currentAnnotations = data.annotations || [];
+        if (annotations.length < currentAnnotations.length) {
+            const removed = currentAnnotations.slice(annotations.length);
+            setUndoneAnnotations(prev => [...prev, ...removed]);
+        } else {
+            // 新增标注时清空重做栈
+            setUndoneAnnotations([]);
+        }
+        handleAnnotationsChange(annotations);
+    }, [data.annotations, handleAnnotationsChange]);
+
+    const handleAnnotationUndo = useCallback(() => {
+        const currentAnnotations = data.annotations || [];
+        if (currentAnnotations.length > 0) {
+            const lastItem = currentAnnotations[currentAnnotations.length - 1];
+            setUndoneAnnotations(prev => [...prev, lastItem]);
+            handleAnnotationsChange(currentAnnotations.slice(0, -1));
+        }
+    }, [data.annotations, handleAnnotationsChange]);
+
+    const handleAnnotationRedo = useCallback(() => {
+        if (undoneAnnotations.length > 0) {
+            const lastUndone = undoneAnnotations[undoneAnnotations.length - 1];
+            setUndoneAnnotations(prev => prev.slice(0, -1));
+            handleAnnotationsChange([...(data.annotations || []), lastUndone]);
+        }
+    }, [undoneAnnotations, data.annotations, handleAnnotationsChange]);
+
+    const handleAnnotationClear = useCallback(() => {
+        setUndoneAnnotations([]);
+        handleAnnotationsChange([]);
+    }, [handleAnnotationsChange]);
+
+    // 宫格切分功能
+    const { gridSplit, isGridSplitting, enterGridSplit, exitGridSplit, setGridSize, toggleCell, selectAllCells, deselectAllCells } = useGridSplit(data, updateData);
+
+    const handleGridSplit = useCallback((rows: number, cols: number) => {
+      enterGridSplit(rows, cols);
+    }, [enterGridSplit]);
+
+    // 宫格切分 - 裁剪选中格子并创建节点
+    const handleGridSplitCreateNodes = useCallback(() => {
+      if (!gridSplit || !data.imageSrc) return;
+      const { rows, cols, selectedCells } = gridSplit;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const cells: { dataUrl: string; label: string; row: number; col: number }[] = [];
+        const cellW = img.naturalWidth / cols;
+        const cellH = img.naturalHeight / rows;
+        selectedCells.forEach(cellId => {
+          const [r, c] = cellId.split('-').map(Number);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(cellW);
+          canvas.height = Math.round(cellH);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, c * cellW, r * cellH, cellW, cellH, 0, 0, canvas.width, canvas.height);
+            cells.push({
+              dataUrl: canvas.toDataURL('image/png'),
+              label: `${data.title || '切分'} ${r + 1}-${c + 1}`,
+              row: r,
+              col: c,
+            });
+          }
+        });
+        if (cells.length > 0 && onGridSplitCreateNodes) {
+          onGridSplitCreateNodes(data.id, cells);
+        }
+      };
+      img.src = data.imageSrc;
+    }, [gridSplit, data.imageSrc, data.title, data.id, onGridSplitCreateNodes]);
+
+    // 宫格切分 - 下载选中格子
+    const handleGridSplitDownload = useCallback(() => {
+      if (!gridSplit || !data.imageSrc) return;
+      const { rows, cols, selectedCells } = gridSplit;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const cellW = img.naturalWidth / cols;
+        const cellH = img.naturalHeight / rows;
+        selectedCells.forEach(cellId => {
+          const [r, c] = cellId.split('-').map(Number);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(cellW);
+          canvas.height = Math.round(cellH);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, c * cellW, r * cellH, cellW, cellH, 0, 0, canvas.width, canvas.height);
+            const link = document.createElement('a');
+            link.download = `${data.title || '切分'}_${r + 1}_${c + 1}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+          }
+        });
+      };
+      img.src = data.imageSrc;
+    }, [gridSplit, data.imageSrc, data.title]);
+
+    // 多角度编辑
+    const isAngleEditing = !!data.isAngleEditing;
+    const toggleAngleEdit = useCallback(() => {
+      updateData(data.id, { isAngleEditing: !data.isAngleEditing });
+    }, [data.id, data.isAngleEditing, updateData]);
+    const closeAngleEdit = useCallback(() => {
+      updateData(data.id, { isAngleEditing: false });
+    }, [data.id, updateData]);
+
     const isSelectedAndStable = selected && !isSelecting;
 
     // 检查模型配置已加载
-    // 检查模型是否已配置
-    // 检查模型是否已注册
     const checkConfig = useCallback(() => {
          const mName = data.model || 'Banana 2';
          const cfg = getModelConfig(mName);
@@ -44,7 +169,6 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     }, [data.model]);
 
     // 更新可见模型列表
-    // 更新模型注册列表
     const updateModels = useCallback(() => {
         const visibleModels = getVisibleModels();
         const models = visibleModels.filter(k => MODEL_REGISTRY[k]?.category === 'IMAGE');
@@ -67,7 +191,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
     // 获取当前模型的规则配置
     const currentModel = data.model || 'Banana 2';
-    const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['Banana 2']; // 回退规则
+    const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['Banana 2'];
     const rules = handler.rules;
     const supportedResolutions = rules.resolutions || ['1k'];
     const supportedRatios = rules.ratios || ['1:1', '16:9'];
@@ -76,7 +200,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     // 处理比例变化
     const handleRatioChange = (ratio: string) => {
         const currentShort = Math.min(data.width, data.height);
-        const baseSize = Math.max(currentShort, 400); // 保持当前比例，最小为 400px
+        const baseSize = Math.max(currentShort, 400);
 
         const [wStr, hStr] = ratio.split(':');
         const wR = parseFloat(wStr);
@@ -85,18 +209,14 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
         let newW, newH;
         if (r >= 1) {
-            // 横屏或正方形: 高度是限制因子
             newH = baseSize;
             newW = baseSize * r;
         } else {
-            // 竖屏: 高度是限制因子
             newW = baseSize;
             newH = baseSize / r;
         }
         updateData(data.id, { aspectRatio: ratio, width: Math.round(newW), height: Math.round(newH) });
     };
-
-
 
     const hasResult = !!data.imageSrc && !data.isLoading;
     
@@ -117,35 +237,121 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
     return (
       <>
-        <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || (hasResult && isSelectedAndStable) ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
-             {/* 顶部工具栏 */}
-             {hasResult && isSelectedAndStable && (
-                 <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto">
+        <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || (hasResult && isSelectedAndStable && showControls) ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
+             {/* 顶部工具栏（标注/宫格切分/角度编辑模式下隐藏） */}
+             {hasResult && isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && (
+                 <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                      <ImageNodeToolbar 
-                         imageSrc={data.imageSrc} 
+                         imageSrc={data.annotatedImageSrc || data.imageSrc} 
                          nodeId={data.id}
                          onMaximize={onMaximize} 
-                         isDark={isDark} 
+                         onAnnotate={toggleAnnotate}
+                         isAnnotating={isAnnotating}
+                         isDark={isDark}
+                         onGridSplit={handleGridSplit}
+                         onAngleEdit={toggleAngleEdit}
+                         isAngleEditing={isAngleEditing}
+                     />
+                 </div>
+             )}
+             
+             {/* 宫格切分工具栏 */}
+             {isGridSplitting && gridSplit && (
+                 <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
+                     <GridSplitToolbar
+                         rows={gridSplit.rows}
+                         cols={gridSplit.cols}
+                         selectedCount={gridSplit.selectedCells.length}
+                         totalCount={gridSplit.rows * gridSplit.cols}
+                         onSetSize={setGridSize}
+                         onClose={exitGridSplit}
+                         onSelectAll={selectAllCells}
+                         onDeselectAll={deselectAllCells}
+                         onCreateNodes={handleGridSplitCreateNodes}
+                         onDownload={handleGridSplitDownload}
+                         isDark={isDark}
+                     />
+                 </div>
+             )}
+
+             {/* 标注工具栏（与图片工具栏同位置） */}
+             {isAnnotating && (
+                 <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
+                     <AnnotationToolbar
+                         activeTool={annotationTool}
+                         onToolChange={setAnnotationTool}
+                         currentColor={annotationColor}
+                         onColorChange={setAnnotationColor}
+                         strokeWidth={annotationStrokeWidth}
+                         onStrokeWidthChange={setAnnotationStrokeWidth}
+                         onUndo={handleAnnotationUndo}
+                         onRedo={handleAnnotationRedo}
+                         onClear={handleAnnotationClear}
+                         canUndo={(data.annotations?.length || 0) > 0}
+                         canRedo={undoneAnnotations.length > 0}
+                         onClose={handleCloseAnnotation}
+                         isDark={isDark}
                      />
                  </div>
              )}
              
              {hasResult ? (
                  <>
-                     <LocalMediaStack data={data} updateData={updateData} currentSrc={data.imageSrc} onMaximize={onMaximize} isDark={isDark} selected={selected} />
-                      
-                     {/* 悬停覆盖层（标题和操作） */}
+                    {/* 标注模式/宫格切分/角度编辑模式显示原图+覆盖层，非标注模式显示烘焙图 */}
+                    <LocalMediaStack data={data} updateData={updateData} currentSrc={isAnnotating || isGridSplitting || isAngleEditing ? data.imageSrc : (data.annotatedImageSrc || data.imageSrc)} onMaximize={onMaximize} isDark={isDark} selected={selected} />
+
+                    {/* 悬停覆盖层（标题和操作） */}
+                    {!isAnnotating && !isGridSplitting && !isAngleEditing && (
                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                          {/* Top Gradient顶部渐变 */}
                          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
-                          
+
                          {/* 标题 */}
                          <div className="absolute top-3 left-3 pointer-events-auto">
                              <LocalEditableTitle title={data.title} onUpdate={(t) => updateData(data.id, { title: t })} isDark={true} />
                          </div>
-                          
-
                      </div>
+                    )}
+
+                    {/* 只读标注渲染（仅当有标注但没有烘焙图时才显示SVG叠加） */}
+                    {!isAnnotating && !isGridSplitting && !isAngleEditing && !data.annotatedImageSrc && (data.annotations?.length || 0) > 0 && (
+                         <AnnotationRenderer
+                             annotations={data.annotations || []}
+                             width={data.width}
+                             height={data.height}
+                         />
+                     )}
+
+                     {/* 标注覆盖层（标注模式下可编辑） */}
+                     {isAnnotating && (
+                         <AnnotationOverlay
+                             width={data.width}
+                             height={data.height}
+                             annotations={data.annotations || []}
+                             onAnnotationsChange={handleAnnotationsChangeWithRedo}
+                             onClose={handleCloseAnnotation}
+                             isDark={isDark}
+                             activeTool={annotationTool}
+                             onActiveToolChange={setAnnotationTool}
+                             currentColor={annotationColor}
+                             onCurrentColorChange={setAnnotationColor}
+                             strokeWidth={annotationStrokeWidth}
+                             onStrokeWidthChange={setAnnotationStrokeWidth}
+                         />
+                     )}
+
+                     {/* 宫格切分覆盖层 */}
+                     {isGridSplitting && gridSplit && (
+                         <GridSplitOverlay
+                             width={data.width}
+                             height={data.height}
+                             rows={gridSplit.rows}
+                             cols={gridSplit.cols}
+                             selectedCells={gridSplit.selectedCells}
+                             onToggleCell={toggleCell}
+                             isDark={isDark}
+                         />
+                     )}
                  </>
              ) : (
                  <div className={`w-full h-full flex flex-col items-center justify-center ${emptyStateTextColor}`}>
@@ -167,7 +373,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
         </div>
 
         {/* 控制面板 */}
-        {isSelectedAndStable && showControls && (
+        {isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                  {inputs.length > 0 && <LocalInputThumbnails inputs={inputs} ready={deferredInputs} isDark={isDark} />}
                  <div className={`${controlPanelBg} rounded-2xl p-4 flex flex-col gap-3 border`}>
@@ -249,6 +455,20 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                           </button>
                       </div>
                  </div>
+            </div>
+        )}
+
+        {/* 多角度编辑器 - 与控制面板同级定位 */}
+        {isAngleEditing && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel" onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+                <AngleEditor
+                    imageSrc={data.imageSrc || ''}
+                    onClose={closeAngleEdit}
+                    onGenerate={(params) => onAngleGenerate?.(data.id, params)}
+                    isDark={isDark}
+                    prompt={data.prompt}
+                    isLoading={data.isLoading}
+                />
             </div>
         )}
       </>

@@ -271,27 +271,83 @@ export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, curren
 
     if (data.isStackOpen) {
         return (
-            <div ref={stackRef} className="absolute top-0 left-0 h-full flex gap-4 z-[100] animate-in fade-in zoom-in-95 duration-200">
+            <div ref={stackRef} className="absolute inset-0 overflow-visible rounded-xl">
+                <div className="absolute inset-0 rounded-xl" style={{ 
+                    background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)', 
+                    border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)', 
+                    outline: 'transparent solid 2px', 
+                    outlineOffset: '-1px', 
+                    transition: 'outline-color 0.2s, border-color 0.15s'
+                }} />
                 {sortedArtifacts.map((src, index) => {
                     const isMain = index === 0;
                     const isVideo = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(src) || data.type === 'TEXT_TO_VIDEO';
                     return (
-                      <div key={src + index} className={`relative h-full rounded-xl border ${isDark ? 'border-zinc-800 bg-black' : 'border-gray-200 bg-white'} overflow-hidden shadow-2xl flex-shrink-0 group/card ${isMain ? 'ring-2 ring-cyan-500/50' : ''}`} style={{ width: data.width }}>
-                           {isVideo ? (
-                               <video src={src} className="w-full h-full object-cover" controls={isMain} muted loop autoPlay playsInline />
-                           ) : (
-                               <img src={src} className={`w-full h-full object-contain ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`} draggable={false} onMouseDown={(e) => e.preventDefault()} />
-                           )}
-                           <div className="absolute bottom-2 right-2 flex items-center gap-1.5 z-20 pointer-events-auto">
-                               {!isMain && <button className="h-6 px-2 bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-md text-[9px] font-bold text-white transition-colors flex items-center gap-1 shadow-sm" onClick={(e) => { e.stopPropagation(); updateData(data.id, { [isVideo ? 'videoSrc' : 'imageSrc']: src, isStackOpen: false }); }}><Icons.Check size={10} className="text-cyan-400" /><span>Main</span></button>}
-                               <button className="w-6 h-6 flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-md text-white transition-colors shadow-sm" onClick={(e) => { e.stopPropagation(); onMaximize?.(data.id); }}><Icons.Maximize2 size={12}/></button>
-                               <button className="w-6 h-6 flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-md text-white transition-colors shadow-sm" onClick={(e) => { e.stopPropagation(); e.preventDefault(); safeDownload(src); }}><Icons.Download size={12}/></button>
-                           </div>
-                           <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-[9px] text-white font-mono border border-white/10 select-none">#{index + 1}</div>
-                      </div>
+                        <div 
+                            key={src + index} 
+                            className="absolute overflow-hidden rounded-xl cursor-pointer" 
+                            style={{
+                                left: index * (data.width + 8) + 'px',
+                                top: '0px',
+                                width: data.width + 'px',
+                                height: data.height + 'px',
+                                zIndex: sortedArtifacts.length - index,
+                                border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
+                                outline: 'none',
+                                outlineOffset: '-1px',
+                                background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)'
+                            }}
+                        >
+                            <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
+                                <div style={{ display: 'contents' }}>
+                                    {isVideo ? (
+                                        <video src={src} className="w-full h-full object-cover" controls={isMain} muted loop autoPlay playsInline />
+                                    ) : (
+                                        <img 
+                                            src={src} 
+                                            alt={`图片 ${index + 1}`} 
+                                            className="h-full w-full object-cover" 
+                                            draggable={false} 
+                                            decoding="async"
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                            <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
+                                <button 
+                                    type="button" 
+                                    className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white disabled:opacity-60"
+                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); safeDownload(src); }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 19.8008 19.9004">
+                                        <path d="M1.80078 17C1.80078 17.2917 1.91676 17.5711 2.12305 17.7773C2.32934 17.9836 2.60865 18.0996 2.90039 18.0996H16.9004C17.1921 18.0996 17.4714 17.9836 17.6777 17.7773C17.884 17.5711 18 17.2917 18 17V13H19.8008V17C19.8008 17.7691 19.495 18.5069 18.9512 19.0508C18.4073 19.5946 17.6695 19.9004 16.9004 19.9004H2.90039C2.13126 19.9004 1.39346 19.5946 0.849609 19.0508C0.305754 18.5069 0 17.7691 0 17V13H1.80078V17ZM10.8008 11.8262L14.2637 8.36328L15.5371 9.63672L10.5371 14.6367C10.1856 14.9882 9.61514 14.9882 9.26367 14.6367L4.26367 9.63672L5.53711 8.36328L9 11.8262V0H10.8008V11.8262Z" fill="currentColor"></path>
+                                    </svg>
+                                    <span>下载</span>
+                                </button>
+                                {isMain ? (
+                                    <button 
+                                        type="button" 
+                                        className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                                        onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: false }); }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 20.9399 20.9427">
+                                            <path d="M9.76362 10.5883C10.0398 10.5883 10.2636 10.8122 10.2636 11.0883V19.0883C10.2636 19.3091 10.085 19.4886 9.86421 19.4887H8.86323C8.64234 19.4887 8.46287 19.3092 8.46284 19.0883V13.7719L1.38862 20.8256C1.23226 20.9815 0.979206 20.9819 0.823194 20.8256L0.11714 20.1176C-0.0388821 19.9612 -0.0392109 19.7072 0.11714 19.5512L7.29976 12.3891H1.76362C1.54273 12.3891 1.36326 12.2096 1.36323 11.9887V10.9877C1.36331 10.7669 1.54276 10.5883 1.76362 10.5883H9.76362ZM19.5507 0.116629C19.7072 -0.0392773 19.9602 -0.0387992 20.1162 0.117606L20.8232 0.825613C20.9792 0.982091 20.9787 1.23606 20.8222 1.39202L13.7138 8.47503H19.2519C19.4727 8.47516 19.6512 8.65367 19.6513 8.87444V9.87542C19.6513 10.0962 19.4727 10.2757 19.2519 10.2758H11.2509C10.9751 10.2756 10.7512 10.0516 10.7509 9.77581V1.77483C10.751 1.55398 10.9305 1.37542 11.1513 1.37542H12.1523C12.3731 1.37555 12.5516 1.55406 12.5517 1.77483V7.09124L19.5507 0.116629Z" fill="currentColor"></path>
+                                        </svg>
+                                        <span>收起</span>
+                                    </button>
+                                ) : (
+                                    <button 
+                                        type="button" 
+                                        className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                                        onClick={(e) => { e.stopPropagation(); updateData(data.id, { [isVideo ? 'videoSrc' : 'imageSrc']: src, isStackOpen: false }); }}
+                                    >
+                                        <span>设为主图</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     );
                 })}
-                <div className="flex flex-col justify-center h-full pl-2 pr-6"><button className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all shadow-lg ${isDark ? 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800' : 'bg-white border-gray-200 text-gray-500 hover:text-gray-800 hover:bg-gray-50'}`} onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: false }); }}><Icons.X size={20} /></button></div>
             </div>
         );
     }
@@ -301,13 +357,58 @@ export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, curren
     const isVideo = data.type === 'TEXT_TO_VIDEO' || data.type === 'START_END_TO_VIDEO' || (currentSrc && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(currentSrc));
 
     return (
-        <>
+        <div className="absolute inset-0 overflow-visible rounded-xl">
            {isVideo ? (
                currentSrc && <VideoPreview src={currentSrc} isDark={isDark || false} />
            ) : (
-               currentSrc && <img src={currentSrc} className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`} alt="Generated" draggable={false} />
+               sortedArtifacts.length > 1 ? (
+                   sortedArtifacts.map((src, index) => (
+                       <div 
+                           key={src + index} 
+                           className="absolute overflow-hidden rounded-xl" 
+                           style={{
+                               left: index * 12 + 'px',
+                               top: index * 4 + 'px',
+                               width: data.width + 'px',
+                               height: data.height + 'px',
+                               zIndex: sortedArtifacts.length - index,
+                               transform: index > 0 ? `scale(${1 - index * 0.035}) rotate(${index * 2.5}deg)` : 'scale(1)',
+                               border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
+                               boxShadow: index > 0 ? 'rgba(0, 0, 0, 0.38) 0px 14px 32px' : 'rgba(0, 0, 0, 0.24) 0px 8px 20px',
+                               background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)'
+                           }}
+                       >
+                           <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
+                               <div style={{ display: 'contents' }}>
+                                   <img 
+                                       src={src} 
+                                       alt={`图片 ${index + 1}`} 
+                                       className="h-full w-full object-cover" 
+                                       draggable={false} 
+                                       decoding="async"
+                                   />
+                               </div>
+                           </div>
+                       </div>
+                   ))
+               ) : (
+                   currentSrc && <img src={currentSrc} className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`} alt="Generated" draggable={false} />
+               )
            )}
-           {showBadge && <div className="absolute top-2 right-2 bg-black/30 backdrop-blur-md hover:bg-black/50 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 border border-white/10 z-30 pointer-events-auto cursor-pointer select-none shadow-lg transition-colors group/badge" onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}><Icons.Layers size={10} className="text-cyan-400"/><span className="font-bold tabular-nums">{artifacts.length}</span><Icons.ChevronRight size={10} className="text-zinc-400 group-hover/badge:text-white" /></div>}
-        </>
+           {showBadge && (
+               <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
+                   <button 
+                       type="button" 
+                       className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                       onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}
+                   >
+                       <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 17.8008 17.8008">
+                           <path d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z" fill="currentColor"></path>
+                       </svg>
+                       <span>{sortedArtifacts.length}张</span>
+                   </button>
+               </div>
+           )}
+        </div>
     );
 };

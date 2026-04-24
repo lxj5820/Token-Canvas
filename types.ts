@@ -43,6 +43,16 @@ export interface NodeData {
 
   // UI状态
   activeToolbarItem?: string;
+  // 标注
+  annotations?: AnnotationItem[];
+  isAnnotating?: boolean;
+  annotatedImageSrc?: string; // 标注烘焙后的图片（用于传递给下游节点）
+
+  // 宫格切分
+  gridSplit?: { rows: number; cols: number; selectedCells: string[] };
+
+  // 多角度编辑
+  isAngleEditing?: boolean;
 }
 
 export interface Connection {
@@ -62,4 +72,23 @@ export type DragMode = 'NONE' | 'PAN' | 'DRAG_NODE' | 'SELECT' | 'CONNECT' | 'RE
 export interface Point {
   x: number;
   y: number;
+}
+
+// 标注工具类型
+export type AnnotationTool = 'pen' | 'eraser' | 'rect' | 'text';
+
+// 单条标注数据
+export interface AnnotationItem {
+  id: string;
+  tool: AnnotationTool;
+  // 画笔/橡皮：路径点集
+  points?: Point[];
+  // 矩形：左上角 + 宽高
+  rect?: { x: number; y: number; width: number; height: number };
+  // 文字：位置 + 内容
+  text?: { x: number; y: number; content: string };
+  // 样式
+  color: string;
+  strokeWidth: number;
+  fontSize?: number;
 }

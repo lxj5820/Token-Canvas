@@ -1,8 +1,13 @@
-import React from 'react';
-import { NodeData } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { NodeData, AnnotationTool, AnnotationItem } from '../../types';
 import { Icons } from '../Icons';
 import { EditableTitle } from './Shared/NodeComponents';
 import { MediaStack } from './Shared/MediaStack';
+import { ImageNodeToolbar } from './Shared/ImageToolbar';
+import { AnnotationOverlay, AnnotationRenderer, AnnotationToolbar } from '../Annotation';
+import { GridSplitOverlay, GridSplitToolbar } from '../GridSplit';
+import { useAnnotation } from '../../hooks/useAnnotation';
+import { useGridSplit } from '../../hooks/useGridSplit';
 
 // 原始图片节点属性
 interface OriginalImageNodeProps {
@@ -14,17 +19,137 @@ interface OriginalImageNodeProps {
   onUpload?: (id: string) => void;
   isDark?: boolean;
   selected?: boolean;
+  showControls?: boolean;
+  onGridSplitCreateNodes?: (sourceNodeId: string, cells: { dataUrl: string; label: string; row: number; col: number }[]) => void;
 }
 
 // 原始图片节点组件
 export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
-    data, updateData, onMaximize, onDownload, onDelete, onUpload, isDark = true, selected
+    data, updateData, onMaximize, onDownload, onDelete, onUpload, isDark = true, selected, showControls, onGridSplitCreateNodes
 }) => {
-    const controlPanelBg = isDark ? 'bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50' : 'bg-white/95 backdrop-blur-xl border-gray-200 shadow-xl';
+    const containerBg = isDark ? 'bg-[#1a1a1a]' : 'bg-white';
     const hasResult = !!(data.imageSrc || data.videoSrc);
+    const isSelectedAndStable = selected;
     const containerBorder = selected
         ? 'border-yellow-400/80 node-selected-glow'
         : (isDark ? 'border-zinc-800' : 'border-gray-200');
+
+    // 标注功能
+    const { isAnnotating, toggleAnnotate, handleAnnotationsChange, handleCloseAnnotation } = useAnnotation(data, updateData);
+
+    // 标注工具栏状态（提升到此处以便工具栏独立定位）
+    const [annotationTool, setAnnotationTool] = useState<AnnotationTool>('pen');
+    const [annotationColor, setAnnotationColor] = useState('#FFD700');
+    const [annotationStrokeWidth, setAnnotationStrokeWidth] = useState(3);
+    const [undoneAnnotations, setUndoneAnnotations] = useState<AnnotationItem[]>([]);
+
+    const handleAnnotationsChangeWithRedo = useCallback((annotations: AnnotationItem[]) => {
+        const currentAnnotations = data.annotations || [];
+        if (annotations.length < currentAnnotations.length) {
+            const removed = currentAnnotations.slice(annotations.length);
+            setUndoneAnnotations(prev => [...prev, ...removed]);
+        } else {
+            setUndoneAnnotations([]);
+        }
+        handleAnnotationsChange(annotations);
+    }, [data.annotations, handleAnnotationsChange]);
+
+    const handleAnnotationUndo = useCallback(() => {
+        const currentAnnotations = data.annotations || [];
+        if (currentAnnotations.length > 0) {
+            const lastItem = currentAnnotations[currentAnnotations.length - 1];
+            setUndoneAnnotations(prev => [...prev, lastItem]);
+            handleAnnotationsChange(currentAnnotations.slice(0, -1));
+        }
+    }, [data.annotations, handleAnnotationsChange]);
+
+    const handleAnnotationRedo = useCallback(() => {
+        if (undoneAnnotations.length > 0) {
+            const lastUndone = undoneAnnotations[undoneAnnotations.length - 1];
+            setUndoneAnnotations(prev => prev.slice(0, -1));
+            handleAnnotationsChange([...(data.annotations || []), lastUndone]);
+        }
+    }, [undoneAnnotations, data.annotations, handleAnnotationsChange]);
+
+    const handleAnnotationClear = useCallback(() => {
+        setUndoneAnnotations([]);
+        handleAnnotationsChange([]);
+    }, [handleAnnotationsChange]);
+
+    // 宫格切分功能
+    const { gridSplit, isGridSplitting, enterGridSplit, exitGridSplit, setGridSize, toggleCell, selectAllCells, deselectAllCells } = useGridSplit(data, updateData);
+
+    const handleGridSplit = useCallback((rows: number, cols: number) => {
+      enterGridSplit(rows, cols);
+    }, [enterGridSplit]);
+
+    // 宫格切分 - 裁剪选中格子并创建节点
+    const handleGridSplitCreateNodesAction = useCallback(() => {
+      if (!gridSplit || !data.imageSrc) return;
+      const { rows, cols, selectedCells } = gridSplit;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const cells: { dataUrl: string; label: string; row: number; col: number }[] = [];
+        const cellW = img.naturalWidth / cols;
+        const cellH = img.naturalHeight / rows;
+        selectedCells.forEach(cellId => {
+          const [r, c] = cellId.split('-').map(Number);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(cellW);
+          canvas.height = Math.round(cellH);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, c * cellW, r * cellH, cellW, cellH, 0, 0, canvas.width, canvas.height);
+            cells.push({
+              dataUrl: canvas.toDataURL('image/png'),
+              label: `${data.title || '切分'} ${r + 1}-${c + 1}`,
+              row: r,
+              col: c,
+            });
+          }
+        });
+        if (cells.length > 0 && onGridSplitCreateNodes) {
+          onGridSplitCreateNodes(data.id, cells);
+        }
+      };
+      img.src = data.imageSrc;
+    }, [gridSplit, data.imageSrc, data.title, data.id, onGridSplitCreateNodes]);
+
+    // 宫格切分 - 下载选中格子
+    const handleGridSplitDownload = useCallback(() => {
+      if (!gridSplit || !data.imageSrc) return;
+      const { rows, cols, selectedCells } = gridSplit;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const cellW = img.naturalWidth / cols;
+        const cellH = img.naturalHeight / rows;
+        selectedCells.forEach(cellId => {
+          const [r, c] = cellId.split('-').map(Number);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(cellW);
+          canvas.height = Math.round(cellH);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, c * cellW, r * cellH, cellW, cellH, 0, 0, canvas.width, canvas.height);
+            const link = document.createElement('a');
+            link.download = `${data.title || '切分'}_${r + 1}_${c + 1}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+          }
+        });
+      };
+      img.src = data.imageSrc;
+    }, [gridSplit, data.imageSrc, data.title]);
+
+    // 决定显示哪张图：
+    // - 标注模式 → 显示原图（标注覆盖层叠在原图上方）
+    // - 非标注模式 + 有烘焙图 → 显示烘焙图（标注已合成为图片）
+    // - 非标注模式 + 无烘焙图 → 显示原图
+    const displaySrc = isAnnotating || isGridSplitting
+      ? (data.videoSrc || data.imageSrc)
+      : (data.annotatedImageSrc || data.videoSrc || data.imageSrc);
 
     return (
         <>
@@ -32,17 +157,121 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
               <EditableTitle title={data.title} onUpdate={(t) => updateData(data.id, { title: t })} isDark={isDark} />
           </div>
           
-          <div className={`w-full h-full relative group rounded-xl border ${containerBorder} ${isDark ? 'bg-black' : 'bg-white'} shadow-lg ${data.isStackOpen || (hasResult && selected) ? 'overflow-visible' : 'overflow-hidden'}`}>
+          <div className={`w-full h-full relative group rounded-xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || (hasResult && isSelectedAndStable && showControls) ? 'overflow-visible' : 'overflow-hidden'} shadow-lg transition-all duration-200`}>
+              {/* 顶部工具栏（标注/宫格切分模式下隐藏） */}
+              {hasResult && isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && (
+                  <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
+                      <ImageNodeToolbar
+                          imageSrc={data.annotatedImageSrc || data.imageSrc}
+                          nodeId={data.id}
+                          onMaximize={onMaximize}
+                          onAnnotate={toggleAnnotate}
+                          isAnnotating={isAnnotating}
+                          isDark={isDark}
+                          onGridSplit={handleGridSplit}
+                      />
+                  </div>
+              )}
+
+              {/* 宫格切分工具栏 */}
+              {isGridSplitting && gridSplit && (
+                  <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
+                      <GridSplitToolbar
+                          rows={gridSplit.rows}
+                          cols={gridSplit.cols}
+                          selectedCount={gridSplit.selectedCells.length}
+                          totalCount={gridSplit.rows * gridSplit.cols}
+                          onSetSize={setGridSize}
+                          onClose={exitGridSplit}
+                          onSelectAll={selectAllCells}
+                          onDeselectAll={deselectAllCells}
+                          onCreateNodes={handleGridSplitCreateNodesAction}
+                          onDownload={handleGridSplitDownload}
+                          isDark={isDark}
+                      />
+                  </div>
+              )}
+
+              {/* 标注工具栏（与图片工具栏同位置） */}
+              {isAnnotating && (
+                  <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
+                      <AnnotationToolbar
+                          activeTool={annotationTool}
+                          onToolChange={setAnnotationTool}
+                          currentColor={annotationColor}
+                          onColorChange={setAnnotationColor}
+                          strokeWidth={annotationStrokeWidth}
+                          onStrokeWidthChange={setAnnotationStrokeWidth}
+                          onUndo={handleAnnotationUndo}
+                          onRedo={handleAnnotationRedo}
+                          onClear={handleAnnotationClear}
+                          canUndo={(data.annotations?.length || 0) > 0}
+                          canRedo={undoneAnnotations.length > 0}
+                          onClose={handleCloseAnnotation}
+                          isDark={isDark}
+                      />
+                  </div>
+              )}
+
               {hasResult ? (
-                  <MediaStack 
-                      data={data} 
-                      updateData={updateData} 
-                      currentSrc={data.videoSrc || data.imageSrc} 
-                      type={data.videoSrc ? 'video' : 'image'} 
-                      onMaximize={onMaximize} 
-                      isDark={isDark}
-                      selected={selected}
-                  />
+                  <>
+                      <MediaStack 
+                          data={data} 
+                          updateData={updateData} 
+                          currentSrc={displaySrc}
+                          type={data.videoSrc ? 'video' : 'image'} 
+                          onMaximize={onMaximize} 
+                          isDark={isDark}
+                          selected={selected}
+                      />
+
+                      {/* 悬停覆盖层（标题） */}
+                      {!isAnnotating && !isGridSplitting && (
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
+                      </div>
+                      )}
+
+                      {/* 只读标注渲染（仅当有标注但没有烘焙图时才显示SVG叠加） */}
+                      {!isAnnotating && !isGridSplitting && !data.annotatedImageSrc && (data.annotations?.length || 0) > 0 && (
+                          <AnnotationRenderer
+                              annotations={data.annotations || []}
+                              width={data.width}
+                              height={data.height}
+                          />
+                      )}
+
+                      {/* 标注覆盖层（标注模式下可编辑，叠在原图上方） */}
+                      {isAnnotating && (
+                          <AnnotationOverlay
+                              width={data.width}
+                              height={data.height}
+                              annotations={data.annotations || []}
+                              onAnnotationsChange={handleAnnotationsChangeWithRedo}
+                              onClose={handleCloseAnnotation}
+                              isDark={isDark}
+                              activeTool={annotationTool}
+                              onActiveToolChange={setAnnotationTool}
+                              currentColor={annotationColor}
+                              onCurrentColorChange={setAnnotationColor}
+                              strokeWidth={annotationStrokeWidth}
+                              onStrokeWidthChange={setAnnotationStrokeWidth}
+                          />
+                      )}
+
+                      {/* 宫格切分覆盖层 */}
+                      {isGridSplitting && gridSplit && (
+                          <GridSplitOverlay
+                              width={data.width}
+                              height={data.height}
+                              rows={gridSplit.rows}
+                              cols={gridSplit.cols}
+                              selectedCells={gridSplit.selectedCells}
+                              onToggleCell={toggleCell}
+                              isDark={isDark}
+                          />
+                      )}
+                  </>
               ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 gap-3">
                       <div className={`w-16 h-16 rounded-full border flex items-center justify-center cursor-pointer transition-all shadow-lg group/icon ${isDark ? 'bg-zinc-900 border-zinc-700 hover:bg-zinc-800' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'} hover:text-yellow-400 hover:border-yellow-500/50`} onClick={(e) => { e.stopPropagation(); if (onUpload) onUpload(data.id); }}>
@@ -52,96 +281,6 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
                   </div>
               )}
           </div>
-          
-          {hasResult && selected && (
-              <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto">
-                  <div className={`${controlPanelBg} rounded-xl p-2 flex items-center gap-2 border`}>
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 px-2 py-2 rounded-lg flex items-center gap-1 transition-colors`}
-                          title="全景"
-                      >
-                          <Icons.LayoutGrid size={14} />
-                          <span className="text-xs whitespace-nowrap">全景</span>
-                          <span className="ml-1 flex h-5 w-10 items-center justify-center rounded-full bg-[#3CB5CC40] text-[10px] font-bold uppercase text-[#5DDCFF]">开发中</span>
-                      </button>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 px-2 py-2 rounded-lg flex items-center gap-1 transition-colors`}
-                          title="多角度"
-                      >
-                          <Icons.RotateCcw size={14} />
-                          <span className="text-xs whitespace-nowrap">多角度</span>
-                          <span className="ml-1 flex h-5 w-10 items-center justify-center rounded-full bg-[#3CB5CC40] text-[10px] font-bold uppercase text-[#5DDCFF]">开发中</span>
-                      </button>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 px-2 py-2 rounded-lg flex items-center gap-1 transition-colors`}
-                          title="打光"
-                      >
-                          <Icons.Sun size={14} />
-                          <span className="text-xs whitespace-nowrap">打光</span>
-                          <span className="ml-1 flex h-5 w-10 items-center justify-center rounded-full bg-[#3CB5CC40] text-[10px] font-bold uppercase text-[#5DDCFF]">开发中</span>
-                      </button>
-                      
-                      <div className={`${isDark ? 'bg-zinc-600' : 'bg-gray-300'} h-5 w-px`} aria-hidden="true"></div>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 px-2 py-2 rounded-lg flex items-center gap-1 transition-colors`}
-                          title="九宫格"
-                      >
-                          <Icons.LayoutGrid size={14} />
-                          <span className="text-xs whitespace-nowrap">九宫格</span>
-                          <Icons.ChevronDown size={12} className="opacity-70" />
-                          <span className="ml-1 flex h-5 w-10 items-center justify-center rounded-full bg-[#3CB5CC40] text-[10px] font-bold uppercase text-[#5DDCFF]">开发中</span>
-                      </button>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 px-2 py-2 rounded-lg flex items-center gap-1 transition-colors`}
-                          title="高清"
-                      >
-                          <Icons.ZoomIn size={14} />
-                          <span className="text-xs whitespace-nowrap">高清</span>
-                          <Icons.ChevronDown size={12} className="opacity-70" />
-                          <span className="ml-1 flex h-5 w-10 items-center justify-center rounded-full bg-[#3CB5CC40] text-[10px] font-bold uppercase text-[#5DDCFF]">开发中</span>
-                      </button>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 px-2 py-2 rounded-lg flex items-center gap-1 transition-colors`}
-                          title="宫格切分"
-                      >
-                          <Icons.Images size={14} />
-                          <span className="text-xs whitespace-nowrap">宫格切分</span>
-                          <Icons.ChevronDown size={12} className="opacity-70" />
-                          <span className="ml-1 flex h-5 w-10 items-center justify-center rounded-full bg-[#3CB5CC40] text-[10px] font-bold uppercase text-[#5DDCFF]">开发中</span>
-                      </button>
-                      
-                      <div className={`${isDark ? 'bg-zinc-600' : 'bg-gray-300'} h-5 w-px`} aria-hidden="true"></div>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 w-8 rounded-lg flex items-center justify-center transition-colors`}
-                          title="标注"
-                      >
-                          <Icons.Edit3 size={14} />
-                      </button>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 w-8 rounded-lg flex items-center justify-center transition-colors`}
-                          title="下载"
-                          onClick={(e) => { e.stopPropagation(); onDownload?.(data.id); }}
-                      >
-                          <Icons.Download size={14} />
-                      </button>
-                      
-                      <button 
-                          className={`${isDark ? 'text-zinc-300 hover:text-white hover:bg-zinc-700/50' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'} h-8 w-8 rounded-lg flex items-center justify-center transition-colors`}
-                          title="预览"
-                          onClick={(e) => { e.stopPropagation(); onMaximize?.(data.id); }}
-                      >
-                          <Icons.Maximize2 size={14} />
-                      </button>
-                  </div>
-              </div>
-          )}
         </>
     );
 };

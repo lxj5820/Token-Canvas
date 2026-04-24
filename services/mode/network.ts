@@ -15,19 +15,9 @@ export const constructUrl = (baseUrl: string, endpointPath: string) => {
 export const fetchThirdParty = async (url: string, method: string, body: any, config: ModelConfig, options: { timeout?: number, retries?: number, isFormData?: boolean } = {}) => {
   const { timeout = 60000, retries = 0, isFormData = false } = options;
   
-  console.log('[Network] Fetching URL:', url);
-  console.log('[Network] Method:', method);
-  console.log('[Network] Has body:', !!body);
-  
   if (!config.key) {
       throw new Error("API Key missing. Please configure it in settings.");
   }
-
-  // Masked key logging for debugging
-  const maskedKey = config.key.length > 8 
-      ? `${config.key.substring(0, 4)}...${config.key.substring(config.key.length - 4)} (Length: ${config.key.length})`
-      : '***';
-  console.log(`[Network] Using API Key: ${maskedKey}`);
 
   const headers: any = {};
   // 兼容 Gemini 原生格式 (x-goog-api-key) 和 OpenAI (Authorization)
@@ -65,9 +55,6 @@ export const fetchThirdParty = async (url: string, method: string, body: any, co
   } else {
        headers['Authorization'] = `Bearer ${config.key}`;
   }
-  
-  console.log('[Network] Headers:', headers);
-  console.log('[Network] Final URL:', url);
   
   if (!isFormData && method.toUpperCase() !== 'GET') {
       headers['Content-Type'] = 'application/json';

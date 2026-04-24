@@ -6,6 +6,7 @@ import { TextToAudioNode } from './TextToAudioNode';
 import { StartEndToVideoNode } from './StartEndToVideoNode';
 import { OriginalImageNode } from './OriginalImageNode';
 import { CreativeDescNode } from './CreativeDescNode';
+import { AngleGenerateParams } from '../AngleEditor';
 
 interface NodeContentProps {
   data: NodeData;
@@ -20,6 +21,8 @@ interface NodeContentProps {
   isSelecting?: boolean;
   onDelete?: (id: string) => void;
   isDark?: boolean;
+  onGridSplitCreateNodes?: (sourceNodeId: string, cells: { dataUrl: string; label: string; row: number; col: number }[]) => void;
+  onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
 }
 
 const NodeContentComponent: React.FC<NodeContentProps> = (props) => {
