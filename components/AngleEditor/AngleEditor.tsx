@@ -70,6 +70,7 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
   const [includePrompt, setIncludePrompt] = useState(false);
   const [count, setCount] = useState(1);
   const [activePreset, setActivePreset] = useState('全景俯拍');
+  const [countDropdownOpen, setCountDropdownOpen] = useState(false);
 
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
@@ -123,6 +124,19 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragH, dragV]);
+
+  // ===== 下拉菜单点击外部关闭 =====
+  useEffect(() => {
+    if (!countDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.count-dropdown-container')) {
+        setCountDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [countDropdownOpen]);
 
   // ===== 方向按钮 =====
 
@@ -625,24 +639,43 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
         <div className="flex-1" />
 
         {/* 数量选择 */}
-        <div className="flex items-center gap-2 mr-3">
-          <div className="flex items-center gap-1">
-            <Icons.Zap size={12} className={isDark ? 'text-zinc-400' : 'text-gray-400'} />
-            <span className={`text-[12px] tabular-nums ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>{count}</span>
-          </div>
-          <select
-            value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-            className={`h-7 px-2 rounded-md text-[12px] border cursor-pointer ${
-              isDark
-                ? 'bg-zinc-700/50 border-zinc-700/50 text-zinc-200'
-                : 'bg-gray-100 border-gray-200 text-gray-700'
-            }`}
+        <div className="flex items-center gap-2 mr-3 count-dropdown-container relative">
+          <button
+            className="flex items-center gap-2 cursor-pointer group h-8 px-3 rounded-lg border transition-all border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700"
+            onClick={() => setCountDropdownOpen(!countDropdownOpen)}
           >
-            {[1, 2, 3, 4].map((n) => (
-              <option key={n} value={n}>{n}张</option>
-            ))}
-          </select>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-colors text-zinc-400 group-hover:text-white" aria-hidden="true">
+              <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"></path>
+              <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"></path>
+              <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"></path>
+            </svg>
+            <span className="text-xs font-medium transition-colors select-none text-zinc-300 group-hover:text-white min-w-[20px] text-center">{count}</span>
+          </button>
+          
+          {countDropdownOpen && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max min-w-[130px] bg-[#1a1a1a] border-zinc-700 border rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-150 overflow-visible">
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar px-1.5">
+                {[1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className={`relative px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5 ${
+                      count === n
+                        ? 'bg-yellow-500/15 text-yellow-400'
+                        : 'text-zinc-300 hover:bg-zinc-700 hover:text-white'
+                    }`}
+                    onClick={() => { setCount(n); setCountDropdownOpen(false); }}
+                  >
+                    <span className="whitespace-nowrap pr-2">{n}</span>
+                    {count === n && (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-yellow-400 shrink-0 ml-2" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5"></path>
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 生成按钮 */}

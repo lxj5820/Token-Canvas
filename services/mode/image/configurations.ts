@@ -22,7 +22,7 @@ export const BananaProHandler = {
     rules: { resolutions: ['1k', '2k', '4k'], ratios: BASE_RATIOS },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
         const size = calculateImageSize(params.aspectRatio, params.resolution, 'BananaPro');
-        return await generateBananaChatImage(cfg, prompt, params.aspectRatio, params.resolution, size, params.inputImages);
+        return await generateBananaChatImage(cfg, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count);
     }
 };
 
@@ -35,7 +35,7 @@ export const Banana2 = {
     rules: { resolutions: ['1k', '2k', '4k'], ratios: EXTENDED_RATIOS, supportsEdit: true },
     generate: async (cfg: ModelConfig, prompt: string, params: any) => {
         const size = calculateImageSize(params.aspectRatio, params.resolution, 'Banana 2');
-        return await generateBananaChatImage(cfg, prompt, params.aspectRatio, params.resolution, size, params.inputImages);
+        return await generateBananaChatImage(cfg, prompt, params.aspectRatio, params.resolution, size, params.inputImages, params.count);
     }
 };
 

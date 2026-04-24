@@ -77,8 +77,10 @@ export const generateStandardImage = async (
              return '';
          }).filter((url: string) => !!url)[0]; 
       });
-      const results = await Promise.all(promises);
-      return results.filter(r => !!r);
+      const settled = await Promise.allSettled(promises);
+      return settled
+        .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled' && !!r.value)
+        .map(r => r.value);
    }
 
    const payload: any = {

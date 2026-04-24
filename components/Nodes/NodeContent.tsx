@@ -7,6 +7,7 @@ import { StartEndToVideoNode } from './StartEndToVideoNode';
 import { OriginalImageNode } from './OriginalImageNode';
 import { CreativeDescNode } from './CreativeDescNode';
 import { AngleGenerateParams } from '../AngleEditor';
+import { LightingGenerateParams } from '../LightingEditor';
 
 interface NodeContentProps {
   data: NodeData;
@@ -23,6 +24,7 @@ interface NodeContentProps {
   isDark?: boolean;
   onGridSplitCreateNodes?: (sourceNodeId: string, cells: { dataUrl: string; label: string; row: number; col: number }[]) => void;
   onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
+  onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
 }
 
 const NodeContentComponent: React.FC<NodeContentProps> = (props) => {

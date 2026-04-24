@@ -12,6 +12,8 @@ interface ImageNodeToolbarProps {
   onGridSplit?: (rows: number, cols: number) => void;
   onAngleEdit?: () => void;
   isAngleEditing?: boolean;
+  onLightEdit?: () => void;
+  isLightEditing?: boolean;
 }
 
 export const ImageNodeToolbar: React.FC<ImageNodeToolbarProps> = ({
@@ -23,7 +25,9 @@ export const ImageNodeToolbar: React.FC<ImageNodeToolbarProps> = ({
     isDark = true,
     onGridSplit,
     onAngleEdit,
-    isAngleEditing = false
+    isAngleEditing = false,
+    onLightEdit,
+    isLightEditing = false
 }) => {
     const handleDownload = () => {
         if (imageSrc) {
@@ -69,9 +73,10 @@ export const ImageNodeToolbar: React.FC<ImageNodeToolbarProps> = ({
 
             {/* 打光 */}
             <button
-                className={`inline-flex select-none items-center justify-center rounded-lg transition-colors h-7 gap-1 px-2.5 cursor-pointer ${textBtnBase}`}
+                className={`inline-flex select-none items-center justify-center rounded-lg transition-colors h-7 gap-1 px-2.5 cursor-pointer ${isLightEditing ? textBtnActive : textBtnBase}`}
                 title="打光"
                 data-testid="image-toolbar-light"
+                onClick={onLightEdit}
             >
                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none h-4 w-4" width="1em" height="1em" viewBox="0 0 16 16"><path d="M8.00098 11.7334C8.33224 11.7334 8.60139 12.0018 8.60156 12.333V14C8.60156 14.3314 8.33235 14.6006 8.00098 14.6006C7.66961 14.6006 7.40039 14.3314 7.40039 14V12.333C7.40057 12.0018 7.66971 11.7334 8.00098 11.7334ZM3.97656 10.1758C4.21089 9.94156 4.59091 9.9415 4.8252 10.1758C5.05948 10.4101 5.05941 10.7901 4.8252 11.0244L3.8916 11.958C3.65726 12.192 3.27717 12.1922 3.04297 11.958C2.80876 11.7238 2.80898 11.3437 3.04297 11.1094L3.97656 10.1758ZM11.1768 10.1758C11.4111 9.94153 11.7911 9.94153 12.0254 10.1758L12.959 11.1094C13.1929 11.3437 13.1931 11.7238 12.959 11.958C12.7247 12.1923 12.3437 12.1923 12.1094 11.958L11.1768 11.0244C10.9425 10.7901 10.9425 10.4101 11.1768 10.1758ZM10.668 6.39941C10.9992 6.39959 11.2676 6.66874 11.2676 7C11.2676 7.86637 10.9232 8.69695 10.3105 9.30957C9.69793 9.92219 8.86735 10.2666 8.00098 10.2666C7.1346 10.2666 6.30403 9.92219 5.69141 9.30957C5.07879 8.69695 4.73438 7.86637 4.73438 7C4.73438 6.66874 5.00276 6.39959 5.33398 6.39941C5.66536 6.39941 5.93457 6.66863 5.93457 7C5.93457 7.54811 6.15149 8.07434 6.53906 8.46191C6.92664 8.84949 7.45286 9.06641 8.00098 9.06641C8.54909 9.06641 9.07532 8.84949 9.46289 8.46191C9.85047 8.07434 10.0674 7.54811 10.0674 7C10.0674 6.66863 10.3366 6.39941 10.668 6.39941ZM2.66797 6.39941C2.99919 6.39959 3.26758 6.66874 3.26758 7C3.26758 7.33126 2.99919 7.60041 2.66797 7.60059H1.33398C1.00276 7.60041 0.734375 7.33126 0.734375 7C0.734375 6.66874 1.00276 6.39959 1.33398 6.39941H2.66797ZM14.668 6.39941C14.9992 6.39959 15.2676 6.66874 15.2676 7C15.2676 7.33126 14.9992 7.60041 14.668 7.60059H13.334C13.0028 7.60041 12.7344 7.33126 12.7344 7C12.7344 6.66874 13.0028 6.39959 13.334 6.39941H14.668ZM14.668 3.7334C14.9991 3.73357 15.2674 4.00189 15.2676 4.33301C15.2676 4.66427 14.9992 4.93342 14.668 4.93359H1.33398C1.00276 4.93342 0.734375 4.66427 0.734375 4.33301C0.734551 4.0019 1.00287 3.73357 1.33398 3.7334H14.668ZM12.001 1.39941C12.3323 1.39941 12.6016 1.66863 12.6016 2C12.6016 2.33137 12.3323 2.60059 12.001 2.60059H4.00098C3.66961 2.60059 3.40039 2.33137 3.40039 2C3.40039 1.66863 3.66961 1.39941 4.00098 1.39941H12.001Z" fill="currentColor"></path></svg>
                 <span className="whitespace-nowrap text-xs leading-none">打光</span>

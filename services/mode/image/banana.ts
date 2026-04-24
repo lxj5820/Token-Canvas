@@ -20,8 +20,9 @@ export const generateBananaChatImage = async (
     aspectRatio: string,
     resolution: string,
     calculatedSize: string,
-    inputImages: string[] = []
-): Promise<string> => {
+    inputImages: string[] = [],
+    count: number = 1
+): Promise<string[]> => {
     const hasInputImages = inputImages.length > 0;
     const needsHighRes = resolution !== '1k';
     let endpointType = detectEndpointType(config.endpoint);
@@ -30,6 +31,7 @@ export const generateBananaChatImage = async (
     console.log(`[BananaPro] Original Endpoint Type: ${endpointType}`);
     console.log(`[BananaPro] Has Input Images: ${hasInputImages}`);
     console.log(`[BananaPro] Needs High Res: ${needsHighRes} (resolution: ${resolution})`);
+    console.log(`[BananaPro] Count: ${count}`);
     
     // 关键修改：如果需要高分辨率（2K/4K）且当前是 OpenAI 兼容格式，
     // 自动切换到 Gemini 原生格式，因为 OpenAI 格式不支持 imageSize 参数
@@ -50,6 +52,41 @@ export const generateBananaChatImage = async (
     console.log(`[BananaPro] Final Target URL: ${targetUrl}`);
     
     const isNativeGemini = endpointType === 'GEMINI_NATIVE';
+
+    // 处理多张图片生成
+    if (count > 1) {
+        console.log(`[BananaPro] Generating ${count} images`);
+        const promises = Array(count).fill(null).map(async () => {
+            return await generateSingleBananaChatImage(
+                config, prompt, aspectRatio, resolution, calculatedSize, inputImages, endpointType, targetUrl, isNativeGemini
+            );
+        });
+        const settled = await Promise.allSettled(promises);
+        return settled
+            .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled' && !!r.value)
+            .map(r => r.value);
+    }
+
+    // 生成单张图片
+    const result = await generateSingleBananaChatImage(
+        config, prompt, aspectRatio, resolution, calculatedSize, inputImages, endpointType, targetUrl, isNativeGemini
+    );
+    return result ? [result] : [];
+};
+
+// 生成单张图片的辅助函数
+const generateSingleBananaChatImage = async (
+    config: ModelConfig,
+    prompt: string, 
+    aspectRatio: string,
+    resolution: string,
+    calculatedSize: string,
+    inputImages: string[],
+    endpointType: EndpointType,
+    targetUrl: string,
+    isNativeGemini: boolean
+): Promise<string> => {
+    const hasInputImages = inputImages.length > 0;
 
     // ========== Gemini 原生格式 (generateContent) ==========
     if (isNativeGemini) {

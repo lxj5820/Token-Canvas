@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { NodeData } from '../../../types';
 import { Icons } from '../../Icons';
 import { VideoPreview, safeDownload } from './NodeComponents';
@@ -22,6 +22,39 @@ export const MediaStack: React.FC<MediaStackProps> = ({
     const sortedArtifacts = currentSrc ? [currentSrc, ...artifacts.filter(a => a !== currentSrc)] : artifacts;
     const showBadge = !data.isStackOpen && artifacts.length > 1;
 
+    // 当前浏览索引（在 sortedArtifacts 中的位置）
+    const [browseIndex, setBrowseIndex] = useState(0);
+
+    // 当 currentSrc 变化时重置浏览索引
+    useEffect(() => {
+        setBrowseIndex(0);
+    }, [currentSrc]);
+
+    // 当前浏览的图片
+    const browseSrc = sortedArtifacts[browseIndex] || currentSrc;
+    const totalImages = sortedArtifacts.length;
+
+    const goToPrev = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setBrowseIndex(prev => (prev > 0 ? prev - 1 : totalImages - 1));
+    };
+    const goToNext = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setBrowseIndex(prev => (prev < totalImages - 1 ? prev + 1 : 0));
+    };
+    const goToIndex = (e: React.MouseEvent, index: number) => {
+        e.stopPropagation();
+        setBrowseIndex(index);
+    };
+    // 将浏览的图片设为主图
+    const setAsMain = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (browseSrc && browseSrc !== currentSrc) {
+            const update = type === 'image' ? { imageSrc: browseSrc } : { videoSrc: browseSrc };
+            updateData(data.id, update);
+        }
+    };
+
     // 处理点击外部关闭栈
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -42,7 +75,7 @@ export const MediaStack: React.FC<MediaStackProps> = ({
         return (
             <div ref={stackRef} className="absolute top-0 left-0 h-full flex gap-4 z-[100] animate-in fade-in zoom-in-95 duration-200">
                 {sortedArtifacts.map((src, index) => {
-                    const isMain = index === 0;
+                    const isMain = src === currentSrc;
                     return (
                       <div 
                           key={src + index} 
@@ -82,14 +115,80 @@ export const MediaStack: React.FC<MediaStackProps> = ({
     // 避免使用简单的.includes('video')，因为它会将包含'video'的签名URL标记为视频。
     const isVideo = type === 'video' || data.type === 'TEXT_TO_VIDEO' || (currentSrc && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(currentSrc));
 
+    // 多图导航条
+    const showNavigator = totalImages > 1;
+
     return (
         <>
            {isVideo ? (
                currentSrc && <VideoPreview src={currentSrc} isDark={isDark || false} />
            ) : (
-               currentSrc && <img src={currentSrc} className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`} alt="Generated" draggable={false} />
+               <img 
+                   src={browseSrc || currentSrc} 
+                   className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`} 
+                   alt="Generated" 
+                   draggable={false} 
+               />
            )}
-           {showBadge && (
+           
+           {/* 多图底部导航条 */}
+           {showNavigator && type === 'image' && (
+               <div 
+                   className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-30 pointer-events-auto"
+                   onClick={(e) => e.stopPropagation()}
+               >
+                   {/* 上一张 */}
+                   <button 
+                       className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
+                       onClick={goToPrev}
+                   >
+                       <Icons.ChevronLeft size={14} />
+                   </button>
+                   
+                   {/* 缩略图圆点 */}
+                   <div className="flex items-center gap-1 overflow-x-auto max-w-[70%] px-1">
+                       {sortedArtifacts.map((src, index) => (
+                           <button
+                               key={src + index}
+                               className={`w-7 h-7 rounded-md border-2 shrink-0 overflow-hidden transition-all ${
+                                   index === browseIndex 
+                                       ? 'border-cyan-400 ring-1 ring-cyan-400/50 scale-110' 
+                                       : 'border-white/20 hover:border-white/50 opacity-70 hover:opacity-100'
+                               }`}
+                               onClick={(e) => goToIndex(e, index)}
+                           >
+                               <img src={src} className="w-full h-full object-cover" draggable={false} />
+                           </button>
+                       ))}
+                   </div>
+                   
+                   {/* 下一张 */}
+                   <button 
+                       className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
+                       onClick={goToNext}
+                   >
+                       <Icons.ChevronRight size={14} />
+                   </button>
+                   
+                   {/* 序号 + 设为主图 */}
+                   <div className="flex items-center gap-1.5 ml-1 shrink-0">
+                       <span className="text-[10px] text-white/70 font-mono tabular-nums select-none">
+                           {browseIndex + 1}/{totalImages}
+                       </span>
+                       {browseSrc !== currentSrc && (
+                           <button
+                               className="h-5 px-1.5 bg-cyan-500/30 hover:bg-cyan-500/50 border border-cyan-400/40 rounded text-[8px] font-bold text-cyan-300 transition-colors flex items-center gap-0.5 shrink-0"
+                               onClick={setAsMain}
+                           >
+                               <Icons.Check size={8} /><span>主图</span>
+                           </button>
+                       )}
+                   </div>
+               </div>
+           )}
+           
+           {/* 原有的角标（视频或图片数 > 4 时仍然显示展开按钮） */}
+           {showBadge && type === 'video' && (
                <div className="absolute top-2 right-2 bg-black/30 backdrop-blur-md hover:bg-black/50 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 border border-white/10 z-30 pointer-events-auto cursor-pointer select-none shadow-lg transition-colors group/badge" onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}>
                    <Icons.Layers size={10} className="text-cyan-400"/>
                    <span className="font-bold tabular-nums">{artifacts.length}</span>

@@ -476,7 +476,6 @@ const CanvasWithSidebar: React.FC = () => {
           const updates: Partial<NodeData> = { isLoading: false, outputArtifacts: newArtifacts };
           if (node.type === NodeType.TEXT_TO_IMAGE) {
             updates.imageSrc = results[0];
-            // 清除旧标注（新生成的图片不再适用旧标注）
             updates.annotations = [];
             updates.annotatedImageSrc = undefined;
             updates.isAnnotating = false;
@@ -547,6 +546,151 @@ const CanvasWithSidebar: React.FC = () => {
           annotatedImageSrc: undefined,
           isAngleEditing: false,
         });
+        await saveAssetToIndexedDB(nodeId, results[0], 'image');
+      } else {
+        throw new Error("未返回结果");
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`生成失败: ${(e as Error).message}`);
+      updateNodeData(nodeId, { isLoading: false });
+    }
+  };
+
+  // 打光生成处理
+  const handleLightGenerate = async (nodeId: string, params: any) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const AZIMUTH_LABELS: Record<number, string> = {
+      0: '前方', 45: '右前方', 90: '右侧', 135: '右后方',
+      180: '后方', 225: '左后方', 270: '左侧', 315: '左前方',
+    };
+    const getElevationLabel = (e: number) => {
+      if (e <= -60) return '正下方';
+      if (e <= -30) return '下方';
+      if (e <= 10) return '水平';
+      if (e <= 45) return '上方';
+      if (e <= 80) return '斜上方';
+      return '正上方';
+    };
+
+    // 颜色描述辅助函数
+    const getColorDesc = (hex: string): string => {
+      if (!hex) return '';
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      if (r === 255 && g === 255 && b === 255) return '白色';
+      if (r === 0 && g === 0 && b === 0) return '黑色';
+      if (r === 255 && g === 0 && b === 0) return '红色';
+      if (r === 0 && g === 255 && b === 0) return '绿色';
+      if (r === 0 && g === 0 && b === 255) return '蓝色';
+      if (r === 255 && g === 255 && b === 0) return '黄色';
+      if (r === 255 && g === 165 && b === 0) return '橙色';
+      if (r === 128 && g === 0 && b === 128) return '紫色';
+      if (r === 0 && g === 255 && b === 255) return '青色';
+      if (r === 255 && g === 192 && b === 203) return '粉色';
+      if (r === 255 && g === 215 && b === 0) return '金色';
+      // 非纯色用色温描述
+      if (r > g && r > b) return g > 150 ? '暖黄色' : '暖红色';
+      if (b > r && b > g) return g > 150 ? '冷青色' : '冷蓝色';
+      if (g > r && g > b) return '冷绿色';
+      if (r > 200 && g > 200 && b < 150) return '暖黄色';
+      if (r > 200 && b > 200 && g < 150) return '冷紫色';
+      return `${hex}色`;
+    };
+
+    const mainAz = AZIMUTH_LABELS[params.mainLight.azimuth] || `${params.mainLight.azimuth}°`;
+    const mainEl = getElevationLabel(params.mainLight.elevation);
+    const mainIntensity = params.mainLight.intensity;
+    const mainColorDesc = getColorDesc(params.mainLight.color);
+
+    let lightPrompt = `主光从${mainAz}${mainEl}方向照射，强度${mainIntensity}%，${mainColorDesc}光`;
+
+    if (params.fillLight?.enabled) {
+      const fillAz = AZIMUTH_LABELS[params.fillLight.azimuth] || `${params.fillLight.azimuth}°`;
+      const fillEl = getElevationLabel(params.fillLight.elevation);
+      const fillColorDesc = getColorDesc(params.fillLight.color);
+      lightPrompt += `，辅光从${fillAz}${fillEl}方向照射，强度${params.fillLight.intensity}%，${fillColorDesc}光`;
+    }
+
+    const fullPrompt = params.includePrompt && node.prompt
+      ? `${lightPrompt}。原始描述：${node.prompt}`
+      : lightPrompt;
+
+    const inputImage = node.annotatedImageSrc || node.imageSrc;
+    const inputs = inputImage ? [inputImage] : [];
+
+    updateNodeData(nodeId, { isLoading: true });
+
+    try {
+      const results = await generateImage(
+        fullPrompt, node.aspectRatio, node.model, node.resolution, params.count || 1, inputs, node.promptOptimize
+      );
+
+      if (results.length > 0) {
+        const currentArtifacts = node.outputArtifacts || [];
+        if (node.imageSrc && !currentArtifacts.includes(node.imageSrc)) currentArtifacts.push(node.imageSrc);
+
+        if (results.length > 1) {
+          const newArtifacts = [results[0], ...currentArtifacts];
+          updateNodeData(nodeId, {
+            isLoading: false,
+            imageSrc: results[0],
+            outputArtifacts: newArtifacts,
+            annotations: [],
+            annotatedImageSrc: undefined,
+            isLightEditing: false,
+          });
+          await saveAssetToIndexedDB(nodeId, results[0], 'image');
+
+          const gap = 30;
+          const newNodeSize = 300;
+          const spacing = newNodeSize + gap;
+          const cols = Math.ceil(Math.sqrt(results.length - 1));
+          const extraNodes: NodeData[] = [];
+          const extraConns: Connection[] = [];
+
+          for (let i = 1; i < results.length; i++) {
+            const newNodeId = `node_${Date.now()}_${i}`;
+            const r = Math.floor((i - 1) / cols);
+            const c = (i - 1) % cols;
+            extraNodes.push({
+              id: newNodeId,
+              type: NodeType.ORIGINAL_IMAGE,
+              x: node.x + node.width + gap + 60 + c * spacing,
+              y: node.y + r * spacing,
+              width: newNodeSize,
+              height: newNodeSize,
+              title: `打光 #${i + 1}`,
+              imageSrc: results[i],
+              outputArtifacts: [results[i]],
+            });
+            extraConns.push({
+              id: generateId(),
+              sourceId: nodeId,
+              targetId: newNodeId,
+            });
+          }
+
+          setNodes(prev => [...prev, ...extraNodes]);
+          setConnections(prev => [...prev, ...extraConns]);
+
+          for (let i = 1; i < results.length; i++) {
+            await saveAssetToIndexedDB(extraNodes[i - 1].id, results[i], 'image');
+          }
+        } else {
+          updateNodeData(nodeId, {
+            isLoading: false,
+            imageSrc: results[0],
+            outputArtifacts: [results[0], ...currentArtifacts],
+            annotations: [],
+            annotatedImageSrc: undefined,
+            isLightEditing: false,
+          });
+          await saveAssetToIndexedDB(nodeId, results[0], 'image');
+        }
       } else {
         throw new Error("未返回结果");
       }
@@ -1428,6 +1572,7 @@ const CanvasWithSidebar: React.FC = () => {
                 isDark={isDark}
                 onGridSplitCreateNodes={handleGridSplitCreateNodes}
                 onAngleGenerate={handleAngleGenerate}
+                onLightGenerate={handleLightGenerate}
               />
             </BaseNode>
           ))}

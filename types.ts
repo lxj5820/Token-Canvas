@@ -53,6 +53,9 @@ export interface NodeData {
 
   // 多角度编辑
   isAngleEditing?: boolean;
+
+  // 打光编辑
+  isLightEditing?: boolean;
 }
 
 export interface Connection {

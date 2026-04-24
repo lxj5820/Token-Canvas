@@ -261,6 +261,19 @@ export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, curren
     const sortedArtifacts = currentSrc ? [currentSrc, ...artifacts.filter(a => a !== currentSrc)] : artifacts;
     const showBadge = !data.isStackOpen && artifacts.length > 1;
 
+    // 多图浏览状态
+    const [browseIndex, setBrowseIndex] = useState(0);
+    useEffect(() => { setBrowseIndex(0); }, [currentSrc]);
+
+    const browseSrc = sortedArtifacts[browseIndex] || currentSrc;
+    const totalImages = sortedArtifacts.length;
+    const showNavigator = totalImages > 1;
+
+    const goToPrev = (e: React.MouseEvent) => { e.stopPropagation(); setBrowseIndex(prev => (prev > 0 ? prev - 1 : totalImages - 1)); };
+    const goToNext = (e: React.MouseEvent) => { e.stopPropagation(); setBrowseIndex(prev => (prev < totalImages - 1 ? prev + 1 : 0)); };
+    const goToIndex = (e: React.MouseEvent, index: number) => { e.stopPropagation(); setBrowseIndex(index); };
+    const setAsMain = (e: React.MouseEvent) => { e.stopPropagation(); if (browseSrc && browseSrc !== currentSrc) { const isVid = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(browseSrc) || data.type === 'TEXT_TO_VIDEO'; updateData(data.id, isVid ? { videoSrc: browseSrc } : { imageSrc: browseSrc }); } };
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => { if (data.isStackOpen && stackRef.current && !stackRef.current.contains(event.target as Node)) updateData(data.id, { isStackOpen: false }); };
         if (data.isStackOpen) document.addEventListener('mousedown', handleClickOutside);
@@ -359,54 +372,180 @@ export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, curren
     return (
         <div className="absolute inset-0 overflow-visible rounded-xl">
            {isVideo ? (
-               currentSrc && <VideoPreview src={currentSrc} isDark={isDark || false} />
-           ) : (
-               sortedArtifacts.length > 1 ? (
-                   sortedArtifacts.map((src, index) => (
-                       <div 
-                           key={src + index} 
-                           className="absolute overflow-hidden rounded-xl" 
-                           style={{
-                               left: index * 12 + 'px',
-                               top: index * 4 + 'px',
-                               width: data.width + 'px',
-                               height: data.height + 'px',
-                               zIndex: sortedArtifacts.length - index,
-                               transform: index > 0 ? `scale(${1 - index * 0.035}) rotate(${index * 2.5}deg)` : 'scale(1)',
-                               border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
-                               boxShadow: index > 0 ? 'rgba(0, 0, 0, 0.38) 0px 14px 32px' : 'rgba(0, 0, 0, 0.24) 0px 8px 20px',
-                               background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)'
-                           }}
-                       >
-                           <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
-                               <div style={{ display: 'contents' }}>
-                                   <img 
-                                       src={src} 
-                                       alt={`图片 ${index + 1}`} 
-                                       className="h-full w-full object-cover" 
-                                       draggable={false} 
-                                       decoding="async"
-                                   />
-                               </div>
+               <>
+                   {showBadge ? (
+                       <>
+                           {sortedArtifacts.slice(0, 3).reverse().map((src, index) => {
+                               const reverseIndex = Math.min(sortedArtifacts.length, 3) - 1 - index;
+                               const isTop = reverseIndex === 0;
+                               return (
+                                   <div
+                                       key={src + index}
+                                       className="absolute overflow-hidden rounded-xl"
+                                       style={{
+                                           left: isTop ? '0px' : `${reverseIndex * 12}px`,
+                                           top: isTop ? '0px' : `${reverseIndex * 4}px`,
+                                           width: '100%',
+                                           height: '100%',
+                                           zIndex: Math.min(sortedArtifacts.length, 3) - reverseIndex,
+                                           border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
+                                           outline: 'none',
+                                           outlineOffset: '-1px',
+                                           cursor: isTop ? 'default' : 'pointer',
+                                           background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)',
+                                           transform: isTop ? 'scale(1)' : `scale(${1 - reverseIndex * 0.035}) rotate(${reverseIndex * 2.5}deg)`,
+                                           boxShadow: isTop
+                                               ? 'rgba(0, 0, 0, 0.24) 0px 8px 20px'
+                                               : 'rgba(0, 0, 0, 0.38) 0px 14px 32px',
+                                           transition: 'transform 0.3s, box-shadow 0.3s',
+                                       }}
+                                   >
+                                       <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
+                                           <div style={{ display: 'contents' }}>
+                                               <VideoPreview src={src} isDark={isDark || false} />
+                                           </div>
+                                       </div>
+                                   </div>
+                               );
+                           })}
+                           <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
+                               <button
+                                   type="button"
+                                   className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                                   onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}
+                               >
+                                   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 17.8008 17.8008">
+                                       <path d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z" fill="currentColor"></path>
+                                   </svg>
+                                   <span>{sortedArtifacts.length}张</span>
+                               </button>
                            </div>
-                       </div>
-                   ))
-               ) : (
-                   currentSrc && <img src={currentSrc} className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`} alt="Generated" draggable={false} />
-               )
+                       </>
+                   ) : (
+                       currentSrc && <VideoPreview src={currentSrc} isDark={isDark || false} />
+                   )}
+               </>
+           ) : (
+               <>
+                   {showBadge ? (
+                       <>
+                           {sortedArtifacts.slice(0, 3).reverse().map((src, index) => {
+                               const reverseIndex = Math.min(sortedArtifacts.length, 3) - 1 - index;
+                               const isTop = reverseIndex === 0;
+                               return (
+                                   <div
+                                       key={src + index}
+                                       className="absolute overflow-hidden rounded-xl"
+                                       style={{
+                                           left: isTop ? '0px' : `${reverseIndex * 12}px`,
+                                           top: isTop ? '0px' : `${reverseIndex * 4}px`,
+                                           width: '100%',
+                                           height: '100%',
+                                           zIndex: Math.min(sortedArtifacts.length, 3) - reverseIndex,
+                                           border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
+                                           outline: 'none',
+                                           outlineOffset: '-1px',
+                                           cursor: isTop ? 'default' : 'pointer',
+                                           background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)',
+                                           transform: isTop ? 'scale(1)' : `scale(${1 - reverseIndex * 0.035}) rotate(${reverseIndex * 2.5}deg)`,
+                                           boxShadow: isTop
+                                               ? 'rgba(0, 0, 0, 0.24) 0px 8px 20px'
+                                               : 'rgba(0, 0, 0, 0.38) 0px 14px 32px',
+                                           transition: 'transform 0.3s, box-shadow 0.3s',
+                                       }}
+                                   >
+                                       <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
+                                           <div style={{ display: 'contents' }}>
+                                               <img
+                                                   src={src}
+                                                   alt={isTop ? `图片` : ''}
+                                                   className="h-full w-full object-cover"
+                                                   draggable={false}
+                                                   decoding="async"
+                                                   crossOrigin="anonymous"
+                                               />
+                                           </div>
+                                       </div>
+                                   </div>
+                               );
+                           })}
+                           <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
+                               <button
+                                   type="button"
+                                   className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                                   onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}
+                               >
+                                   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 17.8008 17.8008">
+                                       <path d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z" fill="currentColor"></path>
+                                   </svg>
+                                   <span>{sortedArtifacts.length}张</span>
+                               </button>
+                           </div>
+                       </>
+                   ) : (
+                       <img
+                           src={browseSrc || currentSrc}
+                           className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`}
+                           alt="Generated"
+                           draggable={false}
+                       />
+                   )}
+               </>
            )}
-           {showBadge && (
-               <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
+           
+           {/* 多图底部导航条 */}
+           {showNavigator && !isVideo && !showBadge && (
+               <div 
+                   className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-30 pointer-events-auto"
+                   onClick={(e) => e.stopPropagation()}
+               >
+                   {/* 上一张 */}
                    <button 
-                       type="button" 
-                       className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
-                       onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}
+                       className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
+                       onClick={goToPrev}
                    >
-                       <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 17.8008 17.8008">
-                           <path d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z" fill="currentColor"></path>
-                       </svg>
-                       <span>{sortedArtifacts.length}张</span>
+                       <Icons.ChevronLeft size={14} />
                    </button>
+                   
+                   {/* 缩略图 */}
+                   <div className="flex items-center gap-1 overflow-x-auto max-w-[70%] px-1">
+                       {sortedArtifacts.map((src, index) => (
+                           <button
+                               key={src + index}
+                               className={`w-7 h-7 rounded-md border-2 shrink-0 overflow-hidden transition-all ${
+                                   index === browseIndex 
+                                       ? 'border-yellow-400 ring-1 ring-yellow-400/50 scale-110' 
+                                       : 'border-white/20 hover:border-white/50 opacity-70 hover:opacity-100'
+                               }`}
+                               onClick={(e) => goToIndex(e, index)}
+                           >
+                               <img src={src} className="w-full h-full object-cover" draggable={false} />
+                           </button>
+                       ))}
+                   </div>
+                   
+                   {/* 下一张 */}
+                   <button 
+                       className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
+                       onClick={goToNext}
+                   >
+                       <Icons.ChevronRight size={14} />
+                   </button>
+                   
+                   {/* 序号 + 设为主图 */}
+                   <div className="flex items-center gap-1.5 ml-1 shrink-0">
+                       <span className="text-[10px] text-white/70 font-mono tabular-nums select-none">
+                           {browseIndex + 1}/{totalImages}
+                       </span>
+                       {browseSrc !== currentSrc && (
+                           <button
+                               className="h-5 px-1.5 bg-yellow-500/30 hover:bg-yellow-500/50 border border-yellow-400/40 rounded text-[8px] font-bold text-yellow-300 transition-colors flex items-center gap-0.5 shrink-0"
+                               onClick={setAsMain}
+                           >
+                               <Icons.Check size={8} /><span>主图</span>
+                           </button>
+                       )}
+                   </div>
                </div>
            )}
         </div>

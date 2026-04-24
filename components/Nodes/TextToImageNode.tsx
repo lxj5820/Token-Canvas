@@ -9,6 +9,7 @@ import { ImageNodeToolbar } from './Shared/ImageToolbar';
 import { AnnotationOverlay, AnnotationRenderer, AnnotationToolbar } from '../Annotation';
 import { GridSplitOverlay, GridSplitToolbar } from '../GridSplit';
 import { AngleEditor, AngleGenerateParams } from '../AngleEditor';
+import { LightingEditor, LightingGenerateParams } from '../LightingEditor';
 import { useAnnotation } from '../../hooks/useAnnotation';
 import { useGridSplit } from '../../hooks/useGridSplit';
 import { getOptimizePrompt } from '../AIPanel';
@@ -27,12 +28,13 @@ interface TextToImageNodeProps {
   isSelecting?: boolean;
   onGridSplitCreateNodes?: (sourceNodeId: string, cells: { dataUrl: string; label: string; row: number; col: number }[]) => void;
   onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
+  onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
 }
 
 
 // 文本到图片节点组件
 export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
-    data, updateData, onGenerate, selected, showControls, inputs = [], onMaximize, onDownload, isDark = true, isSelecting, onGridSplitCreateNodes, onAngleGenerate
+    data, updateData, onGenerate, selected, showControls, inputs = [], onMaximize, onDownload, isDark = true, isSelecting, onGridSplitCreateNodes, onAngleGenerate, onLightGenerate
 }) => {
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const [deferredInputs, setDeferredInputs] = useState(false);
@@ -159,6 +161,15 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
       updateData(data.id, { isAngleEditing: false });
     }, [data.id, updateData]);
 
+    // 打光编辑
+    const isLightEditing = !!data.isLightEditing;
+    const toggleLightEdit = useCallback(() => {
+      updateData(data.id, { isLightEditing: !data.isLightEditing });
+    }, [data.id, data.isLightEditing, updateData]);
+    const closeLightEdit = useCallback(() => {
+      updateData(data.id, { isLightEditing: false });
+    }, [data.id, updateData]);
+
     const isSelectedAndStable = selected && !isSelecting;
 
     // 检查模型配置已加载
@@ -237,9 +248,9 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
     return (
       <>
-        <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || (hasResult && isSelectedAndStable && showControls) ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
-             {/* 顶部工具栏（标注/宫格切分/角度编辑模式下隐藏） */}
-             {hasResult && isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && (
+        <div className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || isLightEditing || (hasResult && isSelectedAndStable && showControls) ? 'overflow-visible' : 'overflow-hidden'} shadow-xl group transition-all duration-200`}>
+             {/* 顶部工具栏（标注/宫格切分/角度编辑/打光编辑模式下隐藏） */}
+             {hasResult && isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && !isLightEditing && (
                  <div className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                      <ImageNodeToolbar 
                          imageSrc={data.annotatedImageSrc || data.imageSrc} 
@@ -251,6 +262,8 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                          onGridSplit={handleGridSplit}
                          onAngleEdit={toggleAngleEdit}
                          isAngleEditing={isAngleEditing}
+                         onLightEdit={toggleLightEdit}
+                         isLightEditing={isLightEditing}
                      />
                  </div>
              )}
@@ -297,11 +310,11 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
              
              {hasResult ? (
                  <>
-                    {/* 标注模式/宫格切分/角度编辑模式显示原图+覆盖层，非标注模式显示烘焙图 */}
-                    <LocalMediaStack data={data} updateData={updateData} currentSrc={isAnnotating || isGridSplitting || isAngleEditing ? data.imageSrc : (data.annotatedImageSrc || data.imageSrc)} onMaximize={onMaximize} isDark={isDark} selected={selected} />
+                   {/* 标注模式/宫格切分/角度编辑/打光编辑模式显示原图+覆盖层，非标注模式显示烘焙图 */}
+                   <LocalMediaStack data={data} updateData={updateData} currentSrc={isAnnotating || isGridSplitting || isAngleEditing || isLightEditing ? data.imageSrc : (data.annotatedImageSrc || data.imageSrc)} onMaximize={onMaximize} isDark={isDark} selected={selected} />
 
                     {/* 悬停覆盖层（标题和操作） */}
-                    {!isAnnotating && !isGridSplitting && !isAngleEditing && (
+                    {!isAnnotating && !isGridSplitting && !isAngleEditing && !isLightEditing && (
                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                          {/* Top Gradient顶部渐变 */}
                          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
@@ -314,7 +327,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                     )}
 
                     {/* 只读标注渲染（仅当有标注但没有烘焙图时才显示SVG叠加） */}
-                    {!isAnnotating && !isGridSplitting && !isAngleEditing && !data.annotatedImageSrc && (data.annotations?.length || 0) > 0 && (
+                    {!isAnnotating && !isGridSplitting && !isAngleEditing && !isLightEditing && !data.annotatedImageSrc && (data.annotations?.length || 0) > 0 && (
                          <AnnotationRenderer
                              annotations={data.annotations || []}
                              width={data.width}
@@ -373,7 +386,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
         </div>
 
         {/* 控制面板 */}
-        {isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && (
+        {isSelectedAndStable && showControls && !isAnnotating && !isGridSplitting && !isAngleEditing && !isLightEditing && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
                  {inputs.length > 0 && <LocalInputThumbnails inputs={inputs} ready={deferredInputs} isDark={isDark} />}
                  <div className={`${controlPanelBg} rounded-2xl p-4 flex flex-col gap-3 border`}>
@@ -465,6 +478,20 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                     imageSrc={data.imageSrc || ''}
                     onClose={closeAngleEdit}
                     onGenerate={(params) => onAngleGenerate?.(data.id, params)}
+                    isDark={isDark}
+                    prompt={data.prompt}
+                    isLoading={data.isLoading}
+                />
+            </div>
+        )}
+
+        {/* 打光编辑器 - 与控制面板同级定位 */}
+        {isLightEditing && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[700px] pt-4 z-[70] pointer-events-auto nodrag nowheel" onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+                <LightingEditor
+                    imageSrc={data.imageSrc || ''}
+                    onClose={closeLightEdit}
+                    onGenerate={(params) => onLightGenerate?.(data.id, params)}
                     isDark={isDark}
                     prompt={data.prompt}
                     isLoading={data.isLoading}
