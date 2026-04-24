@@ -310,7 +310,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
 
           {/* 打光编辑器 - 与节点同级定位 */}
           {isLightEditing && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[700px] pt-4 z-[70] pointer-events-auto nodrag nowheel" onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel" onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
                   <LightingEditor
                       imageSrc={data.imageSrc || ''}
                       onClose={closeLightEdit}

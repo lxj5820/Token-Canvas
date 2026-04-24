@@ -338,23 +338,81 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
 
   return (
     <div
-      className={`rounded-2xl shadow-2xl overflow-hidden border backdrop-blur-xl flex ${
+      className={`rounded-2xl shadow-2xl overflow-hidden border backdrop-blur-xl ${
         isDark ? 'bg-[#1a1a1a]/95 border-zinc-700/50' : 'bg-white/95 border-gray-200 shadow-xl'
       }`}
-      style={{ width: 'auto', minWidth: 700, maxWidth: '100%' }}
+      style={{ width: 'auto', minWidth: 480, maxWidth: '100%' }}
       onMouseDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
     >
-      {/* ===== 左侧：3D 预览 ===== */}
-      <div
-        className={`relative flex flex-col border-r ${isDark ? 'bg-[#0d0d0d] border-zinc-700/50' : 'bg-gray-100 border-gray-200'}`}
-        style={{ width: 350, minHeight: 480 }}
-      >
-        {/* 顶部标题栏（透视/正面切换 + 关闭按钮） */}
-        <div className="flex justify-between items-center px-3 pt-3 pb-1">
-          <div className={`z-10 flex p-1 rounded-full backdrop-blur-sm border ${isDark ? 'bg-black/40 border-white/10' : 'bg-white/60 border-gray-200'}`}>
+      {/* ===== Header ===== */}
+      <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-zinc-700/50' : 'border-gray-200'}`}>
+        <h1 className={`text-[15px] font-semibold ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>打光编辑器</h1>
+        <div className="flex items-center gap-2">
+          {/* 主光/辅光标签页 */}
+          <div className={`flex gap-1 p-1 rounded-full ${isDark ? 'bg-zinc-800' : 'bg-gray-100'}`}>
             <button
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-[12px] font-medium transition-colors cursor-pointer ${
+                activeTab === 'main'
+                  ? (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+                  : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-gray-500 hover:text-gray-700')
+              }`}
+              onClick={() => setActiveTab('main')}
+            >
+              主光
+            </button>
+            <button
+              className={`px-3 py-1 rounded-full text-[12px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'fill'
+                  ? (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+                  : (isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-gray-500 hover:text-gray-700')
+              }`}
+              onClick={() => setActiveTab('fill')}
+            >
+              辅光
+              {fillLight.enabled && (
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500" />
+              )}
+            </button>
+          </div>
+          <button
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+              isDark ? 'text-zinc-400 hover:bg-zinc-700/50 hover:text-white' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+            }`}
+            onClick={onClose}
+          >
+            <Icons.X size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* ===== 辅光启用开关（仅辅光标签页） ===== */}
+      {activeTab === 'fill' && (
+        <div className={`flex items-center justify-between px-4 py-2.5 border-b ${isDark ? 'border-zinc-700/50' : 'border-gray-200'}`}>
+          <span className={`text-[12px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>启用辅助光源</span>
+          <button
+            className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
+              fillLight.enabled
+                ? 'bg-purple-500'
+                : (isDark ? 'bg-zinc-700' : 'bg-gray-300')
+            }`}
+            onClick={() => setFillLight(prev => ({ ...prev, enabled: !prev.enabled }))}
+          >
+            <div
+              className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"
+              style={{ left: fillLight.enabled ? 18 : 2 }}
+            />
+          </button>
+        </div>
+      )}
+
+      {/* ===== 3D Scene ===== */}
+      <div className={`relative border-b ${isDark ? 'bg-[#0d0d0d] border-zinc-700/50' : 'bg-gray-100 border-gray-200'}`} style={{ height: 260 }}>
+        {/* 透视/正面切换 */}
+        <div className="absolute top-3 left-3 z-10">
+          <div className={`flex p-1 rounded-full backdrop-blur-sm border ${isDark ? 'bg-black/40 border-white/10' : 'bg-white/60 border-gray-200'}`}>
+            <button
+              className={`px-3 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === 'perspective'
                   ? (isDark ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-800')
                   : (isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800')
@@ -364,7 +422,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
               透视
             </button>
             <button
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === 'front'
                   ? (isDark ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-800')
                   : (isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800')
@@ -374,18 +432,12 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
               正面
             </button>
           </div>
-          <button
-            className={`transition-colors cursor-pointer ${isDark ? 'text-zinc-500 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
-            onClick={onClose}
-            title="关闭"
-          >
-            <Icons.X size={18} />
-          </button>
         </div>
-        {/* 3D 场景 */}
+
+        {/* Scene container */}
         <div
           ref={sceneRef}
-          className="flex-1 w-full relative overflow-hidden select-none"
+          className="absolute inset-0 flex items-center justify-center"
           style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
           onMouseDown={handleSceneMouseDown}
         >
@@ -404,7 +456,7 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
                   height: 0,
                 }}
               >
-                {/* 地面参考圆（赤道平面） */}
+                {/* 地面参考圆 */}
                 <div
                   className="absolute"
                   style={{
@@ -568,195 +620,108 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
             </div>
           )}
         </div>
-
-        {/* 重置按钮 */}
-        <div className="absolute bottom-4 left-4">
-          <button
-            className={`flex items-center gap-1.5 text-sm transition-colors cursor-pointer ${
-              isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={handleReset}
-          >
-            <Icons.RotateCcw size={14} />
-            <span>重置</span>
-          </button>
-        </div>
       </div>
 
-      {/* ===== 右侧：控制面板 ===== */}
-      <div className={`w-full p-4 flex flex-col gap-3 ${isDark ? 'bg-black border-l border-white/5' : 'bg-white border-l border-gray-200'}`} style={{ width: 350 }}>
-        {/* 主光/辅光标签页 */}
-        <div className={`flex gap-1 p-1 ${isDark ? 'bg-[#0a0a0a]' : 'bg-gray-100'} rounded-xl`}>
+      {/* ===== Presets ===== */}
+      <div className={`flex items-center gap-2 px-4 py-2.5 overflow-x-auto no-scrollbar border-b ${isDark ? 'border-zinc-700/50' : 'border-gray-200'}`}>
+        {LIGHT_PRESETS.map((preset) => (
           <button
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
-              activeTab === 'main'
-                ? (isDark ? 'bg-[#1a1a1a] text-purple-400 shadow-sm border border-purple-500/20' : 'bg-white text-purple-600 shadow-sm border border-purple-300')
-                : (isDark ? 'text-gray-500 hover:text-gray-300 border border-transparent' : 'text-gray-400 hover:text-gray-600 border border-transparent')
+            key={preset.name}
+            className={`shrink-0 h-7 px-3 rounded-full text-[12px] font-medium transition-colors cursor-pointer whitespace-nowrap border ${
+              activePreset === preset.name
+                ? (isDark ? 'bg-purple-500/20 text-purple-400 border-purple-500/40' : 'bg-purple-50 text-purple-600 border-purple-300')
+                : (isDark ? 'bg-zinc-700/50 text-zinc-400 border-zinc-700/50 hover:text-zinc-200' : 'bg-gray-100 text-gray-500 border-gray-200 hover:text-gray-700')
             }`}
-            onClick={() => setActiveTab('main')}
+            onClick={() => handlePreset(preset)}
           >
-            主光 (Main)
+            {preset.name}
           </button>
-          <button
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 ${
-              activeTab === 'fill'
-                ? (isDark ? 'bg-[#1a1a1a] text-purple-400 shadow-sm border border-purple-500/20' : 'bg-white text-purple-600 shadow-sm border border-purple-300')
-                : (isDark ? 'text-gray-500 hover:text-gray-300 border border-transparent' : 'text-gray-400 hover:text-gray-600 border border-transparent')
-            }`}
-            onClick={() => setActiveTab('fill')}
-          >
-            辅光 (Fill)
-            {fillLight.enabled && (
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500" />
-            )}
-          </button>
+        ))}
+      </div>
+
+      {/* ===== Controls ===== */}
+      <div className={`px-4 py-3 flex flex-col gap-3 border-b ${isDark ? 'border-zinc-700/50' : 'border-gray-200'}`}>
+        {/* 水平环绕 */}
+        <div className="flex items-center gap-3">
+          <span className={`text-[12px] w-16 shrink-0 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>水平环绕</span>
+          <input
+            type="range"
+            min={0}
+            max={360}
+            value={currentLight.azimuth}
+            onChange={(e) => handleParamChange('azimuth', Number(e.target.value))}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+            style={{ background: getSliderGradient(currentLight.azimuth, 0, 360, '#a855f7') }}
+          />
+          <span className={`text-[12px] w-12 text-right tabular-nums font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{currentLight.azimuth}°</span>
         </div>
 
-        {/* 启用辅光开关（仅在辅光标签页显示） */}
-        {activeTab === 'fill' && (
-          <div className={`flex items-center justify-between ${isDark ? 'bg-[#0a0a0a]' : 'bg-gray-50'} p-2.5 rounded-xl border ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
-            <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>启用辅助光源</span>
-            <button
-              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                fillLight.enabled
-                  ? 'bg-purple-600'
-                  : (isDark ? 'bg-zinc-700' : 'bg-gray-300')
-              }`}
-              onClick={() => setFillLight(prev => ({ ...prev, enabled: !prev.enabled }))}
-            >
-              <div
-                className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform"
-                style={{ left: fillLight.enabled ? 18 : 2 }}
-              />
-            </button>
-          </div>
-        )}
-
-        {/* 预设位置 */}
-        <div className="space-y-2">
-          <h3 className={`text-[11px] uppercase tracking-wider font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>预设位置</h3>
-          <div className="grid grid-cols-4 gap-1.5">
-            {LIGHT_PRESETS.map((preset) => (
-              <button
-                key={preset.name}
-                className={`${isDark ? 'bg-[#111] hover:bg-[#222] hover:text-purple-300 border border-white/5 hover:border-purple-500/30' : 'bg-gray-50 hover:bg-gray-100 hover:text-purple-600 border border-gray-200 hover:border-purple-300'} rounded-lg py-1.5 text-xs font-medium transition-all cursor-pointer ${
-                  activePreset === preset.name
-                    ? (isDark ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-600 border-purple-300')
-                    : (isDark ? 'text-gray-400' : 'text-gray-500')
-                }`}
-                onClick={() => handlePreset(preset)}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
+        {/* 高度 */}
+        <div className="flex items-center gap-3">
+          <span className={`text-[12px] w-16 shrink-0 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>高度</span>
+          <input
+            type="range"
+            min={-90}
+            max={90}
+            value={currentLight.elevation}
+            onChange={(e) => handleParamChange('elevation', Number(e.target.value))}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+            style={{ background: getSliderGradient(currentLight.elevation, -90, 90, '#a855f7') }}
+          />
+          <span className={`text-[12px] w-12 text-right tabular-nums font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{currentLight.elevation}°</span>
         </div>
 
-        {/* 参数调节 */}
-        {(activeTab === 'main' || activeTab === 'fill') && (
-          <div className="space-y-3">
-            <h3 className={`text-[11px] uppercase tracking-wider font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>参数调节</h3>
-
-            {/* 水平环绕 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>水平环绕 (Azimuth)</span>
-                <span className={`font-mono text-[11px] ${isDark ? 'bg-[#0a0a0a] text-purple-300 border-white/5' : 'bg-gray-100 text-purple-600 border-gray-200'} px-1.5 py-0.5 rounded border w-12 text-center`}>
-                  {currentLight.azimuth}°
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={360}
-                value={currentLight.azimuth}
-                onChange={(e) => handleParamChange('azimuth', Number(e.target.value))}
-                className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                style={{ background: getSliderGradient(currentLight.azimuth, 0, 360, '#a855f7') }}
-              />
-            </div>
-
-            {/* 高度 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>高度 (Elevation)</span>
-                <span className={`font-mono text-[11px] ${isDark ? 'bg-[#0a0a0a] text-purple-300 border-white/5' : 'bg-gray-100 text-purple-600 border-gray-200'} px-1.5 py-0.5 rounded border w-12 text-center`}>
-                  {currentLight.elevation}°
-                </span>
-              </div>
-              <input
-                type="range"
-                min={-90}
-                max={90}
-                value={currentLight.elevation}
-                onChange={(e) => handleParamChange('elevation', Number(e.target.value))}
-                className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                style={{ background: getSliderGradient(currentLight.elevation, -90, 90, '#a855f7') }}
-              />
-            </div>
-
-            {/* 强度 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>强度 (Intensity)</span>
-                <span className={`font-mono text-[11px] ${isDark ? 'bg-[#0a0a0a] text-purple-300 border-white/5' : 'bg-gray-100 text-purple-600 border-gray-200'} px-1.5 py-0.5 rounded border w-12 text-center`}>
-                  {currentLight.intensity}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={currentLight.intensity}
-                onChange={(e) => handleParamChange('intensity', Number(e.target.value))}
-                className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
-                style={{ background: getSliderGradient(currentLight.intensity, 0, 100, '#a855f7') }}
-              />
-            </div>
-          </div>
-        )}
+        {/* 强度 */}
+        <div className="flex items-center gap-3">
+          <span className={`text-[12px] w-16 shrink-0 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>强度</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={currentLight.intensity}
+            onChange={(e) => handleParamChange('intensity', Number(e.target.value))}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+            style={{ background: getSliderGradient(currentLight.intensity, 0, 100, '#a855f7') }}
+          />
+          <span className={`text-[12px] w-12 text-right tabular-nums font-medium ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}>{currentLight.intensity}%</span>
+        </div>
 
         {/* 灯光颜色 */}
-        {(activeTab === 'main' || activeTab === 'fill') && (
-          <div className="space-y-2">
-            <h3 className={`text-[11px] uppercase tracking-wider font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>灯光颜色</h3>
-            <div className={`flex items-center gap-3 ${isDark ? 'bg-[#0a0a0a] border-white/5' : 'bg-gray-50 border-gray-200'} border rounded-xl p-2`}>
-              <div className={`relative w-7 h-7 rounded-md ${isDark ? 'border-white/10' : 'border-gray-300'} border shrink-0 shadow-inner cursor-pointer`} style={{ background: currentLight.color }}>
-                <input
-                  key={`${activeTab}-color`}
-                  type="color"
-                  className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
-                  value={currentLight.color}
-                  onChange={(e) => handleParamChange('color', e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className={`text-[9px] font-bold tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>HEX COLOR</span>
-                <input
-                  key={`${activeTab}-hex`}
-                  type="text"
-                  className={`bg-transparent border-none outline-none text-xs w-full font-mono uppercase transition-colors ${isDark ? 'text-gray-200 focus:text-purple-300' : 'text-gray-800 focus:text-purple-600'}`}
-                  maxLength={7}
-                  value={currentLight.color}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
-                      handleParamChange('color', val);
-                    }
-                  }}
-                />
-              </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-[12px] w-16 shrink-0 ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>灯光颜色</span>
+          <div className="flex items-center gap-2 flex-1">
+            <div className={`relative w-7 h-7 rounded-md ${isDark ? 'border-white/10' : 'border-gray-300'} border shrink-0 shadow-inner cursor-pointer`} style={{ background: currentLight.color }}>
+              <input
+                key={`${activeTab}-color`}
+                type="color"
+                className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                value={currentLight.color}
+                onChange={(e) => handleParamChange('color', e.target.value)}
+              />
             </div>
+            <input
+              key={`${activeTab}-hex`}
+              type="text"
+              className={`bg-transparent border-none outline-none text-[12px] w-20 font-mono uppercase ${isDark ? 'text-zinc-200' : 'text-gray-900'}`}
+              maxLength={7}
+              value={currentLight.color}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                  handleParamChange('color', val);
+                }
+              }}
+            />
           </div>
-        )}
+        </div>
 
         {/* 提示词开关 */}
         <div className="flex items-center justify-between">
-          <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>提示词</span>
+          <span className={`text-[12px] ${isDark ? 'text-zinc-400' : 'text-gray-500'}`}>提示词</span>
           <button
             className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
               includePrompt
-                ? 'bg-purple-600'
+                ? 'bg-purple-500'
                 : (isDark ? 'bg-zinc-700' : 'bg-gray-300')
             }`}
             onClick={() => setIncludePrompt(!includePrompt)}
@@ -776,61 +741,74 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
           {fillLight.enabled && ` | 辅光：${fillLight.azimuth}°${getElevationLabel(fillLight.elevation)}，强度${fillLight.intensity}%，${fillLight.color}光`}
           {includePrompt && prompt ? `。原始描述：${prompt.slice(0, 40)}${prompt.length > 40 ? '...' : ''}` : ''}
         </div>
+      </div>
 
-        {/* 底部操作栏 */}
-        <div className="mt-auto flex items-center justify-end gap-2">
-          {/* 数量选择 */}
-          <div className="flex items-center gap-2 count-dropdown-container relative">
-            <button
-              className={`flex items-center gap-2 cursor-pointer group h-8 px-3 rounded-lg border transition-all ${
-                isDark ? 'border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-100'
-              }`}
-              onClick={() => setCountDropdownOpen(!countDropdownOpen)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-colors ${isDark ? 'text-zinc-400 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-700'}`} aria-hidden="true">
-                <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"></path>
-                <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"></path>
-                <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"></path>
-              </svg>
-              <span className={`text-xs font-medium transition-colors select-none min-w-[20px] text-center ${isDark ? 'text-zinc-300 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-800'}`}>{count}</span>
-            </button>
+      {/* ===== Footer ===== */}
+      <div className="flex items-center px-4 py-3">
+        {/* 重置按钮 */}
+        <button
+          className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] transition-colors cursor-pointer ${
+            isDark
+              ? 'text-zinc-400 bg-zinc-700/50 hover:text-zinc-200 hover:bg-zinc-700/70'
+              : 'text-gray-500 bg-gray-100 hover:text-gray-700 hover:bg-gray-200'
+          }`}
+          onClick={handleReset}
+        >
+          <Icons.RotateCcw size={14} />
+          <span>重置参数</span>
+        </button>
 
-            {countDropdownOpen && (
-              <div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max min-w-[130px] ${isDark ? 'bg-[#1a1a1a] border-zinc-700' : 'bg-white border-gray-200'} border rounded-xl shadow-2xl py-1.5 z-[100]`}>
-                <div className="max-h-[300px] overflow-y-auto px-1.5">
-                  {[1, 2, 3, 4].map((n) => (
-                    <div
-                      key={n}
-                      className={`relative px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5 ${
-                        count === n
-                          ? (isDark ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-600')
-                          : (isDark ? 'text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')
-                      }`}
-                      onClick={() => { setCount(n); setCountDropdownOpen(false); }}
-                    >
-                      <span className="whitespace-nowrap pr-2">{n}</span>
-                      {count === n && (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400 shrink-0 ml-2" aria-hidden="true">
-                          <path d="M20 6 9 17l-5-5"></path>
-                        </svg>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="flex-1" />
 
-          {/* 生成按钮 */}
+        {/* 数量选择 */}
+        <div className="flex items-center gap-2 mr-3 count-dropdown-container relative">
           <button
-            className="h-8 px-5 rounded-lg text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.98]"
-            onClick={handleGenerateClick}
-            disabled={isLoading}
+            className="flex items-center gap-2 cursor-pointer group h-8 px-3 rounded-lg border transition-all border-zinc-700 hover:border-zinc-600 hover:bg-zinc-700"
+            onClick={() => setCountDropdownOpen(!countDropdownOpen)}
           >
-            {isLoading ? <Icons.Loader2 size={14} className="animate-spin" /> : <Icons.Wand2 size={14} />}
-            <span>{isLoading ? '生成中' : '生成'}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-colors text-zinc-400 group-hover:text-white" aria-hidden="true">
+              <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"></path>
+              <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"></path>
+              <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"></path>
+            </svg>
+            <span className="text-xs font-medium transition-colors select-none text-zinc-300 group-hover:text-white min-w-[20px] text-center">{count}</span>
           </button>
+
+          {countDropdownOpen && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max min-w-[130px] bg-[#1a1a1a] border-zinc-700 border rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-150 overflow-visible">
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar px-1.5">
+                {[1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className={`relative px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5 ${
+                      count === n
+                        ? 'bg-purple-500/15 text-purple-400'
+                        : 'text-zinc-300 hover:bg-zinc-700 hover:text-white'
+                    }`}
+                    onClick={() => { setCount(n); setCountDropdownOpen(false); }}
+                  >
+                    <span className="whitespace-nowrap pr-2">{n}</span>
+                    {count === n && (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check text-purple-400 shrink-0 ml-2" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5"></path>
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* 生成按钮 */}
+        <button
+          className="h-8 px-5 rounded-lg text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.98]"
+          onClick={handleGenerateClick}
+          disabled={isLoading}
+        >
+          {isLoading ? <Icons.Loader2 size={14} className="animate-spin" /> : <Icons.Wand2 size={14} />}
+          <span>{isLoading ? '生成中' : '生成'}</span>
+        </button>
       </div>
     </div>
   );
