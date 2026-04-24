@@ -56,6 +56,7 @@ const CanvasWithSidebar: React.FC = () => {
   const connectionsRef = useRef(connections);
   const saveToHistoryRef = useRef<(nodes: NodeData[], connections: Connection[]) => void>(undefined as any);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showCommunityPanel, setShowCommunityPanel] = useState(false);
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
   const [showZoomPanel, setShowZoomPanel] = useState(false);
   const [showNewWorkflowDialog, setShowNewWorkflowDialog] = useState(false);
@@ -1354,14 +1355,15 @@ const CanvasWithSidebar: React.FC = () => {
         }
       }
       if (e.key === 'Escape') {
-        if (previewMedia) setPreviewMedia(null);
-        if (contextMenu) setContextMenu(null);
-        if (quickAddMenu) setQuickAddMenu(null);
-        if (showNewWorkflowDialog) setShowNewWorkflowDialog(false);
-        if (isSettingsOpen) setIsSettingsOpen(false);
-        if (isStorageOpen) setIsStorageOpen(false);
-        if (isExportImportOpen) setIsExportImportOpen(false);
-      }
+          if (previewMedia) setPreviewMedia(null);
+          if (contextMenu) setContextMenu(null);
+          if (quickAddMenu) setQuickAddMenu(null);
+          if (showNewWorkflowDialog) setShowNewWorkflowDialog(false);
+          if (isSettingsOpen) setIsSettingsOpen(false);
+          if (isStorageOpen) setIsStorageOpen(false);
+          if (isExportImportOpen) setIsExportImportOpen(false);
+          if (showCommunityPanel) setShowCommunityPanel(false);
+        }
       if (e.code === 'Space') spacePressed.current = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => { if (e.code === 'Space') spacePressed.current = false; };
@@ -1455,31 +1457,7 @@ const CanvasWithSidebar: React.FC = () => {
         )}
       </div>
 
-      <div className="absolute top-4 right-4 z-50">
-        <div className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${isDark ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' : 'bg-white/90 border-gray-200 shadow-lg'}`}>
-          <button onClick={() => setShowAIPanel(!showAIPanel)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${showAIPanel ? (isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600') : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')}`}>
-            <Icons.Sparkles size={15} />
-            <span>AI 助手</span>
-          </button>
-        </div>
-        {showAIPanel && (
-          <div className={`absolute top-full right-0 mt-2 w-80 p-4 rounded-2xl backdrop-blur-xl border shadow-xl animate-in slide-in-from-top-2 duration-200 ${isDark ? 'bg-[#18181b]/95 border-zinc-800' : 'bg-white/95 border-gray-200'}`}>
-            <div className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>AI 助手快捷键</div>
-            <div className="space-y-3">
-              {[
-                ['快速生图', '添加节点 → 输入提示词 → 点击生成'],
-                ['快速生视频', '添加视频节点 → 连接图片节点 → 生成'],
-                ['节点连接', '拖拽节点端口 → 连接到下一个节点']
-              ].map(([title, desc]) => (
-                <div key={title} className={`p-3 rounded-xl border ${isDark ? 'border-zinc-800 bg-zinc-800/30' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{title}</div>
-                  <div className="text-[11px] text-gray-500">{desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+
 
       <input type="file" ref={workflowInputRef} hidden accept=".aistudio-flow,.json" onChange={handleLoadWorkflow} />
       <input type="file" ref={assetInputRef} hidden accept="image/*,video/*" onChange={handleImportAsset} />
@@ -1631,48 +1609,104 @@ const CanvasWithSidebar: React.FC = () => {
           </div>
         </div>
 
-        <div className="absolute top-4 right-4 z-50">
-          <div className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
-            isDark ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' : 'bg-white/90 border-gray-200 shadow-lg'
-          }`}>
-            <button onClick={() => setShowAIPanel(!showAIPanel)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              showAIPanel ? (isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600') : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
-            }`} title="AI 助手">
-              <Icons.Sparkles size={15} />
-              <span>AI 助手</span>
-            </button>
-            <div className={`w-px h-5 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
-            <button onClick={() => setIsExportImportOpen(true)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+        <div className="absolute top-4 right-4 z-50 flex items-start gap-2">
+          {/* 社区按钮（独立按钮） */}
+          <div 
+            className="relative group" 
+            onMouseEnter={() => setShowCommunityPanel(true)}
+            onMouseLeave={() => setShowCommunityPanel(false)}
+          >
+            <div className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
+              isDark ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' : 'bg-white/90 border-gray-200 shadow-lg'
             }`}>
-              <Icons.Download size={15} />
-              <span>下载</span>
-            </button>
-            <div className={`w-px h-5 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
-            <button onClick={() => toggleTheme(!isDark)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`} title="社区" onClick={() => setShowCommunityPanel(!showCommunityPanel)}>
+                <Icons.User size={15} />
+                <span>社区</span>
+              </button>
+            </div>
+            {showCommunityPanel && (
+              <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 p-4 rounded-2xl backdrop-blur-xl border shadow-xl ${isDark ? 'bg-[#18181b]/95 border-zinc-800' : 'bg-white/95 border-gray-200'}`}>
+                <div className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>社区</div>
+                
+                {/* 微信群二维码区域 */}
+                <div className={`p-4 rounded-xl border ${isDark ? 'border-zinc-800 bg-zinc-800/30' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>微信群</div>
+                  <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                    <img 
+                      src="https://raw.githubusercontent.com/lxj5820/nano-banana/refs/heads/main/%E7%A4%BE%E7%BE%A4.png" 
+                      alt="微信群二维码" 
+                      className="w-full h-auto"
+                    />
+                  </div>
+                  <p className={`text-[11px] text-gray-500 mt-2 text-center`}>扫码加入微信群，获取更多福利</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 其他按钮 */}
+          <div className="relative">
+            <div className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
+              isDark ? 'bg-[#18181b]/90 border-zinc-800 shadow-xl' : 'bg-white/90 border-gray-200 shadow-lg'
             }`}>
-              {isDark ? <Icons.Moon size={15} /> : <Icons.Sun size={15} />}
-              <span>{isDark ? '暗色' : '亮色'}</span>
-            </button>
-            <button onClick={handleNewWorkflow} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-            }`}>
-              <span>清空</span>
-            </button>
-            <div className={`w-px h-5 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
-            <button onClick={handleOpenStorageSettings} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              storageDirName ? (isDark ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-emerald-600 hover:bg-emerald-50') : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
-            }`}>
-              <Icons.FolderOpen size={15} />
-              <span>存储</span>
-            </button>
-            <button onClick={() => setIsSettingsOpen(true)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-              isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-            }`}>
-              <Icons.Settings size={15} />
-              <span>API 设置</span>
-            </button>
+              <button onClick={() => setShowAIPanel(!showAIPanel)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                showAIPanel ? (isDark ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-600') : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+              }`} title="AI 助手">
+                <Icons.Sparkles size={15} />
+                <span>AI 助手</span>
+              </button>
+              <div className={`w-px h-5 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+              <button onClick={() => setIsExportImportOpen(true)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}>
+                <Icons.Download size={15} />
+                <span>下载</span>
+              </button>
+              <div className={`w-px h-5 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+              <button onClick={() => toggleTheme(!isDark)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}>
+                {isDark ? <Icons.Moon size={15} /> : <Icons.Sun size={15} />}
+                <span>{isDark ? '暗色' : '亮色'}</span>
+              </button>
+              <button onClick={handleNewWorkflow} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}>
+                <span>清空</span>
+              </button>
+              <div className={`w-px h-5 ${isDark ? 'bg-zinc-700' : 'bg-gray-200'}`} />
+              <button onClick={handleOpenStorageSettings} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                storageDirName ? (isDark ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-emerald-600 hover:bg-emerald-50') : (isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+              }`}>
+                <Icons.FolderOpen size={15} />
+                <span>存储</span>
+              </button>
+              <button onClick={() => setIsSettingsOpen(true)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}>
+                <Icons.Settings size={15} />
+                <span>API 设置</span>
+              </button>
+            </div>
+            {showAIPanel && (
+              <div className={`absolute top-full right-0 mt-2 w-80 p-4 rounded-2xl backdrop-blur-xl border shadow-xl animate-in slide-in-from-top-2 duration-200 ${isDark ? 'bg-[#18181b]/95 border-zinc-800' : 'bg-white/95 border-gray-200'}`}>
+                <div className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>AI 助手快捷键</div>
+                <div className="space-y-3">
+                  {[
+                    ['快速生图', '添加节点 → 输入提示词 → 点击生成'],
+                    ['快速生视频', '添加视频节点 → 连接图片节点 → 生成'],
+                    ['节点连接', '拖拽节点端口 → 连接到下一个节点']
+                  ].map(([title, desc]) => (
+                    <div key={title} className={`p-3 rounded-xl border ${isDark ? 'border-zinc-800 bg-zinc-800/30' : 'border-gray-100 bg-gray-50'}`}>
+                      <div className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{title}</div>
+                      <div className="text-[11px] text-gray-500">{desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <ContextMenu
