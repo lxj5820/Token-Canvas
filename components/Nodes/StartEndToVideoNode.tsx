@@ -134,12 +134,12 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
         return () => clearInterval(interval); 
     }, [data.isLoading]);
 
-    // 处理视频比例变化
     const handleRatioChange = (ratio: string) => {
         const currentShort = Math.min(data.width, data.height);
         const baseSize = Math.max(currentShort, 400);
 
-        const [wStr, hStr] = ratio.split(':');
+        const sizeRatio = ratio === 'auto' ? '1:1' : ratio;
+        const [wStr, hStr] = sizeRatio.split(':');
         const wR = parseFloat(wStr);
         const hR = parseFloat(hStr);
         const r = wR / hR;

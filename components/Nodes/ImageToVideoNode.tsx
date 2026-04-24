@@ -150,31 +150,24 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
         return () => clearInterval(interval);
     }, [data.isLoading]);
 
-    // 处理宽高比变化的函数
     const handleRatioChange = (ratio: string) => {
-        // 计算当前短边长度
         const currentShort = Math.min(data.width, data.height);
-        // 确保基础尺寸不小于400
         const baseSize = Math.max(currentShort, 400);
 
-        // 解析宽高比
-        const [wStr, hStr] = ratio.split(':');
+        const sizeRatio = ratio === 'auto' ? '1:1' : ratio;
+        const [wStr, hStr] = sizeRatio.split(':');
         const wR = parseFloat(wStr);
         const hR = parseFloat(hStr);
         const r = wR / hR;
 
         let newW, newH;
-        // 根据宽高比计算新的宽度和高度
         if (r >= 1) {
-            // 横屏，以高度为基准
             newH = baseSize;
             newW = baseSize * r;
         } else {
-            // 竖屏，以宽度为基准
             newW = baseSize;
             newH = baseSize / r;
         }
-        // 更新节点数据
         updateData(data.id, { aspectRatio: ratio, width: Math.round(newW), height: Math.round(newH) });
     };
 

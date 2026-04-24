@@ -58,6 +58,16 @@ const CanvasWithSidebar: React.FC = () => {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showCommunityPanel, setShowCommunityPanel] = useState(false);
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
+  
+  // 首次加载时显示社区气泡
+  useEffect(() => {
+    setShowCommunityPanel(true);
+    const timer = setTimeout(() => {
+      setShowCommunityPanel(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   const [showZoomPanel, setShowZoomPanel] = useState(false);
   const [showNewWorkflowDialog, setShowNewWorkflowDialog] = useState(false);
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
@@ -1094,7 +1104,8 @@ const CanvasWithSidebar: React.FC = () => {
         const dx = (e.clientX - dragStartRef.current.x) / transform.k;
         let ratio = 1.33;
         if (node.aspectRatio) {
-          const [w, h] = node.aspectRatio.split(':').map(Number);
+          const ar = node.aspectRatio === 'auto' ? '1:1' : node.aspectRatio;
+          const [w, h] = ar.split(':').map(Number);
           if (!isNaN(w) && !isNaN(h) && h !== 0) ratio = w / h;
         } else if (node.type === NodeType.ORIGINAL_IMAGE) {
           ratio = (dragStartRef.current.w || 1) / (dragStartRef.current.h || 1);
