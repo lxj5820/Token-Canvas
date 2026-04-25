@@ -89,6 +89,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
     handleAnnotationUndo,
     handleAnnotationRedo,
     handleAnnotationClear,
+    undoneAnnotations,
   } = useAnnotationWithUndo({ data, handleAnnotationsChange });
 
   const {
