@@ -168,11 +168,10 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
     data.duration,
     inputs.length,
   );
-  const displayResValue =
+  const displayResValue = (
     data.model?.includes("海螺") &&
     (data.resolution === "720p" || data.resolution === "768p")
-      ? "768p"
-      : data.resolution;
+  ) ? "768p" : (data.resolution || "720p");
 
   useEffect(() => {
     let updates: Partial<NodeData> = {};
