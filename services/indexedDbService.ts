@@ -1,8 +1,11 @@
-const DB_NAME = 'TokenCanvasDB';
+// NOTE: This DB (TokenCanvasDB) stores workflow data and assets.
+// The storageService uses a separate DB (canvas_storage_db) for file system access and cache.
+// These two DBs serve different purposes and should not be merged without careful migration.
+const DB_NAME = "TokenCanvasDB";
 const DB_VERSION = 1;
 const STORES = {
-  WORKFLOWS: 'workflows',
-  ASSETS: 'assets'
+  WORKFLOWS: "workflows",
+  ASSETS: "assets",
 };
 
 class IndexedDbService {
@@ -16,16 +19,18 @@ class IndexedDbService {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         // 创建工作流存储
         if (!db.objectStoreNames.contains(STORES.WORKFLOWS)) {
-          db.createObjectStore(STORES.WORKFLOWS, { keyPath: 'id' });
+          db.createObjectStore(STORES.WORKFLOWS, { keyPath: "id" });
         }
 
         // 创建资源存储
         if (!db.objectStoreNames.contains(STORES.ASSETS)) {
-          const assetStore = db.createObjectStore(STORES.ASSETS, { keyPath: 'id' });
-          assetStore.createIndex('workflowId', 'workflowId', { unique: false });
+          const assetStore = db.createObjectStore(STORES.ASSETS, {
+            keyPath: "id",
+          });
+          assetStore.createIndex("workflowId", "workflowId", { unique: false });
         }
       };
 
@@ -43,13 +48,13 @@ class IndexedDbService {
   async saveWorkflow(workflowData: any): Promise<void> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.WORKFLOWS, 'readwrite');
+      const transaction = db.transaction(STORES.WORKFLOWS, "readwrite");
       const store = transaction.objectStore(STORES.WORKFLOWS);
-      
+
       const request = store.put({
-        id: 'current',
+        id: "current",
         data: workflowData,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       });
 
       request.onsuccess = () => resolve();
@@ -60,10 +65,10 @@ class IndexedDbService {
   async getWorkflow(): Promise<any | null> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.WORKFLOWS, 'readonly');
+      const transaction = db.transaction(STORES.WORKFLOWS, "readonly");
       const store = transaction.objectStore(STORES.WORKFLOWS);
-      
-      const request = store.get('current');
+
+      const request = store.get("current");
 
       request.onsuccess = () => {
         resolve(request.result ? request.result.data : null);
@@ -72,21 +77,24 @@ class IndexedDbService {
     });
   }
 
-  async saveAsset(workflowId: string, assetData: {
-    id: string;
-    url: string;
-    type: 'image' | 'video';
-    data: string;
-  }): Promise<void> {
+  async saveAsset(
+    workflowId: string,
+    assetData: {
+      id: string;
+      url: string;
+      type: "image" | "video";
+      data: string;
+    },
+  ): Promise<void> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.ASSETS, 'readwrite');
+      const transaction = db.transaction(STORES.ASSETS, "readwrite");
       const store = transaction.objectStore(STORES.ASSETS);
-      
+
       const request = store.put({
         ...assetData,
         workflowId,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       });
 
       request.onsuccess = () => resolve();
@@ -97,10 +105,10 @@ class IndexedDbService {
   async getAssetsByWorkflow(workflowId: string): Promise<any[]> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.ASSETS, 'readonly');
+      const transaction = db.transaction(STORES.ASSETS, "readonly");
       const store = transaction.objectStore(STORES.ASSETS);
-      const index = store.index('workflowId');
-      
+      const index = store.index("workflowId");
+
       const request = index.getAll(workflowId);
 
       request.onsuccess = () => {
@@ -113,9 +121,9 @@ class IndexedDbService {
   async getAllAssets(): Promise<any[]> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.ASSETS, 'readonly');
+      const transaction = db.transaction(STORES.ASSETS, "readonly");
       const store = transaction.objectStore(STORES.ASSETS);
-      
+
       const request = store.getAll();
 
       request.onsuccess = () => {
@@ -125,19 +133,19 @@ class IndexedDbService {
     });
   }
 
-  async deleteAssetsByType(type: 'image' | 'video'): Promise<void> {
+  async deleteAssetsByType(type: "image" | "video"): Promise<void> {
     const assets = await this.getAllAssets();
-    const assetsToDelete = assets.filter(a => a.type === type);
-    
+    const assetsToDelete = assets.filter((a) => a.type === type);
+
     if (assetsToDelete.length === 0) return;
-    
+
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.ASSETS, 'readwrite');
+      const transaction = db.transaction(STORES.ASSETS, "readwrite");
       const store = transaction.objectStore(STORES.ASSETS);
-      
+
       let deletedCount = 0;
-      assetsToDelete.forEach(asset => {
+      assetsToDelete.forEach((asset) => {
         const request = store.delete(asset.id);
         request.onsuccess = () => {
           deletedCount++;
@@ -150,17 +158,25 @@ class IndexedDbService {
     });
   }
 
-  async getAssetStats(): Promise<{ count: number, totalSize: number, byType: Record<string, number> }> {
+  async getAssetStats(): Promise<{
+    count: number;
+    totalSize: number;
+    byType: Record<string, number>;
+  }> {
     const assets = await this.getAllAssets();
-    const stats = { count: 0, totalSize: 0, byType: {} as Record<string, number> };
-    
+    const stats = {
+      count: 0,
+      totalSize: 0,
+      byType: {} as Record<string, number>,
+    };
+
     for (const asset of assets) {
       stats.count++;
       let dataSize = 0;
       if (asset.data) {
-        if (asset.data.startsWith('data:')) {
+        if (asset.data.startsWith("data:")) {
           // 格式: data:[mimeType];base64,[base64Data]
-          const base64Part = asset.data.split(',')[1];
+          const base64Part = asset.data.split(",")[1];
           if (base64Part) {
             // Base64编码：每4个字符 = 3个字节
             dataSize = Math.floor((base64Part.length * 3) / 4);
@@ -173,22 +189,25 @@ class IndexedDbService {
       stats.totalSize += dataSize;
       stats.byType[asset.type] = (stats.byType[asset.type] || 0) + dataSize;
     }
-    
+
     return stats;
   }
 
   async deleteWorkflow(workflowId: string): Promise<void> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORES.WORKFLOWS, STORES.ASSETS], 'readwrite');
-      
+      const transaction = db.transaction(
+        [STORES.WORKFLOWS, STORES.ASSETS],
+        "readwrite",
+      );
+
       // 删除工作流
       const workflowStore = transaction.objectStore(STORES.WORKFLOWS);
       workflowStore.delete(workflowId);
 
       // 删除关联的资源
       const assetStore = transaction.objectStore(STORES.ASSETS);
-      const index = assetStore.index('workflowId');
+      const index = assetStore.index("workflowId");
       const request = index.openCursor(workflowId);
 
       request.onsuccess = (event) => {
@@ -209,8 +228,11 @@ class IndexedDbService {
   async clearAll(): Promise<void> {
     const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORES.WORKFLOWS, STORES.ASSETS], 'readwrite');
-      
+      const transaction = db.transaction(
+        [STORES.WORKFLOWS, STORES.ASSETS],
+        "readwrite",
+      );
+
       transaction.objectStore(STORES.WORKFLOWS).clear();
       transaction.objectStore(STORES.ASSETS).clear();
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { AnnotationItem } from '../../types';
+import React from "react";
+import { AnnotationItem } from "../../types";
 
 const DEFAULT_FONT_SIZE = 16;
 const ERASER_RADIUS = 12;
@@ -27,13 +27,13 @@ export const AnnotationRenderer: React.FC<AnnotationRendererProps> = ({
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="xMidYMid meet"
     >
-      {annotations.map(item => {
+      {annotations.map((item) => {
         switch (item.tool) {
-          case 'pen':
+          case "pen":
             if (item.points && item.points.length > 1) {
               const d = item.points
-                .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`)
-                .join(' ');
+                .map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`)
+                .join(" ");
               return (
                 <path
                   key={item.id}
@@ -58,12 +58,12 @@ export const AnnotationRenderer: React.FC<AnnotationRendererProps> = ({
             }
             return null;
 
-          case 'eraser':
+          case "eraser":
             // 橡皮擦在只读模式下不渲染（它是对 canvas 的 destructive 操作）
             // 在持久化渲染中，橡皮擦的路径已经在导出时被应用了
             return null;
 
-          case 'rect':
+          case "rect":
             if (item.rect) {
               return (
                 <rect
@@ -83,7 +83,7 @@ export const AnnotationRenderer: React.FC<AnnotationRendererProps> = ({
             }
             return null;
 
-          case 'text':
+          case "text":
             if (item.text) {
               const fontSize = item.fontSize || DEFAULT_FONT_SIZE;
               return (

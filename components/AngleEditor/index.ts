@@ -1,2 +1,2 @@
-export { AngleEditor } from './AngleEditor';
-export type { AngleGenerateParams } from './AngleEditor';
+export { AngleEditor } from "./AngleEditor";
+export type { AngleGenerateParams } from "./AngleEditor";

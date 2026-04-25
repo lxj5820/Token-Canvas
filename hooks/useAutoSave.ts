@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { NodeData, Connection, CanvasTransform } from '../types';
-import { indexedDbService } from '../services/indexedDbService';
+import { useEffect } from "react";
+import { NodeData, Connection, CanvasTransform } from "../types";
+import { indexedDbService } from "../services/indexedDbService";
 
 export interface UseAutoSaveOptions {
   nodes: NodeData[];
@@ -15,7 +15,7 @@ export const useAutoSave = ({
   connections,
   transform,
   projectName,
-  enabled = true
+  enabled = true,
 }: UseAutoSaveOptions) => {
   useEffect(() => {
     if (!enabled) return;
@@ -27,11 +27,11 @@ export const useAutoSave = ({
           connections,
           transform,
           projectName,
-          savedAt: Date.now()
+          savedAt: Date.now(),
         };
         await indexedDbService.saveWorkflow(data);
       } catch (e) {
-        console.warn('[App] 保存工作流失败:', e);
+        console.warn("[App] 保存工作流失败:", e);
       }
     };
 
@@ -46,7 +46,10 @@ export const useLoadWorkflow = (
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>,
   setTransform: React.Dispatch<React.SetStateAction<CanvasTransform>>,
   setProjectName: React.Dispatch<React.SetStateAction<string>>,
-  setInitialHistory: (entry: { nodes: NodeData[]; connections: Connection[] }) => void
+  setInitialHistory: (entry: {
+    nodes: NodeData[];
+    connections: Connection[];
+  }) => void,
 ) => {
   useEffect(() => {
     const loadWorkflow = async () => {
@@ -57,11 +60,14 @@ export const useLoadWorkflow = (
           setConnections(saved.connections);
           if (saved.transform) setTransform(saved.transform);
           if (saved.projectName) setProjectName(saved.projectName);
-          console.log('[App] 已从IndexedDB加载工作流');
-          setInitialHistory({ nodes: saved.nodes, connections: saved.connections });
+          console.log("[App] 已从IndexedDB加载工作流");
+          setInitialHistory({
+            nodes: saved.nodes,
+            connections: saved.connections,
+          });
         }
       } catch (e) {
-        console.warn('[App] 加载工作流失败:', e);
+        console.warn("[App] 加载工作流失败:", e);
       }
     };
     loadWorkflow();

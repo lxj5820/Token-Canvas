@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { AnnotationItem, AnnotationTool, Point } from '../../types';
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import { AnnotationItem, AnnotationTool, Point } from "../../types";
 
 interface AnnotationOverlayProps {
   width: number;
@@ -19,12 +19,16 @@ interface AnnotationOverlayProps {
   onClear?: () => void;
 }
 
-const DEFAULT_COLOR = '#FFD700'; // 黄色标注
+const DEFAULT_COLOR = "#FFD700"; // 黄色标注
 const DEFAULT_STROKE_WIDTH = 3;
 const DEFAULT_FONT_SIZE = 16;
 
 const generateId = (): string => {
-  try { return crypto.randomUUID(); } catch { return Math.random().toString(36).substr(2, 9); }
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return Math.random().toString(36).substr(2, 9);
+  }
 };
 
 export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
@@ -45,9 +49,12 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 工具栏状态：外部可控，无外部时回退到内部默认
-  const [internalActiveTool, setInternalActiveTool] = useState<AnnotationTool>('pen');
-  const [internalCurrentColor, setInternalCurrentColor] = useState(DEFAULT_COLOR);
-  const [internalStrokeWidth, setInternalStrokeWidth] = useState(DEFAULT_STROKE_WIDTH);
+  const [internalActiveTool, setInternalActiveTool] =
+    useState<AnnotationTool>("pen");
+  const [internalCurrentColor, setInternalCurrentColor] =
+    useState(DEFAULT_COLOR);
+  const [internalStrokeWidth, setInternalStrokeWidth] =
+    useState(DEFAULT_STROKE_WIDTH);
   const activeTool = externalActiveTool ?? internalActiveTool;
   const setActiveTool = onActiveToolChange ?? setInternalActiveTool;
   const currentColor = externalCurrentColor ?? internalCurrentColor;
@@ -58,28 +65,37 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
   const [rectStart, setRectStart] = useState<Point | null>(null);
-  const [rectPreview, setRectPreview] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const [textInput, setTextInput] = useState<{ x: number; y: number; id: string } | null>(null);
-  const [textValue, setTextValue] = useState('');
+  const [rectPreview, setRectPreview] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
+  const [textInput, setTextInput] = useState<{
+    x: number;
+    y: number;
+    id: string;
+  } | null>(null);
+  const [textValue, setTextValue] = useState("");
   const [eraserCursorPos, setEraserCursorPos] = useState<Point | null>(null);
 
   // 绘制所有标注到 canvas
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 按顺序渲染所有标注，橡皮擦用 destination-out 擦除之前绘制的内容
-    annotations.forEach(item => {
+    annotations.forEach((item) => {
       ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
       switch (item.tool) {
-        case 'pen':
+        case "pen":
           ctx.strokeStyle = item.color;
           ctx.fillStyle = item.color;
           ctx.lineWidth = item.strokeWidth;
@@ -92,19 +108,25 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
             ctx.stroke();
           } else if (item.points && item.points.length === 1) {
             ctx.beginPath();
-            ctx.arc(item.points[0].x, item.points[0].y, item.strokeWidth / 2, 0, Math.PI * 2);
+            ctx.arc(
+              item.points[0].x,
+              item.points[0].y,
+              item.strokeWidth / 2,
+              0,
+              Math.PI * 2,
+            );
             ctx.fill();
           }
           break;
 
-        case 'eraser':
+        case "eraser":
           // 像素级擦除：和画笔使用完全相同的坐标，只是用 destination-out 合成模式
           if (item.points && item.points.length > 0) {
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.strokeStyle = 'rgba(0,0,0,1)';
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.strokeStyle = "rgba(0,0,0,1)";
             ctx.lineWidth = item.strokeWidth;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
             ctx.beginPath();
             ctx.moveTo(item.points[0].x, item.points[0].y);
             for (let i = 1; i < item.points.length; i++) {
@@ -114,26 +136,40 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
           }
           break;
 
-        case 'rect':
+        case "rect":
           if (item.rect) {
             ctx.strokeStyle = item.color;
             ctx.fillStyle = item.color;
             ctx.lineWidth = item.strokeWidth;
             // 半透明填充高亮区域
-            ctx.fillStyle = item.color + '20';
-            ctx.fillRect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
+            ctx.fillStyle = item.color + "20";
+            ctx.fillRect(
+              item.rect.x,
+              item.rect.y,
+              item.rect.width,
+              item.rect.height,
+            );
             ctx.beginPath();
-            ctx.rect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
+            ctx.rect(
+              item.rect.x,
+              item.rect.y,
+              item.rect.width,
+              item.rect.height,
+            );
             ctx.stroke();
           }
           break;
 
-        case 'text':
+        case "text":
           if (item.text) {
             const fontSize = item.fontSize || DEFAULT_FONT_SIZE;
             ctx.fillStyle = item.color;
             ctx.font = `bold ${fontSize}px "Inter", "SF Pro", system-ui, sans-serif`;
-            ctx.fillText(item.text.content, item.text.x, item.text.y + fontSize);
+            ctx.fillText(
+              item.text.content,
+              item.text.x,
+              item.text.y + fontSize,
+            );
           }
           break;
       }
@@ -143,9 +179,9 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     // 绘制当前正在画的路径（和画笔逻辑完全一致）
     if (isDrawing && currentPath.length > 0) {
       ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      if (activeTool === 'pen') {
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      if (activeTool === "pen") {
         ctx.strokeStyle = currentColor;
         ctx.lineWidth = strokeWidth;
         ctx.beginPath();
@@ -154,13 +190,13 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
           ctx.lineTo(currentPath[i].x, currentPath[i].y);
         }
         ctx.stroke();
-      } else if (activeTool === 'eraser') {
+      } else if (activeTool === "eraser") {
         // 和画笔完全相同的路径，只是用 destination-out 擦除
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.strokeStyle = 'rgba(0,0,0,1)';
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = "rgba(0,0,0,1)";
         ctx.lineWidth = strokeWidth;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(currentPath[0].x, currentPath[0].y);
         for (let i = 1; i < currentPath.length; i++) {
@@ -174,15 +210,28 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     // 绘制矩形预览
     if (rectPreview) {
       ctx.save();
-      ctx.fillStyle = currentColor + '15';
+      ctx.fillStyle = currentColor + "15";
       ctx.fillRect(rectPreview.x, rectPreview.y, rectPreview.w, rectPreview.h);
       ctx.strokeStyle = currentColor;
       ctx.lineWidth = strokeWidth;
       ctx.setLineDash([6, 4]);
-      ctx.strokeRect(rectPreview.x, rectPreview.y, rectPreview.w, rectPreview.h);
+      ctx.strokeRect(
+        rectPreview.x,
+        rectPreview.y,
+        rectPreview.w,
+        rectPreview.h,
+      );
       ctx.restore();
     }
-  }, [annotations, isDrawing, currentPath, activeTool, currentColor, strokeWidth, rectPreview]);
+  }, [
+    annotations,
+    isDrawing,
+    currentPath,
+    activeTool,
+    currentColor,
+    strokeWidth,
+    rectPreview,
+  ]);
 
   useEffect(() => {
     redraw();
@@ -212,20 +261,20 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     e.stopPropagation();
     e.preventDefault();
 
-    if (activeTool === 'text') {
+    if (activeTool === "text") {
       const point = getCanvasPoint(e);
       const id = generateId();
       setTextInput({ x: point.x, y: point.y, id });
-      setTextValue('');
+      setTextValue("");
       return;
     }
 
     const point = getCanvasPoint(e);
     setIsDrawing(true);
 
-    if (activeTool === 'pen' || activeTool === 'eraser') {
+    if (activeTool === "pen" || activeTool === "eraser") {
       setCurrentPath([point]);
-    } else if (activeTool === 'rect') {
+    } else if (activeTool === "rect") {
       setRectStart(point);
     }
   };
@@ -233,7 +282,7 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   const handleMouseMove = (e: React.MouseEvent) => {
     const point = getCanvasPoint(e);
     // 更新橡皮擦光标位置（需要从屏幕坐标转换为容器本地坐标）
-    if (activeTool === 'eraser') {
+    if (activeTool === "eraser") {
       const canvas = canvasRef.current!;
       const rect = canvas.getBoundingClientRect();
       // ReactFlow 缩放导致 rect（屏幕空间）和 offsetWidth（本地空间）不同
@@ -246,9 +295,9 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     }
     if (!isDrawing) return;
 
-    if (activeTool === 'pen' || activeTool === 'eraser') {
-      setCurrentPath(prev => [...prev, point]);
-    } else if (activeTool === 'rect' && rectStart) {
+    if (activeTool === "pen" || activeTool === "eraser") {
+      setCurrentPath((prev) => [...prev, point]);
+    } else if (activeTool === "rect" && rectStart) {
       setRectPreview({
         x: Math.min(rectStart.x, point.x),
         y: Math.min(rectStart.y, point.y),
@@ -263,26 +312,38 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     const point = getCanvasPoint(e);
     setIsDrawing(false);
 
-    if (activeTool === 'pen') {
+    if (activeTool === "pen") {
       const newPath = [...currentPath, point];
       if (newPath.length > 0) {
         onAnnotationsChange([
           ...annotations,
-          { id: generateId(), tool: 'pen', points: newPath, color: currentColor, strokeWidth },
+          {
+            id: generateId(),
+            tool: "pen",
+            points: newPath,
+            color: currentColor,
+            strokeWidth,
+          },
         ]);
       }
       setCurrentPath([]);
-    } else if (activeTool === 'eraser') {
+    } else if (activeTool === "eraser") {
       // 像素级橡皮擦：和画笔完全相同的坐标，保存为 eraser 记录，渲染时用 destination-out
       const eraserPath = [...currentPath, point];
       if (eraserPath.length > 0) {
         onAnnotationsChange([
           ...annotations,
-          { id: generateId(), tool: 'eraser', points: eraserPath, color: currentColor, strokeWidth },
+          {
+            id: generateId(),
+            tool: "eraser",
+            points: eraserPath,
+            color: currentColor,
+            strokeWidth,
+          },
         ]);
       }
       setCurrentPath([]);
-    } else if (activeTool === 'rect' && rectStart) {
+    } else if (activeTool === "rect" && rectStart) {
       const rect = {
         x: Math.min(rectStart.x, point.x),
         y: Math.min(rectStart.y, point.y),
@@ -292,7 +353,13 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
       if (rect.width > 2 && rect.height > 2) {
         onAnnotationsChange([
           ...annotations,
-          { id: generateId(), tool: 'rect', rect, color: currentColor, strokeWidth },
+          {
+            id: generateId(),
+            tool: "rect",
+            rect,
+            color: currentColor,
+            strokeWidth,
+          },
         ]);
       }
       setRectStart(null);
@@ -307,7 +374,7 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
         ...annotations,
         {
           id: textInput.id,
-          tool: 'text',
+          tool: "text",
           text: { x: textInput.x, y: textInput.y, content: textValue.trim() },
           color: currentColor,
           strokeWidth,
@@ -316,25 +383,29 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
       ]);
     }
     setTextInput(null);
-    setTextValue('');
+    setTextValue("");
   };
 
   const handleTextKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       confirmText();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setTextInput(null);
-      setTextValue('');
+      setTextValue("");
     }
     e.stopPropagation();
   };
 
   // 光标样式
-  const cursorClass = activeTool === 'pen' ? 'cursor-crosshair'
-    : activeTool === 'eraser' ? 'cursor-none'
-    : activeTool === 'rect' ? 'cursor-crosshair'
-    : 'cursor-text';
+  const cursorClass =
+    activeTool === "pen"
+      ? "cursor-crosshair"
+      : activeTool === "eraser"
+        ? "cursor-none"
+        : activeTool === "rect"
+          ? "cursor-crosshair"
+          : "cursor-text";
 
   // 橡皮擦光标尺寸：strokeWidth 在 canvas 坐标系中，映射到容器本地 CSS 像素
   // 用 offsetWidth（本地 CSS 尺寸，不受 ReactFlow 缩放影响）
@@ -357,7 +428,7 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
         width={width}
         height={height}
         className={`absolute inset-0 w-full h-full ${cursorClass}`}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: "none" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -373,7 +444,7 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
       />
 
       {/* 橡皮擦自定义光标 */}
-      {activeTool === 'eraser' && eraserCursorPos && (
+      {activeTool === "eraser" && eraserCursorPos && (
         <div
           className="absolute pointer-events-none border-2 border-white/60 rounded-full"
           style={{
@@ -381,7 +452,7 @@ export const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
             top: eraserCursorPos.y - eraserCursorRadius,
             width: eraserCursorSize,
             height: eraserCursorSize,
-            boxShadow: '0 0 0 1px rgba(0,0,0,0.3)',
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.3)",
           }}
         />
       )}

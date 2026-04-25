@@ -1,2 +1,5 @@
-export { LightingEditor } from './LightingEditor';
-export type { LightingGenerateParams, LightSourceParams } from './LightingEditor';
+export { LightingEditor } from "./LightingEditor";
+export type {
+  LightingGenerateParams,
+  LightSourceParams,
+} from "./LightingEditor";

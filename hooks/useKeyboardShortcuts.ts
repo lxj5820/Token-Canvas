@@ -1,37 +1,79 @@
-import { useEffect, useCallback } from 'react';
-import { NodeData, Connection, NodeType, CanvasTransform, Point } from '../types';
+import { useEffect, useCallback, useRef } from "react";
+import {
+  NodeData,
+  Connection,
+  NodeType,
+  CanvasTransform,
+  Point,
+} from "../types";
 
 export interface UseKeyboardShortcutsOptions {
   selectedNodeIds: Set<string>;
   selectedConnectionId: string | null;
   nodes: NodeData[];
   connections: Connection[];
-  currentMode: 'select' | 'pan';
-  previewMedia: { url: string; type: 'image' | 'video' } | null;
-  contextMenu: { type: 'CANVAS' | 'NODE'; nodeId?: string; nodeType?: NodeType; x: number; y: number; worldX: number; worldY: number } | null;
-  quickAddMenu: { sourceId: string; x: number; y: number; worldX: number; worldY: number } | null;
+  currentMode: "select" | "pan";
+  previewMedia: { url: string; type: "image" | "video" } | null;
+  contextMenu: {
+    type: "CANVAS" | "NODE";
+    nodeId?: string;
+    nodeType?: NodeType;
+    x: number;
+    y: number;
+    worldX: number;
+    worldY: number;
+  } | null;
+  quickAddMenu: {
+    sourceId: string;
+    x: number;
+    y: number;
+    worldX: number;
+    worldY: number;
+  } | null;
   showNewWorkflowDialog: boolean;
   isSettingsOpen: boolean;
   isStorageOpen: boolean;
   isExportImportOpen: boolean;
+  showCommunityPanel?: boolean;
   handleSelectMode: () => void;
   handlePanMode: () => void;
   handleZoomIn: () => void;
   handleZoomOut: () => void;
   handleZoomReset: () => void;
-  handleAlign: (direction: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT') => void;
+  handleAlign: (direction: "UP" | "DOWN" | "LEFT" | "RIGHT") => void;
   handleUndo: () => void;
   handleRedo: () => void;
   performCopy: () => void;
   deleteSelectedNodes: () => void;
   deleteSelectedConnection: () => void;
-  setPreviewMedia: React.Dispatch<React.SetStateAction<{ url: string; type: 'image' | 'video' } | null>>;
-  setContextMenu: React.Dispatch<React.SetStateAction<{ type: 'CANVAS' | 'NODE'; nodeId?: string; nodeType?: NodeType; x: number; y: number; worldX: number; worldY: number } | null>>;
-  setQuickAddMenu: React.Dispatch<React.SetStateAction<{ sourceId: string; x: number; y: number; worldX: number; worldY: number } | null>>;
+  setPreviewMedia: React.Dispatch<
+    React.SetStateAction<{ url: string; type: "image" | "video" } | null>
+  >;
+  setContextMenu: React.Dispatch<
+    React.SetStateAction<{
+      type: "CANVAS" | "NODE";
+      nodeId?: string;
+      nodeType?: NodeType;
+      x: number;
+      y: number;
+      worldX: number;
+      worldY: number;
+    } | null>
+  >;
+  setQuickAddMenu: React.Dispatch<
+    React.SetStateAction<{
+      sourceId: string;
+      x: number;
+      y: number;
+      worldX: number;
+      worldY: number;
+    } | null>
+  >;
   setShowNewWorkflowDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsStorageOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsExportImportOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowCommunityPanel?: React.Dispatch<React.SetStateAction<boolean>>;
   transform: CanvasTransform;
   internalClipboard: { nodes: NodeData[]; connections: Connection[] } | null;
   performPaste: (targetPos: Point) => void;
@@ -40,6 +82,7 @@ export interface UseKeyboardShortcutsOptions {
   setNodes: React.Dispatch<React.SetStateAction<NodeData[]>>;
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>;
   setSelectedNodeIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  spacePressedRef?: React.MutableRefObject<boolean>;
 }
 
 export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
@@ -64,6 +107,7 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
     isSettingsOpen,
     isStorageOpen,
     isExportImportOpen,
+    showCommunityPanel,
     deleteSelectedNodes,
     deleteSelectedConnection,
     setPreviewMedia,
@@ -73,69 +117,85 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
     setIsSettingsOpen,
     setIsStorageOpen,
     setIsExportImportOpen,
+    setShowCommunityPanel,
     performPaste,
     setDeletedNodes,
     saveToHistory,
     setNodes,
     setConnections,
     setSelectedNodeIds,
+    spacePressedRef,
   } = options;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      const isInput =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        target.getAttribute("role") === "textbox";
       if (!isInput) {
-        if (e.key === 'v' || e.key === 'V') {
-          handleSelectMode();
+        if (e.key === "v" || e.key === "V") handleSelectMode();
+        if (e.key === "h" || e.key === "H") handlePanMode();
+        if (e.key === "[") handleZoomIn();
+        if (e.key === "]") handleZoomOut();
+        if (e.key === "0") handleZoomReset();
+        if (e.key === "Delete" || e.key === "Backspace") {
+          if (selectedNodeIds.size > 0) deleteSelectedNodes();
+          if (selectedConnectionId) deleteSelectedConnection();
         }
-        if (e.key === 'h' || e.key === 'H') {
-          handlePanMode();
-        }
-        if (e.key === '[') {
-          handleZoomIn();
-        }
-        if (e.key === ']') {
-          handleZoomOut();
-        }
-        if (e.key === '0') {
-          handleZoomReset();
-        }
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-          if (selectedNodeIds.size > 0) {
-            deleteSelectedNodes();
-          }
-          if (selectedConnectionId) {
-            deleteSelectedConnection();
-          }
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if ((e.ctrlKey || e.metaKey) && e.key === "c") {
           e.preventDefault();
           performCopy();
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if ((e.ctrlKey || e.metaKey) && e.key === "z") {
           e.preventDefault();
           handleUndo();
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        if ((e.ctrlKey || e.metaKey) && e.key === "y") {
           e.preventDefault();
           handleRedo();
         }
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-          if (e.key === 'ArrowUp') { e.preventDefault(); handleAlign('UP'); }
-          if (e.key === 'ArrowDown') { e.preventDefault(); handleAlign('DOWN'); }
-          if (e.key === 'ArrowLeft') { e.preventDefault(); handleAlign('LEFT'); }
-          if (e.key === 'ArrowRight') { e.preventDefault(); handleAlign('RIGHT'); }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            handleAlign("UP");
+          }
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            handleAlign("DOWN");
+          }
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            handleAlign("LEFT");
+          }
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            handleAlign("RIGHT");
+          }
         }
         if (!(e.ctrlKey || e.metaKey)) {
-          if (e.key === 'ArrowUp') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('UP'); }
-          if (e.key === 'ArrowDown') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('DOWN'); }
-          if (e.key === 'ArrowLeft') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('LEFT'); }
-          if (e.key === 'ArrowRight') { e.preventDefault(); if (selectedNodeIds.size >= 2) handleAlign('RIGHT'); }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (selectedNodeIds.size >= 2) handleAlign("UP");
+          }
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (selectedNodeIds.size >= 2) handleAlign("DOWN");
+          }
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            if (selectedNodeIds.size >= 2) handleAlign("LEFT");
+          }
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            if (selectedNodeIds.size >= 2) handleAlign("RIGHT");
+          }
         }
       }
 
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         if (previewMedia) setPreviewMedia(null);
         if (contextMenu) setContextMenu(null);
         if (quickAddMenu) setQuickAddMenu(null);
@@ -143,18 +203,21 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
         if (isSettingsOpen) setIsSettingsOpen(false);
         if (isStorageOpen) setIsStorageOpen(false);
         if (isExportImportOpen) setIsExportImportOpen(false);
+        if (showCommunityPanel && setShowCommunityPanel)
+          setShowCommunityPanel(false);
       }
+      if (e.code === "Space" && spacePressedRef) spacePressedRef.current = true;
     };
-
     const handleKeyUp = (e: KeyboardEvent) => {
-      // Handle key up if needed
+      if (e.code === "Space" && spacePressedRef)
+        spacePressedRef.current = false;
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [
     selectedNodeIds,
@@ -166,6 +229,7 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
     isSettingsOpen,
     isStorageOpen,
     isExportImportOpen,
+    showCommunityPanel,
     handleAlign,
   ]);
 };
@@ -178,15 +242,20 @@ export const deleteSelectedNodesHelper = (
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>,
   setSelectedNodeIds: React.Dispatch<React.SetStateAction<Set<string>>>,
   setDeletedNodes: React.Dispatch<React.SetStateAction<NodeData[]>>,
-  saveToHistory: (nodes: NodeData[], connections: Connection[]) => void
+  saveToHistory: (nodes: NodeData[], connections: Connection[]) => void,
 ) => {
-  const nodesToDelete = nodes.filter(n => selectedNodeIds.has(n.id));
-  const withContent = nodesToDelete.filter(n => n.imageSrc || n.videoSrc);
+  const nodesToDelete = nodes.filter((n) => selectedNodeIds.has(n.id));
+  const withContent = nodesToDelete.filter((n) => n.imageSrc || n.videoSrc);
   if (withContent.length > 0) {
-    setDeletedNodes(prev => [...prev, ...withContent]);
+    setDeletedNodes((prev) => [...prev, ...withContent]);
   }
   saveToHistory(nodes, connections);
-  setNodes(prev => prev.filter(n => !selectedNodeIds.has(n.id)));
-  setConnections(prev => prev.filter(c => !selectedNodeIds.has(c.sourceId) && !selectedNodeIds.has(c.targetId)));
+  setNodes((prev) => prev.filter((n) => !selectedNodeIds.has(n.id)));
+  setConnections((prev) =>
+    prev.filter(
+      (c) =>
+        !selectedNodeIds.has(c.sourceId) && !selectedNodeIds.has(c.targetId),
+    ),
+  );
   setSelectedNodeIds(new Set());
 };

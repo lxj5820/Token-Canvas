@@ -1,13 +1,12 @@
-
 export enum NodeType {
-  TEXT_TO_IMAGE = 'TEXT_TO_IMAGE',
-  TEXT_TO_VIDEO = 'TEXT_TO_VIDEO',
-  TEXT_TO_AUDIO = 'TEXT_TO_AUDIO',
-  IMAGE_TO_IMAGE = 'IMAGE_TO_IMAGE',
-  IMAGE_TO_VIDEO = 'IMAGE_TO_VIDEO',
-  START_END_TO_VIDEO = 'START_END_TO_VIDEO',
-  CREATIVE_DESC = 'CREATIVE_DESC',
-  ORIGINAL_IMAGE = 'ORIGINAL_IMAGE',
+  TEXT_TO_IMAGE = "TEXT_TO_IMAGE",
+  TEXT_TO_VIDEO = "TEXT_TO_VIDEO",
+  TEXT_TO_AUDIO = "TEXT_TO_AUDIO",
+  IMAGE_TO_IMAGE = "IMAGE_TO_IMAGE",
+  IMAGE_TO_VIDEO = "IMAGE_TO_VIDEO",
+  START_END_TO_VIDEO = "START_END_TO_VIDEO",
+  CREATIVE_DESC = "CREATIVE_DESC",
+  ORIGINAL_IMAGE = "ORIGINAL_IMAGE",
 }
 
 export interface NodeData {
@@ -18,43 +17,35 @@ export interface NodeData {
   width: number;
   height: number;
   title: string;
-  
-  // 状态
+
   prompt?: string;
-  imageSrc?: string; // 结果或输入（活动选择）
-  videoSrc?: string; // 结果（活动选择）
-  audioSrc?: string; // 结果（音频）
-  outputArtifacts?: string[]; // 历史/批量结果
+  imageSrc?: string;
+  videoSrc?: string;
+  audioSrc?: string;
+  outputArtifacts?: string[];
   isLoading?: boolean;
-  isStackOpen?: boolean; // 展开画廊的UI状态
-  
-  // 配置
+  isStackOpen?: boolean;
+
   aspectRatio?: string;
   resolution?: string;
-  duration?: string; // 视频时长（5s, 10s, 15s）/ 音频时长（30s, 60s, 120s）
+  duration?: string;
   count?: number;
   model?: string;
-  promptOptimize?: boolean; // 提示词扩展/优化开关
-  swapFrames?: boolean; // 对于START_END_TO_VIDEO：交换首尾帧顺序
-  style?: string; // 对于TEXT_TO_AUDIO：音乐风格
-  
-  // 创意描述特定
+  promptOptimize?: boolean;
+  swapFrames?: boolean;
+  style?: string;
+
   optimizedPrompt?: string;
 
-  // UI状态
   activeToolbarItem?: string;
-  // 标注
   annotations?: AnnotationItem[];
   isAnnotating?: boolean;
-  annotatedImageSrc?: string; // 标注烘焙后的图片（用于传递给下游节点）
+  annotatedImageSrc?: string;
 
-  // 宫格切分
   gridSplit?: { rows: number; cols: number; selectedCells: string[] };
 
-  // 多角度编辑
   isAngleEditing?: boolean;
 
-  // 灯光编辑
   isLightEditing?: boolean;
 }
 
@@ -70,7 +61,13 @@ export interface CanvasTransform {
   k: number; // Scale
 }
 
-export type DragMode = 'NONE' | 'PAN' | 'DRAG_NODE' | 'SELECT' | 'CONNECT' | 'RESIZE_NODE';
+export type DragMode =
+  | "NONE"
+  | "PAN"
+  | "DRAG_NODE"
+  | "SELECT"
+  | "CONNECT"
+  | "RESIZE_NODE";
 
 export interface Point {
   x: number;
@@ -78,7 +75,7 @@ export interface Point {
 }
 
 // 标注工具类型
-export type AnnotationTool = 'pen' | 'eraser' | 'rect' | 'text';
+export type AnnotationTool = "pen" | "eraser" | "rect" | "text";
 
 // 单条标注数据
 export interface AnnotationItem {

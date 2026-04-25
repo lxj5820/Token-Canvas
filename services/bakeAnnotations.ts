@@ -1,4 +1,4 @@
-import { AnnotationItem } from '../types';
+import { AnnotationItem } from "../types";
 
 const DEFAULT_FONT_SIZE = 16;
 
@@ -14,7 +14,7 @@ export const bakeAnnotationsToImage = (
   imageSrc: string,
   annotations: AnnotationItem[],
   width: number,
-  height: number
+  height: number,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!annotations || annotations.length === 0) {
@@ -23,7 +23,7 @@ export const bakeAnnotationsToImage = (
     }
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvasW = img.naturalWidth || width;
       const canvasH = img.naturalHeight || height;
@@ -33,27 +33,27 @@ export const bakeAnnotationsToImage = (
       const scaleY = canvasH / height;
 
       // === 第一层：在临时 canvas 上渲染标注 ===
-      const annotCanvas = document.createElement('canvas');
+      const annotCanvas = document.createElement("canvas");
       annotCanvas.width = canvasW;
       annotCanvas.height = canvasH;
-      const actx = annotCanvas.getContext('2d');
+      const actx = annotCanvas.getContext("2d");
       if (!actx) {
-        reject(new Error('Canvas context not available'));
+        reject(new Error("Canvas context not available"));
         return;
       }
 
       actx.scale(scaleX, scaleY);
-      annotations.forEach(item => {
+      annotations.forEach((item) => {
         actx.save();
-        actx.lineCap = 'round';
-        actx.lineJoin = 'round';
+        actx.lineCap = "round";
+        actx.lineJoin = "round";
 
         switch (item.tool) {
-          case 'eraser':
+          case "eraser":
             // 在标注层上用 destination-out 擦除之前绘制的标注像素
             if (item.points && item.points.length > 0) {
-              actx.globalCompositeOperation = 'destination-out';
-              actx.strokeStyle = 'rgba(0,0,0,1)';
+              actx.globalCompositeOperation = "destination-out";
+              actx.strokeStyle = "rgba(0,0,0,1)";
               actx.lineWidth = item.strokeWidth;
               actx.beginPath();
               actx.moveTo(item.points[0].x, item.points[0].y);
@@ -64,7 +64,7 @@ export const bakeAnnotationsToImage = (
             }
             break;
 
-          case 'pen':
+          case "pen":
             actx.strokeStyle = item.color;
             actx.fillStyle = item.color;
             actx.lineWidth = item.strokeWidth;
@@ -77,30 +77,50 @@ export const bakeAnnotationsToImage = (
               actx.stroke();
             } else if (item.points && item.points.length === 1) {
               actx.beginPath();
-              actx.arc(item.points[0].x, item.points[0].y, item.strokeWidth / 2, 0, Math.PI * 2);
+              actx.arc(
+                item.points[0].x,
+                item.points[0].y,
+                item.strokeWidth / 2,
+                0,
+                Math.PI * 2,
+              );
               actx.fill();
             }
             break;
 
-          case 'rect':
+          case "rect":
             if (item.rect) {
               actx.strokeStyle = item.color;
               actx.fillStyle = item.color;
               actx.lineWidth = item.strokeWidth;
-              actx.fillStyle = item.color + '20';
-              actx.fillRect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
+              actx.fillStyle = item.color + "20";
+              actx.fillRect(
+                item.rect.x,
+                item.rect.y,
+                item.rect.width,
+                item.rect.height,
+              );
               actx.beginPath();
-              actx.rect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
+              actx.rect(
+                item.rect.x,
+                item.rect.y,
+                item.rect.width,
+                item.rect.height,
+              );
               actx.stroke();
             }
             break;
 
-          case 'text':
+          case "text":
             if (item.text) {
               const fontSize = item.fontSize || DEFAULT_FONT_SIZE;
               actx.fillStyle = item.color;
               actx.font = `bold ${fontSize}px "Inter", "SF Pro", system-ui, sans-serif`;
-              actx.fillText(item.text.content, item.text.x, item.text.y + fontSize);
+              actx.fillText(
+                item.text.content,
+                item.text.x,
+                item.text.y + fontSize,
+              );
             }
             break;
         }
@@ -108,12 +128,12 @@ export const bakeAnnotationsToImage = (
       });
 
       // === 第二层：主 canvas = 原图 + 标注叠加 ===
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = canvasW;
       canvas.height = canvasH;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
-        reject(new Error('Canvas context not available'));
+        reject(new Error("Canvas context not available"));
         return;
       }
 
@@ -122,9 +142,9 @@ export const bakeAnnotationsToImage = (
       // 再叠加标注层（橡皮擦已在标注层中生效，只擦除了标注像素）
       ctx.drawImage(annotCanvas, 0, 0);
 
-      resolve(canvas.toDataURL('image/png'));
+      resolve(canvas.toDataURL("image/png"));
     };
-    img.onerror = () => reject(new Error('Failed to load image for baking'));
+    img.onerror = () => reject(new Error("Failed to load image for baking"));
     img.src = imageSrc;
   });
 };

@@ -1,553 +1,957 @@
-
-import React, { useState, useEffect, useRef, memo } from 'react';
-import { Icons } from '../../Icons';
-import { NodeData } from '../../../types';
+import React, { useState, useEffect, useRef, memo } from "react";
+import { Icons } from "../../Icons";
+import { NodeData } from "../../../types";
 
 // --- 本地组件（提取） ---
 
-export const LocalEditableTitle: React.FC<{ title: string; onUpdate: (newTitle: string) => void, isDark?: boolean }> = ({ title, onUpdate, isDark = true }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(title);
-    const inputRef = useRef<HTMLInputElement>(null);
-    useEffect(() => { if (isEditing && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); } }, [isEditing]);
-    useEffect(() => { if (!isEditing) setEditValue(title); }, [title, isEditing]);
-    const handleBlur = () => { setIsEditing(false); if (editValue.trim() && editValue !== title) onUpdate(editValue.trim().slice(0, 20)); else setEditValue(title); };
+export const LocalEditableTitle: React.FC<{
+  title: string;
+  onUpdate: (newTitle: string) => void;
+  isDark?: boolean;
+}> = ({ title, onUpdate, isDark = true }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  useEffect(() => {
+    if (!isEditing) setEditValue(title);
+  }, [title, isEditing]);
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (editValue.trim() && editValue !== title)
+      onUpdate(editValue.trim().slice(0, 20));
+    else setEditValue(title);
+  };
 
-    return isEditing ? (
-        <input 
-            ref={inputRef} 
-            type="text" 
-            value={editValue} 
-            onChange={(e) => setEditValue(e.target.value)} 
-            onBlur={handleBlur} 
-            onKeyDown={(e) => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditValue(title); setIsEditing(false); } }} 
-            className={`bg-black/60 backdrop-blur-md text-white border border-white/20 rounded-lg px-3 py-1.5 outline-none w-[160px] text-sm font-semibold focus:border-white/40`} 
-            onClick={(e) => e.stopPropagation()} 
-            onMouseDown={(e) => e.stopPropagation()} 
-        />
-    ) : (
-        <div 
-            className="bg-black/40 backdrop-blur-md text-white font-semibold text-sm px-3 py-1.5 rounded-lg cursor-text border border-transparent hover:border-white/20 truncate max-w-[160px] transition-all" 
-            onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); setEditValue(title); }} 
-            onMouseDown={(e) => e.stopPropagation()} 
-            title={title}
-        >
-            {title}
-        </div>
-    );
+  return isEditing ? (
+    <input
+      ref={inputRef}
+      type="text"
+      value={editValue}
+      onChange={(e) => setEditValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") handleBlur();
+        if (e.key === "Escape") {
+          setEditValue(title);
+          setIsEditing(false);
+        }
+      }}
+      className={`bg-black/60 backdrop-blur-md text-white border border-white/20 rounded-lg px-3 py-1.5 outline-none w-[160px] text-sm font-semibold focus:border-white/40`}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    />
+  ) : (
+    <div
+      className="bg-black/40 backdrop-blur-md text-white font-semibold text-sm px-3 py-1.5 rounded-lg cursor-text border border-transparent hover:border-white/20 truncate max-w-[160px] transition-all"
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+        setEditValue(title);
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      title={title}
+    >
+      {title}
+    </div>
+  );
 };
 
-    // 自定义下拉菜单组件
-export const LocalCustomDropdown = ({ options, value, onChange, isOpen, onToggle, onClose, icon: Icon, width = "w-max", align = "center", disabledOptions = [], isDark = true }: any) => {
-    const ref = useRef<HTMLDivElement>(null);
-    const listRef = useRef<HTMLDivElement>(null);
-    const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
-    const [flyoutTop, setFlyoutTop] = useState<number>(0);
-    const hoverTimeout = useRef<any>(null);
+interface LocalCustomDropdownProps {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  icon?: React.FC<{ size?: number; className?: string; fill?: string }>;
+  width?: string;
+  align?: "left" | "right" | "center";
+  disabledOptions?: string[];
+  isDark?: boolean;
+}
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) onClose(); };
-        if (isOpen) document.addEventListener('mousedown', handleClickOutside, true);
-        return () => document.removeEventListener('mousedown', handleClickOutside, true);
-    }, [isOpen, onClose]);
+export const LocalCustomDropdown = ({
+  options,
+  value,
+  onChange,
+  isOpen,
+  onToggle,
+  onClose,
+  icon: Icon,
+  width = "w-max",
+  align = "center",
+  disabledOptions = [],
+  isDark = true,
+}: LocalCustomDropdownProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const [flyoutTop, setFlyoutTop] = useState<number>(0);
+  const hoverTimeout = useRef<any>(null);
 
-    useEffect(() => { if (!isOpen) { setHoveredGroup(null); } }, [isOpen]);
-
-    const handleMouseEnterGroup = (label: string, e: React.MouseEvent) => {
-        if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
-        if (listRef.current) {
-            const listRect = listRef.current.getBoundingClientRect();
-            const itemRect = e.currentTarget.getBoundingClientRect();
-            setFlyoutTop(itemRect.top - listRect.top);
-        }
-        setHoveredGroup(label);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
     };
+    if (isOpen)
+      document.addEventListener("mousedown", handleClickOutside, true);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside, true);
+  }, [isOpen, onClose]);
 
-    const handleMouseLeave = () => {
-        hoverTimeout.current = setTimeout(() => setHoveredGroup(null), 200);
-    };
+  useEffect(() => {
+    if (!isOpen) {
+      setHoveredGroup(null);
+    }
+  }, [isOpen]);
 
-    const handleMouseEnterFlyout = () => {
-        if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
-    };
+  const handleMouseEnterGroup = (label: string, e: React.MouseEvent) => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    if (listRef.current) {
+      const listRect = listRef.current.getBoundingClientRect();
+      const itemRect = e.currentTarget.getBoundingClientRect();
+      setFlyoutTop(itemRect.top - listRect.top);
+    }
+    setHoveredGroup(label);
+  };
 
-    const bgClass = isDark ? 'bg-[#1a1a1a] border-zinc-700' : 'bg-white border-gray-200 shadow-xl';
-    const hoverClass = isDark ? 'hover:bg-zinc-700' : 'hover:bg-gray-100';
-    const iconColor = isDark ? 'text-zinc-400 group-hover:text-white' : 'text-gray-500 group-hover:text-gray-700';
-    const optionHover = isDark ? 'hover:bg-zinc-700 hover:text-white' : 'hover:bg-gray-100 hover:text-gray-900';
-    const activeItem = isDark ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-50 text-yellow-600';
-    const flyoutBg = isDark ? 'bg-[#1a1a1a] border-zinc-700' : 'bg-white border-gray-200 shadow-xl';
+  const handleMouseLeave = () => {
+    hoverTimeout.current = setTimeout(() => setHoveredGroup(null), 200);
+  };
 
-    const activeGroupItems = hoveredGroup ? (options.find((o: any) => typeof o === 'object' && o.label === hoveredGroup)?.items || []) : [];
+  const handleMouseEnterFlyout = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+  };
 
-    return (
-        <div className="relative flex items-center" ref={ref}>
-            {/* Trigger Button */}
-            <button 
-                className={`flex items-center gap-2 cursor-pointer group h-8 px-3 rounded-lg border transition-all ${
-                    isOpen 
-                        ? (isDark ? 'bg-zinc-700 border-zinc-600' : 'bg-gray-100 border-gray-300') 
-                        : (isDark ? 'border-zinc-700 hover:border-zinc-600' : 'border-gray-200 hover:border-gray-300')
-                } ${hoverClass}`} 
-                onClick={(e) => { e.stopPropagation(); onToggle(); }}
-            >
-                {Icon && <Icon size={15} className={`transition-colors ${isOpen ? (isDark ? 'text-yellow-400' : 'text-yellow-600') : iconColor}`} />}
-                <span className={`text-xs font-medium transition-colors select-none ${
-                    isOpen 
-                        ? (isDark ? 'text-white' : 'text-gray-900') 
-                        : (isDark ? 'text-zinc-300 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900')
-                } ${Icon ? 'min-w-[20px] text-center' : 'max-w-[90px] truncate'}`}>
-                    {value}
-                </span>
-                {!Icon && <Icons.ChevronRight size={12} className={`transition-all duration-200 ${isOpen ? 'rotate-[-90deg] text-yellow-400' : `rotate-90 ${isDark ? 'text-zinc-500' : 'text-gray-400'}`}`} />}
-            </button>
+  const bgClass = isDark
+    ? "bg-[#1a1a1a] border-zinc-700"
+    : "bg-white border-gray-200 shadow-xl";
+  const hoverClass = isDark ? "hover:bg-zinc-700" : "hover:bg-gray-100";
+  const iconColor = isDark
+    ? "text-zinc-400 group-hover:text-white"
+    : "text-gray-500 group-hover:text-gray-700";
+  const optionHover = isDark
+    ? "hover:bg-zinc-700 hover:text-white"
+    : "hover:bg-gray-100 hover:text-gray-900";
+  const activeItem = isDark
+    ? "bg-yellow-500/15 text-yellow-400"
+    : "bg-yellow-50 text-yellow-600";
+  const flyoutBg = isDark
+    ? "bg-[#1a1a1a] border-zinc-700"
+    : "bg-white border-gray-200 shadow-xl";
 
-            {/* Main Dropdown Body */}
-            {isOpen && (
-                <div className={`absolute bottom-full mb-2 ${align === 'left' ? 'left-0' : align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2'} ${width} min-w-[130px] ${bgClass} border rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-150 overflow-visible`} onMouseDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
-                    
-                    <div ref={listRef} className="max-h-[300px] overflow-y-auto custom-scrollbar px-1.5">
-                        {options.map((opt: any) => {
-                            const isGroup = typeof opt === 'object';
-                            const label = isGroup ? opt.label : opt;
-                            const isDisabled = !isGroup && disabledOptions.includes(label);
-                            const isSelected = !isGroup && label === value;
-                            const isGroupHovered = isGroup && hoveredGroup === label;
-                            const containsSelection = isGroup && opt.items.includes(value);
-                            
-                            return (
-                                <div 
-                                    key={label}
-                                    className={`relative px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5
-                                        ${isDisabled 
-                                            ? 'text-zinc-600 cursor-not-allowed opacity-50' 
-                                            : (isSelected || (isGroup && isGroupHovered)
-                                                ? activeItem 
-                                                : (containsSelection 
-                                                    ? (isDark ? 'text-yellow-400' : 'text-yellow-600') + ` ${optionHover}`
-                                                    : (isDark ? 'text-zinc-300' : 'text-gray-600') + ` ${optionHover}`
-                                                  )
-                                            )
+  const activeGroupItems = hoveredGroup
+    ? (options.find((o: string) =>
+        typeof o === "object" && (o as any).label === hoveredGroup
+          ? (o as any).items || []
+          : [],
+      ) as string[])
+    : [];
+
+  return (
+    <div className="relative flex items-center" ref={ref}>
+      {/* Trigger Button */}
+      <button
+        className={`flex items-center gap-2 cursor-pointer group h-8 px-3 rounded-lg border transition-all ${
+          isOpen
+            ? isDark
+              ? "bg-zinc-700 border-zinc-600"
+              : "bg-gray-100 border-gray-300"
+            : isDark
+              ? "border-zinc-700 hover:border-zinc-600"
+              : "border-gray-200 hover:border-gray-300"
+        } ${hoverClass}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+      >
+        {Icon && (
+          <Icon
+            size={15}
+            className={`transition-colors ${isOpen ? (isDark ? "text-yellow-400" : "text-yellow-600") : iconColor}`}
+          />
+        )}
+        <span
+          className={`text-xs font-medium transition-colors select-none ${
+            isOpen
+              ? isDark
+                ? "text-white"
+                : "text-gray-900"
+              : isDark
+                ? "text-zinc-300 group-hover:text-white"
+                : "text-gray-600 group-hover:text-gray-900"
+          } ${Icon ? "min-w-[20px] text-center" : "max-w-[90px] truncate"}`}
+        >
+          {value}
+        </span>
+        {!Icon && (
+          <Icons.ChevronRight
+            size={12}
+            className={`transition-all duration-200 ${isOpen ? "rotate-[-90deg] text-yellow-400" : `rotate-90 ${isDark ? "text-zinc-500" : "text-gray-400"}`}`}
+          />
+        )}
+      </button>
+
+      {/* Main Dropdown Body */}
+      {isOpen && (
+        <div
+          className={`absolute bottom-full mb-2 ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${width} min-w-[130px] ${bgClass} border rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-150 overflow-visible`}
+          onMouseDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <div
+            ref={listRef}
+            className="max-h-[300px] overflow-y-auto custom-scrollbar px-1.5"
+          >
+            {options.map((opt: string) => {
+              const isGroup = typeof opt === "object";
+              const label = isGroup ? opt.label : opt;
+              const isDisabled = !isGroup && disabledOptions.includes(label);
+              const isSelected = !isGroup && label === value;
+              const isGroupHovered = isGroup && hoveredGroup === label;
+              const containsSelection = isGroup && opt.items.includes(value);
+
+              return (
+                <div
+                  key={label}
+                  className={`relative px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5
+                                        ${
+                                          isDisabled
+                                            ? "text-zinc-600 cursor-not-allowed opacity-50"
+                                            : isSelected ||
+                                                (isGroup && isGroupHovered)
+                                              ? activeItem
+                                              : containsSelection
+                                                ? (isDark
+                                                    ? "text-yellow-400"
+                                                    : "text-yellow-600") +
+                                                  ` ${optionHover}`
+                                                : (isDark
+                                                    ? "text-zinc-300"
+                                                    : "text-gray-600") +
+                                                  ` ${optionHover}`
                                         }
                                     `}
-                                    onMouseEnter={(e) => isGroup ? handleMouseEnterGroup(label, e) : setHoveredGroup(null)}
-                                    onMouseLeave={handleMouseLeave}
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        if (!isGroup && !isDisabled) { onChange(label); onClose(); }
-                                    }}
-                                >
-                                    <span className="whitespace-nowrap pr-2">{label}</span>
-                                    {isSelected && <Icons.Check size={12} className="text-yellow-400 shrink-0 ml-2" />}
-                                    {isGroup && <Icons.ChevronRight size={12} className={`shrink-0 ml-2 ${isGroupHovered ? 'text-yellow-400' : (isDark ? 'text-zinc-500' : 'text-gray-400')}`} />}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* 弹出菜单 */}
-                    {hoveredGroup && activeGroupItems.length > 0 && (
-                        <div 
-                            className={`absolute left-full ml-2 w-[150px] ${flyoutBg} border rounded-xl shadow-2xl py-1.5 z-[110] animate-in fade-in slide-in-from-left-2 duration-150 before:absolute before:-left-4 before:top-0 before:h-full before:w-4 before:bg-transparent`}
-                            style={{ top: flyoutTop }}
-                            onMouseEnter={handleMouseEnterFlyout}
-                            onMouseLeave={handleMouseLeave}
-                        >
-                            <div className="max-h-[250px] overflow-y-auto custom-scrollbar px-1.5">
-                                {activeGroupItems.map((subItem: string) => {
-                                    const isSubSelected = subItem === value;
-                                    return (
-                                        <div 
-                                            key={subItem}
-                                            className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5
-                                                ${isSubSelected ? activeItem : optionHover}
-                                                ${!isSubSelected && isDark ? 'text-zinc-300' : ''} 
-                                            `}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onChange(subItem);
-                                                onClose();
-                                            }}
-                                        >
-                                            <span className="truncate">{subItem}</span>
-                                            {isSubSelected && <Icons.Check size={12} className="text-yellow-400 shrink-0 ml-2" />}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
+                  onMouseEnter={(e) =>
+                    isGroup
+                      ? handleMouseEnterGroup(label, e)
+                      : setHoveredGroup(null)
+                  }
+                  onMouseLeave={handleMouseLeave}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isGroup && !isDisabled) {
+                      onChange(label);
+                      onClose();
+                    }
+                  }}
+                >
+                  <span className="whitespace-nowrap pr-2">{label}</span>
+                  {isSelected && (
+                    <Icons.Check
+                      size={12}
+                      className="text-yellow-400 shrink-0 ml-2"
+                    />
+                  )}
+                  {isGroup && (
+                    <Icons.ChevronRight
+                      size={12}
+                      className={`shrink-0 ml-2 ${isGroupHovered ? "text-yellow-400" : isDark ? "text-zinc-500" : "text-gray-400"}`}
+                    />
+                  )}
                 </div>
-            )}
+              );
+            })}
+          </div>
+
+          {/* 弹出菜单 */}
+          {hoveredGroup && activeGroupItems.length > 0 && (
+            <div
+              className={`absolute left-full ml-2 w-[150px] ${flyoutBg} border rounded-xl shadow-2xl py-1.5 z-[110] animate-in fade-in slide-in-from-left-2 duration-150 before:absolute before:-left-4 before:top-0 before:h-full before:w-4 before:bg-transparent`}
+              style={{ top: flyoutTop }}
+              onMouseEnter={handleMouseEnterFlyout}
+              onMouseLeave={handleMouseLeave}
+            >
+              <div className="max-h-[250px] overflow-y-auto custom-scrollbar px-1.5">
+                {activeGroupItems.map((subItem: string) => {
+                  const isSubSelected = subItem === value;
+                  return (
+                    <div
+                      key={subItem}
+                      className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5
+                                                ${isSubSelected ? activeItem : optionHover}
+                                                ${!isSubSelected && isDark ? "text-zinc-300" : ""} 
+                                            `}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onChange(subItem);
+                        onClose();
+                      }}
+                    >
+                      <span className="truncate">{subItem}</span>
+                      {isSubSelected && (
+                        <Icons.Check
+                          size={12}
+                          className="text-yellow-400 shrink-0 ml-2"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 // 自定义缩略图项组件
-export const LocalThumbnailItem = memo(({ src, index, isDark }: { src: string, index: number, isDark: boolean }) => {
+export const LocalThumbnailItem = memo(
+  ({ src, index, isDark }: { src: string; index: number; isDark: boolean }) => {
     const [loaded, setLoaded] = useState(false);
     return (
-        <div className={`relative w-[48px] h-[48px] flex-shrink-0 border rounded-lg overflow-hidden shadow-sm group/thumb cursor-pointer hover:border-cyan-500/50 transition-colors ${isDark ? 'border-zinc-700 bg-black/40' : 'border-gray-300 bg-gray-100'}`}>
-            <div className={`absolute inset-0 ${isDark ? 'bg-zinc-800/50' : 'bg-gray-200'}`} />
-            <img src={src} className="absolute inset-0 w-full h-full object-cover will-change-[clip-path]" draggable={false} decoding="async" loading="lazy" onLoad={() => setLoaded(true)} style={{ clipPath: loaded ? 'inset(0 0 0% 0)' : 'inset(0 0 100% 0)', opacity: loaded ? 1 : 0, transition: 'clip-path 0.8s ease-out, opacity 0.3s ease-in' }} />
-            <div className="absolute top-0 right-0 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold px-1.5 rounded-bl z-10">{index + 1}</div>
+      <div
+        className={`relative w-[48px] h-[48px] flex-shrink-0 border rounded-lg overflow-hidden shadow-sm group/thumb cursor-pointer hover:border-cyan-500/50 transition-colors ${isDark ? "border-zinc-700 bg-black/40" : "border-gray-300 bg-gray-100"}`}
+      >
+        <div
+          className={`absolute inset-0 ${isDark ? "bg-zinc-800/50" : "bg-gray-200"}`}
+        />
+        <img
+          src={src}
+          className="absolute inset-0 w-full h-full object-cover will-change-[clip-path]"
+          draggable={false}
+          decoding="async"
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          style={{
+            clipPath: loaded ? "inset(0 0 0% 0)" : "inset(0 0 100% 0)",
+            opacity: loaded ? 1 : 0,
+            transition: "clip-path 0.8s ease-out, opacity 0.3s ease-in",
+          }}
+        />
+        <div className="absolute top-0 right-0 bg-black/60 backdrop-blur-sm text-white text-[9px] font-bold px-1.5 rounded-bl z-10">
+          {index + 1}
         </div>
+      </div>
     );
-});
+  },
+);
 
 // 自定义下拉菜单组件
-export const LocalInputThumbnails = memo(({ inputs, ready, isDark, label }: { inputs: string[], ready: boolean, isDark: boolean, label?: string }) => {
+export const LocalInputThumbnails = memo(
+  ({
+    inputs,
+    ready,
+    isDark,
+    label,
+  }: {
+    inputs: string[];
+    ready: boolean;
+    isDark: boolean;
+    label?: string;
+  }) => {
     if (!inputs || inputs.length === 0) return null;
-    const labelColor = isDark ? 'text-zinc-500' : 'text-gray-400';
+    const labelColor = isDark ? "text-zinc-500" : "text-gray-400";
     return (
-       <div className="flex flex-col items-center gap-1 pb-2">
-           {label && <span className={`text-[9px] font-bold uppercase ${labelColor}`}>{label}</span>}
-           <div className="flex justify-center gap-2 overflow-x-auto no-scrollbar min-h-[48px]">
-               {inputs.slice(0, 8).map((src, i) => (
-                   ready ? <LocalThumbnailItem key={src + i} src={src} index={i} isDark={isDark} /> : <div key={i} className={`relative w-[48px] h-[48px] flex-shrink-0 border rounded-lg overflow-hidden shadow-sm ${isDark ? 'border-zinc-700 bg-black/40' : 'border-gray-300 bg-gray-100'}`}><div className={`absolute inset-0 ${isDark ? 'bg-zinc-800/50' : 'bg-gray-200'}`} /></div>
-               ))}
-           </div>
-       </div>
+      <div className="flex flex-col items-center gap-1 pb-2">
+        {label && (
+          <span className={`text-[9px] font-bold uppercase ${labelColor}`}>
+            {label}
+          </span>
+        )}
+        <div className="flex justify-center gap-2 overflow-x-auto no-scrollbar min-h-[48px]">
+          {inputs.slice(0, 8).map((src, i) =>
+            ready ? (
+              <LocalThumbnailItem
+                key={src + i}
+                src={src}
+                index={i}
+                isDark={isDark}
+              />
+            ) : (
+              <div
+                key={i}
+                className={`relative w-[48px] h-[48px] flex-shrink-0 border rounded-lg overflow-hidden shadow-sm ${isDark ? "border-zinc-700 bg-black/40" : "border-gray-300 bg-gray-100"}`}
+              >
+                <div
+                  className={`absolute inset-0 ${isDark ? "bg-zinc-800/50" : "bg-gray-200"}`}
+                />
+              </div>
+            ),
+          )}
+        </div>
+      </div>
     );
-});
+  },
+);
 
 // 自定义视频预览组件
-export const VideoPreview = ({ src, isDark }: { src: string, isDark: boolean }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [isPlaying, setIsPlaying] = useState(true);
-    const togglePlay = (e: React.MouseEvent) => { e.stopPropagation(); const v = videoRef.current; if (v) { if (v.paused) { v.play(); setIsPlaying(true); } else { v.pause(); setIsPlaying(false); } } };
-    return (
-        <div className="relative w-full h-full group/video">
-            <video ref={videoRef} src={src} className="w-full h-full object-cover pointer-events-none" loop muted autoPlay playsInline draggable={false} />
-            <div className="absolute bottom-3 left-3 z-30 pointer-events-auto opacity-0 group-hover/video:opacity-100 transition-opacity">
-                <button onClick={togglePlay} className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-all shadow-sm ${isDark ? 'bg-black/60 border-white/10 text-white hover:bg-black/80 hover:scale-110' : 'bg-white/60 border-black/10 text-black hover:bg-white/80 hover:scale-110'}`}>
-                    {isPlaying ? <Icons.Pause size={14} fill="currentColor" /> : <Icons.Play size={14} fill="currentColor" className="ml-0.5" />}
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// 自定义安全下载组件
-// 安全下载视频或图片文件
-// 安全下载视频或图片文件
-// 安全下载视频或图片文件
-// 安全下载视频或图片文件
-export const safeDownload = async (src: string) => {
-    try {
-      const isVideo = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(src);
-      const response = await fetch(src);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a'); 
-      link.href = url; 
-      link.download = `download_${Date.now()}.${isVideo ? 'mp4' : 'png'}`;
-      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
-    } catch (e) {
-      const link = document.createElement('a'); link.href = src; link.download = `download_${Date.now()}`; link.target = "_blank"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    }
-};
-
-// 自定义媒体栈组件
-// 安全下载视频或图片文件
-// 安全下载视频或图片文件
-// 安全下载视频或图片文件
-// 安全下载视频或图片文件
-export const LocalMediaStack: React.FC<{ data: NodeData, updateData: any, currentSrc: string | undefined, onMaximize?: any, isDark?: boolean, selected?: boolean }> = ({ 
-    data, updateData, currentSrc, onMaximize, isDark = true, selected
+export const VideoPreview = ({
+  src,
+  isDark,
+}: {
+  src: string;
+  isDark: boolean;
 }) => {
-    const stackRef = useRef<HTMLDivElement>(null);
-    const artifacts = data.outputArtifacts || [];
-    const sortedArtifacts = currentSrc ? [currentSrc, ...artifacts.filter(a => a !== currentSrc)] : artifacts;
-    const showBadge = !data.isStackOpen && artifacts.length > 1;
-
-    // 多图浏览状态
-    const [browseIndex, setBrowseIndex] = useState(0);
-    useEffect(() => { setBrowseIndex(0); }, [currentSrc]);
-
-    const browseSrc = sortedArtifacts[browseIndex] || currentSrc;
-    const totalImages = sortedArtifacts.length;
-    const showNavigator = totalImages > 1;
-
-    const goToPrev = (e: React.MouseEvent) => { e.stopPropagation(); setBrowseIndex(prev => (prev > 0 ? prev - 1 : totalImages - 1)); };
-    const goToNext = (e: React.MouseEvent) => { e.stopPropagation(); setBrowseIndex(prev => (prev < totalImages - 1 ? prev + 1 : 0)); };
-    const goToIndex = (e: React.MouseEvent, index: number) => { e.stopPropagation(); setBrowseIndex(index); };
-    const setAsMain = (e: React.MouseEvent) => { e.stopPropagation(); if (browseSrc && browseSrc !== currentSrc) { const isVid = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(browseSrc) || data.type === 'TEXT_TO_VIDEO'; updateData(data.id, isVid ? { videoSrc: browseSrc } : { imageSrc: browseSrc }); } };
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => { if (data.isStackOpen && stackRef.current && !stackRef.current.contains(event.target as Node)) updateData(data.id, { isStackOpen: false }); };
-        if (data.isStackOpen) document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [data.isStackOpen, data.id, updateData]);
-
-    useEffect(() => { if (!selected && data.isStackOpen) updateData(data.id, { isStackOpen: false }); }, [selected, data.isStackOpen, data.id, updateData]);
-
-    if (data.isStackOpen) {
-        return (
-            <div ref={stackRef} className="absolute inset-0 overflow-visible rounded-xl">
-                <div className="absolute inset-0 rounded-xl" style={{ 
-                    background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)', 
-                    border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)', 
-                    outline: 'transparent solid 2px', 
-                    outlineOffset: '-1px', 
-                    transition: 'outline-color 0.2s, border-color 0.15s'
-                }} />
-                {sortedArtifacts.map((src, index) => {
-                    const isMain = index === 0;
-                    const isVideo = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(src) || data.type === 'TEXT_TO_VIDEO';
-                    return (
-                        <div 
-                            key={src + index} 
-                            className="absolute overflow-hidden rounded-xl cursor-pointer" 
-                            style={{
-                                left: index * (data.width + 8) + 'px',
-                                top: '0px',
-                                width: data.width + 'px',
-                                height: data.height + 'px',
-                                zIndex: sortedArtifacts.length - index,
-                                border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
-                                outline: 'none',
-                                outlineOffset: '-1px',
-                                background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)'
-                            }}
-                        >
-                            <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
-                                <div style={{ display: 'contents' }}>
-                                    {isVideo ? (
-                                        <video src={src} className="w-full h-full object-cover" controls={isMain} muted loop autoPlay playsInline />
-                                    ) : (
-                                        <img 
-                                            src={src} 
-                                            alt={`图片 ${index + 1}`} 
-                                            className="h-full w-full object-cover" 
-                                            draggable={false} 
-                                            decoding="async"
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                            <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
-                                <button 
-                                    type="button" 
-                                    className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white disabled:opacity-60"
-                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); safeDownload(src); }}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 19.8008 19.9004">
-                                        <path d="M1.80078 17C1.80078 17.2917 1.91676 17.5711 2.12305 17.7773C2.32934 17.9836 2.60865 18.0996 2.90039 18.0996H16.9004C17.1921 18.0996 17.4714 17.9836 17.6777 17.7773C17.884 17.5711 18 17.2917 18 17V13H19.8008V17C19.8008 17.7691 19.495 18.5069 18.9512 19.0508C18.4073 19.5946 17.6695 19.9004 16.9004 19.9004H2.90039C2.13126 19.9004 1.39346 19.5946 0.849609 19.0508C0.305754 18.5069 0 17.7691 0 17V13H1.80078V17ZM10.8008 11.8262L14.2637 8.36328L15.5371 9.63672L10.5371 14.6367C10.1856 14.9882 9.61514 14.9882 9.26367 14.6367L4.26367 9.63672L5.53711 8.36328L9 11.8262V0H10.8008V11.8262Z" fill="currentColor"></path>
-                                    </svg>
-                                    <span>下载</span>
-                                </button>
-                                {isMain ? (
-                                    <button 
-                                        type="button" 
-                                        className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
-                                        onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: false }); }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 20.9399 20.9427">
-                                            <path d="M9.76362 10.5883C10.0398 10.5883 10.2636 10.8122 10.2636 11.0883V19.0883C10.2636 19.3091 10.085 19.4886 9.86421 19.4887H8.86323C8.64234 19.4887 8.46287 19.3092 8.46284 19.0883V13.7719L1.38862 20.8256C1.23226 20.9815 0.979206 20.9819 0.823194 20.8256L0.11714 20.1176C-0.0388821 19.9612 -0.0392109 19.7072 0.11714 19.5512L7.29976 12.3891H1.76362C1.54273 12.3891 1.36326 12.2096 1.36323 11.9887V10.9877C1.36331 10.7669 1.54276 10.5883 1.76362 10.5883H9.76362ZM19.5507 0.116629C19.7072 -0.0392773 19.9602 -0.0387992 20.1162 0.117606L20.8232 0.825613C20.9792 0.982091 20.9787 1.23606 20.8222 1.39202L13.7138 8.47503H19.2519C19.4727 8.47516 19.6512 8.65367 19.6513 8.87444V9.87542C19.6513 10.0962 19.4727 10.2757 19.2519 10.2758H11.2509C10.9751 10.2756 10.7512 10.0516 10.7509 9.77581V1.77483C10.751 1.55398 10.9305 1.37542 11.1513 1.37542H12.1523C12.3731 1.37555 12.5516 1.55406 12.5517 1.77483V7.09124L19.5507 0.116629Z" fill="currentColor"></path>
-                                        </svg>
-                                        <span>收起</span>
-                                    </button>
-                                ) : (
-                                    <button 
-                                        type="button" 
-                                        className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
-                                        onClick={(e) => { e.stopPropagation(); updateData(data.id, { [isVideo ? 'videoSrc' : 'imageSrc']: src, isStackOpen: false }); }}
-                                    >
-                                        <span>设为主图</span>
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        );
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (v) {
+      if (v.paused) {
+        v.play();
+        setIsPlaying(true);
+      } else {
+        v.pause();
+        setIsPlaying(false);
+      }
     }
-    
-    // 改进的检测逻辑：优先严格检查节点类型，然后检查文件扩展名。
-    // 移除了简单的 .includes('video') 方法，避免在 URL 中的随机签名触发误检测。
-    const isVideo = data.type === 'TEXT_TO_VIDEO' || data.type === 'START_END_TO_VIDEO' || (currentSrc && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(currentSrc));
+  };
+  return (
+    <div className="relative w-full h-full group/video">
+      <video
+        ref={videoRef}
+        src={src}
+        className="w-full h-full object-cover pointer-events-none"
+        loop
+        muted
+        autoPlay
+        playsInline
+        draggable={false}
+      />
+      <div className="absolute bottom-3 left-3 z-30 pointer-events-auto opacity-0 group-hover/video:opacity-100 transition-opacity">
+        <button
+          onClick={togglePlay}
+          className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-all shadow-sm ${isDark ? "bg-black/60 border-white/10 text-white hover:bg-black/80 hover:scale-110" : "bg-white/60 border-black/10 text-black hover:bg-white/80 hover:scale-110"}`}
+        >
+          {isPlaying ? (
+            <Icons.Pause size={14} fill="currentColor" />
+          ) : (
+            <Icons.Play size={14} fill="currentColor" className="ml-0.5" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
 
+export const safeDownload = async (src: string) => {
+  try {
+    const isVideo = /\.(mp4|webm|mov|mkv)(\?|$)/i.test(src);
+    const response = await fetch(src);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `download_${Date.now()}.${isVideo ? "mp4" : "png"}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    const link = document.createElement("a");
+    link.href = src;
+    link.download = `download_${Date.now()}`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+
+export const LocalMediaStack: React.FC<{
+  data: NodeData;
+  updateData: (id: string, updates: Partial<NodeData>) => void;
+  currentSrc: string | undefined;
+  onMaximize?: (id: string) => void;
+  isDark?: boolean;
+  selected?: boolean;
+}> = ({
+  data,
+  updateData,
+  currentSrc,
+  onMaximize,
+  isDark = true,
+  selected,
+}) => {
+  const stackRef = useRef<HTMLDivElement>(null);
+  const artifacts = data.outputArtifacts || [];
+  const sortedArtifacts = currentSrc
+    ? [currentSrc, ...artifacts.filter((a) => a !== currentSrc)]
+    : artifacts;
+  const showBadge = !data.isStackOpen && artifacts.length > 1;
+
+  // 多图浏览状态
+  const [browseIndex, setBrowseIndex] = useState(0);
+  useEffect(() => {
+    setBrowseIndex(0);
+  }, [currentSrc]);
+
+  const browseSrc = sortedArtifacts[browseIndex] || currentSrc;
+  const totalImages = sortedArtifacts.length;
+  const showNavigator = totalImages > 1;
+
+  const goToPrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBrowseIndex((prev) => (prev > 0 ? prev - 1 : totalImages - 1));
+  };
+  const goToNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBrowseIndex((prev) => (prev < totalImages - 1 ? prev + 1 : 0));
+  };
+  const goToIndex = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    setBrowseIndex(index);
+  };
+  const setAsMain = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (browseSrc && browseSrc !== currentSrc) {
+      const isVid =
+        /\.(mp4|webm|mov|mkv)(\?|$)/i.test(browseSrc) ||
+        data.type === "TEXT_TO_VIDEO";
+      updateData(
+        data.id,
+        isVid ? { videoSrc: browseSrc } : { imageSrc: browseSrc },
+      );
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        data.isStackOpen &&
+        stackRef.current &&
+        !stackRef.current.contains(event.target as Node)
+      )
+        updateData(data.id, { isStackOpen: false });
+    };
+    if (data.isStackOpen)
+      document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [data.isStackOpen, data.id, updateData]);
+
+  useEffect(() => {
+    if (!selected && data.isStackOpen)
+      updateData(data.id, { isStackOpen: false });
+  }, [selected, data.isStackOpen, data.id, updateData]);
+
+  if (data.isStackOpen) {
     return (
-        <div className="absolute inset-0 overflow-visible rounded-xl">
-           {isVideo ? (
-               <>
-                   {showBadge ? (
-                       <>
-                           {sortedArtifacts.slice(0, 3).reverse().map((src, index) => {
-                               const reverseIndex = Math.min(sortedArtifacts.length, 3) - 1 - index;
-                               const isTop = reverseIndex === 0;
-                               return (
-                                   <div
-                                       key={src + index}
-                                       className="absolute overflow-hidden rounded-xl"
-                                       style={{
-                                           left: isTop ? '0px' : `${reverseIndex * 12}px`,
-                                           top: isTop ? '0px' : `${reverseIndex * 4}px`,
-                                           width: '100%',
-                                           height: '100%',
-                                           zIndex: Math.min(sortedArtifacts.length, 3) - reverseIndex,
-                                           border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
-                                           outline: 'none',
-                                           outlineOffset: '-1px',
-                                           cursor: isTop ? 'default' : 'pointer',
-                                           background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)',
-                                           transform: isTop ? 'scale(1)' : `scale(${1 - reverseIndex * 0.035}) rotate(${reverseIndex * 2.5}deg)`,
-                                           boxShadow: isTop
-                                               ? 'rgba(0, 0, 0, 0.24) 0px 8px 20px'
-                                               : 'rgba(0, 0, 0, 0.38) 0px 14px 32px',
-                                           transition: 'transform 0.3s, box-shadow 0.3s',
-                                       }}
-                                   >
-                                       <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
-                                           <div style={{ display: 'contents' }}>
-                                               <VideoPreview src={src} isDark={isDark || false} />
-                                           </div>
-                                       </div>
-                                   </div>
-                               );
-                           })}
-                           <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
-                               <button
-                                   type="button"
-                                   className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
-                                   onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}
-                               >
-                                   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 17.8008 17.8008">
-                                       <path d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z" fill="currentColor"></path>
-                                   </svg>
-                                   <span>{sortedArtifacts.length}张</span>
-                               </button>
-                           </div>
-                       </>
-                   ) : (
-                       currentSrc && <VideoPreview src={currentSrc} isDark={isDark || false} />
-                   )}
-               </>
-           ) : (
-               <>
-                   {showBadge ? (
-                       <>
-                           {sortedArtifacts.slice(0, 3).reverse().map((src, index) => {
-                               const reverseIndex = Math.min(sortedArtifacts.length, 3) - 1 - index;
-                               const isTop = reverseIndex === 0;
-                               return (
-                                   <div
-                                       key={src + index}
-                                       className="absolute overflow-hidden rounded-xl"
-                                       style={{
-                                           left: isTop ? '0px' : `${reverseIndex * 12}px`,
-                                           top: isTop ? '0px' : `${reverseIndex * 4}px`,
-                                           width: '100%',
-                                           height: '100%',
-                                           zIndex: Math.min(sortedArtifacts.length, 3) - reverseIndex,
-                                           border: isDark ? '1px solid var(--canvas-node-border, #3f3f46)' : '1px solid var(--canvas-node-border, #e5e7eb)',
-                                           outline: 'none',
-                                           outlineOffset: '-1px',
-                                           cursor: isTop ? 'default' : 'pointer',
-                                           background: isDark ? 'var(--Surface-Panel-background, #171717)' : 'var(--Surface-Panel-background, #ffffff)',
-                                           transform: isTop ? 'scale(1)' : `scale(${1 - reverseIndex * 0.035}) rotate(${reverseIndex * 2.5}deg)`,
-                                           boxShadow: isTop
-                                               ? 'rgba(0, 0, 0, 0.24) 0px 8px 20px'
-                                               : 'rgba(0, 0, 0, 0.38) 0px 14px 32px',
-                                           transition: 'transform 0.3s, box-shadow 0.3s',
-                                       }}
-                                   >
-                                       <div className="h-full w-full transition-transform duration-300" style={{ transform: 'scale(1)' }}>
-                                           <div style={{ display: 'contents' }}>
-                                               <img
-                                                   src={src}
-                                                   alt={isTop ? `图片` : ''}
-                                                   className="h-full w-full object-cover"
-                                                   draggable={false}
-                                                   decoding="async"
-                                                   crossOrigin="anonymous"
-                                               />
-                                           </div>
-                                       </div>
-                                   </div>
-                               );
-                           })}
-                           <div className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity" style={{ zIndex: 10, opacity: 1 }}>
-                               <button
-                                   type="button"
-                                   className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
-                                   onClick={(e) => { e.stopPropagation(); updateData(data.id, { isStackOpen: true }); }}
-                               >
-                                   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" className="iconify iconify--libtv pointer-events-none" width="14" height="14" viewBox="0 0 17.8008 17.8008">
-                                       <path d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z" fill="currentColor"></path>
-                                   </svg>
-                                   <span>{sortedArtifacts.length}张</span>
-                               </button>
-                           </div>
-                       </>
-                   ) : (
-                       <img
-                           src={browseSrc || currentSrc}
-                           className={`w-full h-full object-contain pointer-events-none ${isDark ? 'bg-[#09090b]' : 'bg-gray-50'}`}
-                           alt="Generated"
-                           draggable={false}
-                       />
-                   )}
-               </>
-           )}
-           
-           {/* 多图底部导航条 */}
-           {showNavigator && !isVideo && !showBadge && (
-               <div 
-                   className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-30 pointer-events-auto"
-                   onClick={(e) => e.stopPropagation()}
-               >
-                   {/* 上一张 */}
-                   <button 
-                       className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
-                       onClick={goToPrev}
-                   >
-                       <Icons.ChevronLeft size={14} />
-                   </button>
-                   
-                   {/* 缩略图 */}
-                   <div className="flex items-center gap-1 overflow-x-auto max-w-[70%] px-1">
-                       {sortedArtifacts.map((src, index) => (
-                           <button
-                               key={src + index}
-                               className={`w-7 h-7 rounded-md border-2 shrink-0 overflow-hidden transition-all ${
-                                   index === browseIndex 
-                                       ? 'border-yellow-400 ring-1 ring-yellow-400/50 scale-110' 
-                                       : 'border-white/20 hover:border-white/50 opacity-70 hover:opacity-100'
-                               }`}
-                               onClick={(e) => goToIndex(e, index)}
-                           >
-                               <img src={src} className="w-full h-full object-cover" draggable={false} />
-                           </button>
-                       ))}
-                   </div>
-                   
-                   {/* 下一张 */}
-                   <button 
-                       className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
-                       onClick={goToNext}
-                   >
-                       <Icons.ChevronRight size={14} />
-                   </button>
-                   
-                   {/* 序号 + 设为主图 */}
-                   <div className="flex items-center gap-1.5 ml-1 shrink-0">
-                       <span className="text-[10px] text-white/70 font-mono tabular-nums select-none">
-                           {browseIndex + 1}/{totalImages}
-                       </span>
-                       {browseSrc !== currentSrc && (
-                           <button
-                               className="h-5 px-1.5 bg-yellow-500/30 hover:bg-yellow-500/50 border border-yellow-400/40 rounded text-[8px] font-bold text-yellow-300 transition-colors flex items-center gap-0.5 shrink-0"
-                               onClick={setAsMain}
-                           >
-                               <Icons.Check size={8} /><span>主图</span>
-                           </button>
-                       )}
-                   </div>
-               </div>
-           )}
-        </div>
+      <div
+        ref={stackRef}
+        className="absolute inset-0 overflow-visible rounded-xl"
+      >
+        <div
+          className="absolute inset-0 rounded-xl"
+          style={{
+            background: isDark
+              ? "var(--Surface-Panel-background, #171717)"
+              : "var(--Surface-Panel-background, #ffffff)",
+            border: isDark
+              ? "1px solid var(--canvas-node-border, #3f3f46)"
+              : "1px solid var(--canvas-node-border, #e5e7eb)",
+            outline: "transparent solid 2px",
+            outlineOffset: "-1px",
+            transition: "outline-color 0.2s, border-color 0.15s",
+          }}
+        />
+        {sortedArtifacts.map((src, index) => {
+          const isMain = index === 0;
+          const isVideo =
+            /\.(mp4|webm|mov|mkv)(\?|$)/i.test(src) ||
+            data.type === "TEXT_TO_VIDEO";
+          return (
+            <div
+              key={src + index}
+              className="absolute overflow-hidden rounded-xl cursor-pointer"
+              style={{
+                left: index * (data.width + 8) + "px",
+                top: "0px",
+                width: data.width + "px",
+                height: data.height + "px",
+                zIndex: sortedArtifacts.length - index,
+                border: isDark
+                  ? "1px solid var(--canvas-node-border, #3f3f46)"
+                  : "1px solid var(--canvas-node-border, #e5e7eb)",
+                outline: "none",
+                outlineOffset: "-1px",
+                background: isDark
+                  ? "var(--Surface-Panel-background, #171717)"
+                  : "var(--Surface-Panel-background, #ffffff)",
+              }}
+            >
+              <div
+                className="h-full w-full transition-transform duration-300"
+                style={{ transform: "scale(1)" }}
+              >
+                <div style={{ display: "contents" }}>
+                  {isVideo ? (
+                    <video
+                      src={src}
+                      className="w-full h-full object-cover"
+                      controls={isMain}
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={src}
+                      alt={`图片 ${index + 1}`}
+                      className="h-full w-full object-cover"
+                      draggable={false}
+                      decoding="async"
+                    />
+                  )}
+                </div>
+              </div>
+              <div
+                className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity"
+                style={{ zIndex: 10, opacity: 1 }}
+              >
+                <button
+                  type="button"
+                  className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white disabled:opacity-60"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    safeDownload(src);
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlnsXlink="http://www.w3.org/1999/xlink"
+                    aria-hidden="true"
+                    role="img"
+                    className="iconify iconify--libtv pointer-events-none"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 19.8008 19.9004"
+                  >
+                    <path
+                      d="M1.80078 17C1.80078 17.2917 1.91676 17.5711 2.12305 17.7773C2.32934 17.9836 2.60865 18.0996 2.90039 18.0996H16.9004C17.1921 18.0996 17.4714 17.9836 17.6777 17.7773C17.884 17.5711 18 17.2917 18 17V13H19.8008V17C19.8008 17.7691 19.495 18.5069 18.9512 19.0508C18.4073 19.5946 17.6695 19.9004 16.9004 19.9004H2.90039C2.13126 19.9004 1.39346 19.5946 0.849609 19.0508C0.305754 18.5069 0 17.7691 0 17V13H1.80078V17ZM10.8008 11.8262L14.2637 8.36328L15.5371 9.63672L10.5371 14.6367C10.1856 14.9882 9.61514 14.9882 9.26367 14.6367L4.26367 9.63672L5.53711 8.36328L9 11.8262V0H10.8008V11.8262Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                  <span>下载</span>
+                </button>
+                {isMain ? (
+                  <button
+                    type="button"
+                    className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateData(data.id, { isStackOpen: false });
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      xmlnsXlink="http://www.w3.org/1999/xlink"
+                      aria-hidden="true"
+                      role="img"
+                      className="iconify iconify--libtv pointer-events-none"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 20.9399 20.9427"
+                    >
+                      <path
+                        d="M9.76362 10.5883C10.0398 10.5883 10.2636 10.8122 10.2636 11.0883V19.0883C10.2636 19.3091 10.085 19.4886 9.86421 19.4887H8.86323C8.64234 19.4887 8.46287 19.3092 8.46284 19.0883V13.7719L1.38862 20.8256C1.23226 20.9815 0.979206 20.9819 0.823194 20.8256L0.11714 20.1176C-0.0388821 19.9612 -0.0392109 19.7072 0.11714 19.5512L7.29976 12.3891H1.76362C1.54273 12.3891 1.36326 12.2096 1.36323 11.9887V10.9877C1.36331 10.7669 1.54276 10.5883 1.76362 10.5883H9.76362ZM19.5507 0.116629C19.7072 -0.0392773 19.9602 -0.0387992 20.1162 0.117606L20.8232 0.825613C20.9792 0.982091 20.9787 1.23606 20.8222 1.39202L13.7138 8.47503H19.2519C19.4727 8.47516 19.6512 8.65367 19.6513 8.87444V9.87542C19.6513 10.0962 19.4727 10.2757 19.2519 10.2758H11.2509C10.9751 10.2756 10.7512 10.0516 10.7509 9.77581V1.77483C10.751 1.55398 10.9305 1.37542 11.1513 1.37542H12.1523C12.3731 1.37555 12.5516 1.55406 12.5517 1.77483V7.09124L19.5507 0.116629Z"
+                        fill="currentColor"
+                      ></path>
+                    </svg>
+                    <span>收起</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateData(data.id, {
+                        [isVideo ? "videoSrc" : "imageSrc"]: src,
+                        isStackOpen: false,
+                      });
+                    }}
+                  >
+                    <span>设为主图</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
+  }
+
+  // 改进的检测逻辑：优先严格检查节点类型，然后检查文件扩展名。
+  // 移除了简单的 .includes('video') 方法，避免在 URL 中的随机签名触发误检测。
+  const isVideo =
+    data.type === "TEXT_TO_VIDEO" ||
+    data.type === "START_END_TO_VIDEO" ||
+    (currentSrc && /\.(mp4|webm|mov|mkv)(\?|$)/i.test(currentSrc));
+
+  return (
+    <div className="absolute inset-0 overflow-visible rounded-xl">
+      {isVideo ? (
+        <>
+          {showBadge ? (
+            <>
+              {sortedArtifacts
+                .slice(0, 3)
+                .reverse()
+                .map((src, index) => {
+                  const reverseIndex =
+                    Math.min(sortedArtifacts.length, 3) - 1 - index;
+                  const isTop = reverseIndex === 0;
+                  return (
+                    <div
+                      key={src + index}
+                      className="absolute overflow-hidden rounded-xl"
+                      style={{
+                        left: isTop ? "0px" : `${reverseIndex * 12}px`,
+                        top: isTop ? "0px" : `${reverseIndex * 4}px`,
+                        width: "100%",
+                        height: "100%",
+                        zIndex:
+                          Math.min(sortedArtifacts.length, 3) - reverseIndex,
+                        border: isDark
+                          ? "1px solid var(--canvas-node-border, #3f3f46)"
+                          : "1px solid var(--canvas-node-border, #e5e7eb)",
+                        outline: "none",
+                        outlineOffset: "-1px",
+                        cursor: isTop ? "default" : "pointer",
+                        background: isDark
+                          ? "var(--Surface-Panel-background, #171717)"
+                          : "var(--Surface-Panel-background, #ffffff)",
+                        transform: isTop
+                          ? "scale(1)"
+                          : `scale(${1 - reverseIndex * 0.035}) rotate(${reverseIndex * 2.5}deg)`,
+                        boxShadow: isTop
+                          ? "rgba(0, 0, 0, 0.24) 0px 8px 20px"
+                          : "rgba(0, 0, 0, 0.38) 0px 14px 32px",
+                        transition: "transform 0.3s, box-shadow 0.3s",
+                      }}
+                    >
+                      <div
+                        className="h-full w-full transition-transform duration-300"
+                        style={{ transform: "scale(1)" }}
+                      >
+                        <div style={{ display: "contents" }}>
+                          <VideoPreview src={src} isDark={isDark || false} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              <div
+                className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity"
+                style={{ zIndex: 10, opacity: 1 }}
+              >
+                <button
+                  type="button"
+                  className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateData(data.id, { isStackOpen: true });
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlnsXlink="http://www.w3.org/1999/xlink"
+                    aria-hidden="true"
+                    role="img"
+                    className="iconify iconify--libtv pointer-events-none"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 17.8008 17.8008"
+                  >
+                    <path
+                      d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                  <span>{sortedArtifacts.length}张</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            currentSrc && (
+              <VideoPreview src={currentSrc} isDark={isDark || false} />
+            )
+          )}
+        </>
+      ) : (
+        <>
+          {showBadge ? (
+            <>
+              {sortedArtifacts
+                .slice(0, 3)
+                .reverse()
+                .map((src, index) => {
+                  const reverseIndex =
+                    Math.min(sortedArtifacts.length, 3) - 1 - index;
+                  const isTop = reverseIndex === 0;
+                  return (
+                    <div
+                      key={src + index}
+                      className="absolute overflow-hidden rounded-xl"
+                      style={{
+                        left: isTop ? "0px" : `${reverseIndex * 12}px`,
+                        top: isTop ? "0px" : `${reverseIndex * 4}px`,
+                        width: "100%",
+                        height: "100%",
+                        zIndex:
+                          Math.min(sortedArtifacts.length, 3) - reverseIndex,
+                        border: isDark
+                          ? "1px solid var(--canvas-node-border, #3f3f46)"
+                          : "1px solid var(--canvas-node-border, #e5e7eb)",
+                        outline: "none",
+                        outlineOffset: "-1px",
+                        cursor: isTop ? "default" : "pointer",
+                        background: isDark
+                          ? "var(--Surface-Panel-background, #171717)"
+                          : "var(--Surface-Panel-background, #ffffff)",
+                        transform: isTop
+                          ? "scale(1)"
+                          : `scale(${1 - reverseIndex * 0.035}) rotate(${reverseIndex * 2.5}deg)`,
+                        boxShadow: isTop
+                          ? "rgba(0, 0, 0, 0.24) 0px 8px 20px"
+                          : "rgba(0, 0, 0, 0.38) 0px 14px 32px",
+                        transition: "transform 0.3s, box-shadow 0.3s",
+                      }}
+                    >
+                      <div
+                        className="h-full w-full transition-transform duration-300"
+                        style={{ transform: "scale(1)" }}
+                      >
+                        <div style={{ display: "contents" }}>
+                          <img
+                            src={src}
+                            alt={isTop ? `图片` : ""}
+                            className="h-full w-full object-cover"
+                            draggable={false}
+                            decoding="async"
+                            crossOrigin="anonymous"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              <div
+                className="pointer-events-none absolute right-2 top-2 flex items-center gap-2 transition-opacity"
+                style={{ zIndex: 10, opacity: 1 }}
+              >
+                <button
+                  type="button"
+                  className="pointer-events-auto flex items-center justify-center gap-1 rounded-lg bg-black/65 p-2 text-[13px] text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateData(data.id, { isStackOpen: true });
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlnsXlink="http://www.w3.org/1999/xlink"
+                    aria-hidden="true"
+                    role="img"
+                    className="iconify iconify--libtv pointer-events-none"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 17.8008 17.8008"
+                  >
+                    <path
+                      d="M1.40039 8.90039C1.62129 8.90039 1.80076 9.07988 1.80078 9.30078V14.8447L7.0625 9.58301C7.21875 9.42676 7.47271 9.4267 7.62891 9.58301L8.33594 10.29C8.49204 10.4463 8.4921 10.7003 8.33594 10.8564L3.19141 16H8.5C8.7209 16 8.90037 16.1795 8.90039 16.4004V17.4014C8.9003 17.6222 8.72086 17.8008 8.5 17.8008H0.799805C0.358011 17.8007 0 17.4428 0 17.001V9.30078C1.9471e-05 9.08004 0.178725 8.90064 0.399414 8.90039H1.40039ZM17.001 0C17.4427 0.000171625 17.8008 0.359059 17.8008 0.800781V8.50098C17.8007 8.72182 17.6213 8.90039 17.4004 8.90039H16.3994C16.1788 8.90014 16.0001 8.72166 16 8.50098V3.13672L10.8066 8.33105C10.6504 8.48728 10.3964 8.48728 10.2402 8.33105L9.5332 7.62305C9.37729 7.46686 9.37722 7.21375 9.5332 7.05762L14.7891 1.80078H9.2998C9.07916 1.80053 8.90048 1.62205 8.90039 1.40137V0.400391C8.90041 0.179648 9.07912 0.000250219 9.2998 0H17.001Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                  <span>{sortedArtifacts.length}张</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <img
+              src={browseSrc || currentSrc}
+              className={`w-full h-full object-contain pointer-events-none ${isDark ? "bg-[#09090b]" : "bg-gray-50"}`}
+              alt="Generated"
+              draggable={false}
+            />
+          )}
+        </>
+      )}
+
+      {/* 多图底部导航条 */}
+      {showNavigator && !isVideo && !showBadge && (
+        <div
+          className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-30 pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 上一张 */}
+          <button
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
+            onClick={goToPrev}
+          >
+            <Icons.ChevronLeft size={14} />
+          </button>
+
+          {/* 缩略图 */}
+          <div className="flex items-center gap-1 overflow-x-auto max-w-[70%] px-1">
+            {sortedArtifacts.map((src, index) => (
+              <button
+                key={src + index}
+                className={`w-7 h-7 rounded-md border-2 shrink-0 overflow-hidden transition-all ${
+                  index === browseIndex
+                    ? "border-yellow-400 ring-1 ring-yellow-400/50 scale-110"
+                    : "border-white/20 hover:border-white/50 opacity-70 hover:opacity-100"
+                }`}
+                onClick={(e) => goToIndex(e, index)}
+              >
+                <img
+                  src={src}
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              </button>
+            ))}
+          </div>
+
+          {/* 下一张 */}
+          <button
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors shrink-0"
+            onClick={goToNext}
+          >
+            <Icons.ChevronRight size={14} />
+          </button>
+
+          {/* 序号 + 设为主图 */}
+          <div className="flex items-center gap-1.5 ml-1 shrink-0">
+            <span className="text-[10px] text-white/70 font-mono tabular-nums select-none">
+              {browseIndex + 1}/{totalImages}
+            </span>
+            {browseSrc !== currentSrc && (
+              <button
+                className="h-5 px-1.5 bg-yellow-500/30 hover:bg-yellow-500/50 border border-yellow-400/40 rounded text-[8px] font-bold text-yellow-300 transition-colors flex items-center gap-0.5 shrink-0"
+                onClick={setAsMain}
+              >
+                <Icons.Check size={8} />
+                <span>主图</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };

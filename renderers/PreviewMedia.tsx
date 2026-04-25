@@ -1,12 +1,15 @@
-import React from 'react';
-import { Icons } from '../components/Icons';
+import React from "react";
+import { Icons } from "../components/Icons";
 
 interface PreviewMediaProps {
-  previewMedia: { url: string; type: 'image' | 'video' } | null;
+  previewMedia: { url: string; type: "image" | "video" } | null;
   onClose: () => void;
 }
 
-export const PreviewMedia: React.FC<PreviewMediaProps> = ({ previewMedia, onClose }) => {
+export const PreviewMedia: React.FC<PreviewMediaProps> = ({
+  previewMedia,
+  onClose,
+}) => {
   if (!previewMedia) return null;
 
   return (
@@ -25,7 +28,7 @@ export const PreviewMedia: React.FC<PreviewMediaProps> = ({ previewMedia, onClos
         >
           <Icons.X size={20} />
         </button>
-        {previewMedia.type === 'video' ? (
+        {previewMedia.type === "video" ? (
           <video
             src={previewMedia.url}
             controls

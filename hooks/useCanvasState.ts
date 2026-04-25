@@ -1,5 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
-import { NodeData, Connection, CanvasTransform, DragMode, Point } from '../types';
+import { useState, useCallback, useMemo } from "react";
+import {
+  NodeData,
+  Connection,
+  CanvasTransform,
+  DragMode,
+  Point,
+} from "../types";
 
 const EMPTY_ARRAY: string[] = [];
 
@@ -16,15 +22,17 @@ export interface UseCanvasStateReturn {
   setDragMode: React.Dispatch<React.SetStateAction<DragMode>>;
   hoveredConnectionId: string | null;
   setHoveredConnectionId: React.Dispatch<React.SetStateAction<string | null>>;
-  currentMode: 'select' | 'pan';
-  setCurrentMode: React.Dispatch<React.SetStateAction<'select' | 'pan'>>;
+  currentMode: "select" | "pan";
+  setCurrentMode: React.Dispatch<React.SetStateAction<"select" | "pan">>;
   canvasBg: string;
   setCanvasBg: React.Dispatch<React.SetStateAction<string>>;
   isDark: boolean;
   projectName: string;
   setProjectName: React.Dispatch<React.SetStateAction<string>>;
   selectionBox: { x: number; y: number; w: number; h: number } | null;
-  setSelectionBox: React.Dispatch<React.SetStateAction<{ x: number; y: number; w: number; h: number } | null>>;
+  setSelectionBox: React.Dispatch<
+    React.SetStateAction<{ x: number; y: number; w: number; h: number } | null>
+  >;
   selectedConnectionId: string | null;
   setSelectedConnectionId: React.Dispatch<React.SetStateAction<string | null>>;
   inputsMap: Record<string, string[]>;
@@ -35,42 +43,63 @@ export interface UseCanvasStateReturn {
 export const useCanvasState = (): UseCanvasStateReturn => {
   const [nodes, setNodes] = useState<NodeData[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [transform, setTransform] = useState<CanvasTransform>({ x: 0, y: 0, k: 1 });
-  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
-  const [dragMode, setDragMode] = useState<DragMode>('NONE');
-  const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
-  const [currentMode, setCurrentMode] = useState<'select' | 'pan'>('select');
-  const [canvasBg, setCanvasBg] = useState('#0B0C0E');
-  const [projectName, setProjectName] = useState('未命名项目');
-  const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [transform, setTransform] = useState<CanvasTransform>({
+    x: 0,
+    y: 0,
+    k: 1,
+  });
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [dragMode, setDragMode] = useState<DragMode>("NONE");
+  const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(
+    null,
+  );
+  const [currentMode, setCurrentMode] = useState<"select" | "pan">("select");
+  const [canvasBg, setCanvasBg] = useState("#0B0C0E");
+  const [projectName, setProjectName] = useState("未命名项目");
+  const [selectionBox, setSelectionBox] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<
+    string | null
+  >(null);
 
-  const isDark = canvasBg === '#0B0C0E';
+  const isDark = canvasBg === "#0B0C0E";
 
   const inputsMap = useMemo(() => {
     const map: Record<string, string[]> = {};
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       map[node.id] = connections
-        .filter(c => c.targetId === node.id)
-        .map(c => nodes.find(n => n.id === c.sourceId))
-        .filter(n => n && (n.imageSrc || n.videoSrc))
-        .map(n => {
+        .filter((c) => c.targetId === node.id)
+        .map((c) => nodes.find((n) => n.id === c.sourceId))
+        .filter((n) => n && (n.imageSrc || n.videoSrc))
+        .map((n) => {
           // 优先使用带标注的图片，确保标注内容传递给下游节点
           if (n?.annotatedImageSrc) return n.annotatedImageSrc;
-          return n?.imageSrc || n?.videoSrc || '';
+          return n?.imageSrc || n?.videoSrc || "";
         });
     });
     return map;
   }, [nodes, connections]);
 
-  const getInputImages = useCallback((nodeId: string) => {
-    return inputsMap[nodeId] || EMPTY_ARRAY;
-  }, [inputsMap]);
+  const getInputImages = useCallback(
+    (nodeId: string) => {
+      return inputsMap[nodeId] || EMPTY_ARRAY;
+    },
+    [inputsMap],
+  );
 
-  const screenToWorld = useCallback((x: number, y: number) => ({
-    x: (x - transform.x) / transform.k,
-    y: (y - transform.y) / transform.k,
-  }), [transform]);
+  const screenToWorld = useCallback(
+    (x: number, y: number) => ({
+      x: (x - transform.x) / transform.k,
+      y: (y - transform.y) / transform.k,
+    }),
+    [transform],
+  );
 
   return {
     nodes,

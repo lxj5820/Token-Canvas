@@ -3,24 +3,28 @@ import type { ModelDef, ModelConfig } from "./types";
 
 export type { ModelConfig };
 
-const CUSTOM_MODELS_KEY = 'CUSTOM_MODEL_REGISTRY';
-const DELETED_MODELS_KEY = 'DELETED_MODELS';
+const CUSTOM_MODELS_KEY = "CUSTOM_MODEL_REGISTRY";
+const DELETED_MODELS_KEY = "DELETED_MODELS";
 
 const loadCustomModels = (): Record<string, ModelDef> => {
-    if (typeof window === 'undefined') return {};
-    try {
-        const stored = localStorage.getItem(CUSTOM_MODELS_KEY);
-        return stored ? JSON.parse(stored) : {};
-    } catch(e) { return {}; }
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = localStorage.getItem(CUSTOM_MODELS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (e) {
+    return {};
+  }
 };
 
 // 加载已删除的模型列表
 const loadDeletedModels = (): Set<string> => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-        const stored = localStorage.getItem(DELETED_MODELS_KEY);
-        return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch(e) { return new Set(); }
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = localStorage.getItem(DELETED_MODELS_KEY);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch (e) {
+    return new Set();
+  }
 };
 
 const customModels = loadCustomModels();
@@ -28,207 +32,379 @@ const deletedModels = loadDeletedModels();
 
 export const MODEL_REGISTRY: Record<string, ModelDef> = {
   // --- Image Models ---
-  'Banana 2': { id: 'gemini-3.1-flash-image-preview', name: 'Banana 2 ', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3.1-flash-image-preview:generateContent' },
-  'BananaPro': { id: 'gemini-3-pro-image-preview', name: 'Banana Pro', type: 'CHAT', category: 'IMAGE', defaultEndpoint: '/v1beta/models/gemini-3-pro-image-preview:generateContent' },
-  
-  'gpt-image-2': { id: 'gpt-image-2', name: 'gpt-image-2', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  'gpt-image-2-all': { id: 'gpt-image-2-all', name: 'gpt-image-2-all', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
+  "Banana 2": {
+    id: "gemini-3.1-flash-image-preview",
+    name: "Banana 2 ",
+    type: "CHAT",
+    category: "IMAGE",
+    defaultEndpoint:
+      "/v1beta/models/gemini-3.1-flash-image-preview:generateContent",
+  },
+  BananaPro: {
+    id: "gemini-3-pro-image-preview",
+    name: "Banana Pro",
+    type: "CHAT",
+    category: "IMAGE",
+    defaultEndpoint:
+      "/v1beta/models/gemini-3-pro-image-preview:generateContent",
+  },
+
+  "gpt-image-2": {
+    id: "gpt-image-2",
+    name: "gpt-image-2",
+    type: "IMAGE_GEN",
+    category: "IMAGE",
+    defaultEndpoint: "/v1/images/generations",
+  },
+  "gpt-image-2-all": {
+    id: "gpt-image-2-all",
+    name: "gpt-image-2-all",
+    type: "IMAGE_GEN",
+    category: "IMAGE",
+    defaultEndpoint: "/v1/images/generations",
+  },
   //'gpt-image-1.5': { id: 'gpt-image-1.5-all', name: 'gpt-image-1.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
 
+  "doubao 5": {
+    id: "doubao-seedream-5-0-260128",
+    name: "Jimeng 5",
+    type: "IMAGE_GEN",
+    category: "IMAGE",
+    defaultEndpoint: "/v1/images/generations",
+  },
+  "doubao 4.5": {
+    id: "doubao-seedream-4-5-251128",
+    name: "Jimeng 4.5",
+    type: "IMAGE_GEN",
+    category: "IMAGE",
+    defaultEndpoint: "/v1/images/generations",
+  },
+  "doubao 4": {
+    id: "doubao-seedream-4-0-250828",
+    name: "Jimeng 4",
+    type: "IMAGE_GEN",
+    category: "IMAGE",
+    defaultEndpoint: "/v1/images/generations",
+  },
 
-  'doubao 5': { id: 'doubao-seedream-5-0-260128', name: 'Jimeng 5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  'doubao 4.5': { id: 'doubao-seedream-4-5-251128', name: 'Jimeng 4.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  'doubao 4': { id: 'doubao-seedream-4-0-250828', name: 'Jimeng 4', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
-  
   //'MJ': { id: 'mj_modal', name: 'Midjourney', type: 'MJ_MODAL', category: 'IMAGE', defaultEndpoint: '/mj/submit/modal' },
-  'Zimage': { id: 'z-image-turbo', name: 'Qwen Zimage', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
+  Zimage: {
+    id: "z-image-turbo",
+    name: "Qwen Zimage",
+    type: "IMAGE_GEN",
+    category: "IMAGE",
+    defaultEndpoint: "/v1/images/generations",
+  },
   //'Fluxpro': { id: 'flux-pro', name: 'Flux Pro', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
   //'kling image': { id: 'kling-image', name: 'Kling Image', type: 'KLING_OMNI', category: 'IMAGE', defaultEndpoint: '/kling/v1/images/generations' },
 
   // --- Video Models ---
-  'Sora 2': { id: 'sora-2-pro', name: 'Sora 2', type: 'VIDEO_GEN_CHAT', category: 'VIDEO', defaultEndpoint: '/v1/videos/create' },
-  'Veo 3.1': { id: 'veo3.1', name: 'Veo 3.1', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  'Veo 3.1 Fast': { id: 'veo3.1-fast', name: 'Veo 3.1 Fast', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  'Veo 3.1 Pro': { id: 'veo3.1-pro', name: 'Veo 3.1 Pro', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  'Veo 3.1 4K': { id: 'veo3.1-4k', name: 'Veo 3.1 4K', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  'Veo 3.1 Pro 4K': { id: 'veo3.1-pro-4k', name: 'Veo 3.1 Pro 4K', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  'Veo 3.1 Fast Components': { id: 'veo3.1-fast-components', name: 'Veo 3.1 Fast Components', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  'Veo 3.1 Components': { id: 'veo3.1-components', name: 'Veo 3.1 Components', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
-  '海螺2.0': { id: 'MiniMax-Hailuo-02', name: 'Hailuo 2.0',  type: 'VIDEO_GEN_MINIMAX', category: 'VIDEO', defaultEndpoint: '/v1/video_generation',defaultQueryEndpoint: '/v1/query/video_generation',defaultDownloadEndpoint: '/v1/files/retrieve'},
-  '海螺2.3': { id: 'MiniMax-Hailuo-2.3', name: 'Hailuo 2.3', type: 'VIDEO_GEN_MINIMAX', category: 'VIDEO', defaultEndpoint: '/v1/video_generation',defaultQueryEndpoint: '/v1/query/video_generation',defaultDownloadEndpoint: '/v1/files/retrieve'},
-  
-  // Kling O1
-  'Kling O1 Pro': { id: 'kling-omni-video', name: 'Kling O1 Pro', type: 'KLING_OMNI', category: 'VIDEO', defaultEndpoint: '/kling/v1/videos/omni-video' },
-  
-  '即梦 3.5': { id: 'doubao-seedance-1-5-pro', name: '即梦 3.5', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/videos' },
-  
-  // Kling 2.5
-  'Kling 2.5 Pro': { id: 'kling-v2-5-turbo', name: 'Kling 2.5 Pro', type: 'KLING', category: 'VIDEO', defaultEndpoint: '/kling/v1/videos' },
+  "Sora 2": {
+    id: "sora-2-pro",
+    name: "Sora 2",
+    type: "VIDEO_GEN_CHAT",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/videos/create",
+  },
+  "Veo 3.1": {
+    id: "veo3.1",
+    name: "Veo 3.1",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "Veo 3.1 Fast": {
+    id: "veo3.1-fast",
+    name: "Veo 3.1 Fast",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "Veo 3.1 Pro": {
+    id: "veo3.1-pro",
+    name: "Veo 3.1 Pro",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "Veo 3.1 4K": {
+    id: "veo3.1-4k",
+    name: "Veo 3.1 4K",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "Veo 3.1 Pro 4K": {
+    id: "veo3.1-pro-4k",
+    name: "Veo 3.1 Pro 4K",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "Veo 3.1 Fast Components": {
+    id: "veo3.1-fast-components",
+    name: "Veo 3.1 Fast Components",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "Veo 3.1 Components": {
+    id: "veo3.1-components",
+    name: "Veo 3.1 Components",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
+  "海螺2.0": {
+    id: "MiniMax-Hailuo-02",
+    name: "Hailuo 2.0",
+    type: "VIDEO_GEN_MINIMAX",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video_generation",
+    defaultQueryEndpoint: "/v1/query/video_generation",
+    defaultDownloadEndpoint: "/v1/files/retrieve",
+  },
+  "海螺2.3": {
+    id: "MiniMax-Hailuo-2.3",
+    name: "Hailuo 2.3",
+    type: "VIDEO_GEN_MINIMAX",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video_generation",
+    defaultQueryEndpoint: "/v1/query/video_generation",
+    defaultDownloadEndpoint: "/v1/files/retrieve",
+  },
 
-  // Wan 
-  'Wan2.6': { id: 'wan2.6-i2v', name: 'Qwen Wan 2.6', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/alibailian/api/v1/services/aigc/video-generation/video-synthesis',defaultQueryEndpoint: '/alibailian/api/v1/services/aigc/video-generation/video-synthesis'},
-  'Wan2.5': { id: 'wan2.5-i2v-preview', name: 'Qwen Wan 2.5', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/alibailian/api/v1/services/aigc/video-generation/video-synthesis',defaultQueryEndpoint: '/alibailian/api/v1/services/aigc/video-generation/video-synthesis'},
-  
-  'Grok video 3': { id: 'grok-video-3', name: 'Grok Video', type: 'VIDEO_GEN_STD', category: 'VIDEO', defaultEndpoint: '/v1/video/create', defaultQueryEndpoint: '/v1/video/query' },
+  // Kling O1
+  "Kling O1 Pro": {
+    id: "kling-omni-video",
+    name: "Kling O1 Pro",
+    type: "KLING_OMNI",
+    category: "VIDEO",
+    defaultEndpoint: "/kling/v1/videos/omni-video",
+  },
+
+  "即梦 3.5": {
+    id: "doubao-seedance-1-5-pro",
+    name: "即梦 3.5",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/videos",
+  },
+
+  // Kling 2.5
+  "Kling 2.5 Pro": {
+    id: "kling-v2-5-turbo",
+    name: "Kling 2.5 Pro",
+    type: "KLING",
+    category: "VIDEO",
+    defaultEndpoint: "/kling/v1/videos",
+  },
+
+  // Wan
+  "Wan2.6": {
+    id: "wan2.6-i2v",
+    name: "Qwen Wan 2.6",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint:
+      "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+    defaultQueryEndpoint:
+      "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+  },
+  "Wan2.5": {
+    id: "wan2.5-i2v-preview",
+    name: "Qwen Wan 2.5",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint:
+      "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+    defaultQueryEndpoint:
+      "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+  },
+
+  "Grok video 3": {
+    id: "grok-video-3",
+    name: "Grok Video",
+    type: "VIDEO_GEN_STD",
+    category: "VIDEO",
+    defaultEndpoint: "/v1/video/create",
+    defaultQueryEndpoint: "/v1/video/query",
+  },
 
   // --- Audio Models ---
-  'suno_music': { id: 'suno_music', name: 'Suno Music', type: 'AUDIO_GEN', category: 'AUDIO', defaultEndpoint: '/suno/submit/music' },
-  
-  ...customModels
+  suno_music: {
+    id: "suno_music",
+    name: "Suno Music",
+    type: "AUDIO_GEN",
+    category: "AUDIO",
+    defaultEndpoint: "/suno/submit/music",
+  },
+
+  ...customModels,
 };
 
 // 启动时删除已标记删除的模型
-deletedModels.forEach(key => {
-    delete MODEL_REGISTRY[key];
+deletedModels.forEach((key) => {
+  delete MODEL_REGISTRY[key];
 });
 
 const getStorageKey = (modelName: string) => `API_CONFIG_MODEL_${modelName}`;
 
 // 全局配置 Key（与 SettingsModal 保持一致）
-const GLOBAL_BASE_URL_KEY = 'GLOBAL_BASE_URL';
-const GLOBAL_API_KEY_KEY = 'GLOBAL_API_KEY';
+const GLOBAL_BASE_URL_KEY = "GLOBAL_BASE_URL";
+const GLOBAL_API_KEY_KEY = "GLOBAL_API_KEY";
 
 // 获取全局配置
 const getGlobalConfig = (): { baseUrl: string; key: string } => {
-    if (typeof window === 'undefined') {
-        return { baseUrl: '', key: '' };
-    }
-    return {
-        baseUrl: localStorage.getItem(GLOBAL_BASE_URL_KEY) || '',
-        key: localStorage.getItem(GLOBAL_API_KEY_KEY) || ''
-    };
+  if (typeof window === "undefined") {
+    return { baseUrl: "", key: "" };
+  }
+  return {
+    baseUrl: localStorage.getItem(GLOBAL_BASE_URL_KEY) || "",
+    key: localStorage.getItem(GLOBAL_API_KEY_KEY) || "",
+  };
 };
 
 export const getModelConfig = (modelName: string): ModelConfig => {
-    const def = MODEL_REGISTRY[modelName];
-    const globalConfig = getGlobalConfig();
-    
-    if (!def) {
-        return {
-            baseUrl: globalConfig.baseUrl || EnvConfig.DEFAULT_BASE_URL,
-            key: globalConfig.key, 
-            modelId: '',
-            endpoint: '/v1/chat/completions'
-        };
-    }
+  const def = MODEL_REGISTRY[modelName];
+  const globalConfig = getGlobalConfig();
 
-    if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem(getStorageKey(modelName));
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            
-            // 自动更新过时的 endpoint
-            let endpoint = parsed.endpoint;
-            let queryEndpoint = parsed.queryEndpoint;
-            let downloadEndpoint = parsed.downloadEndpoint;
-            
-            // 如果当前 endpoint 是旧的 chat completions，更新为新的 video create
-            if (endpoint === '/v1/chat/completions' && def.type === 'VIDEO_GEN_STD') {
-                endpoint = def.defaultEndpoint;
-                queryEndpoint = def.defaultQueryEndpoint || '';
-                downloadEndpoint = def.defaultDownloadEndpoint || '';
-                
-                // 保存更新后的配置
-                saveModelConfig(modelName, {
-                    ...parsed,
-                    endpoint,
-                    queryEndpoint,
-                    downloadEndpoint
-                });
-            }
-            
-            return {
-                // 模型特定配置优先，否则使用全局配置
-                baseUrl: parsed.baseUrl || globalConfig.baseUrl || EnvConfig.DEFAULT_BASE_URL,
-                key: parsed.key || globalConfig.key || '', 
-                modelId: parsed.modelId || def.id,
-                endpoint: endpoint || def.defaultEndpoint,
-                queryEndpoint: queryEndpoint || def.defaultQueryEndpoint || '',
-                downloadEndpoint: downloadEndpoint || def.defaultDownloadEndpoint || ''
-            };
-        }
-    }
-
-    // 没有模型特定配置时，使用全局配置
+  if (!def) {
     return {
-        baseUrl: globalConfig.baseUrl || EnvConfig.DEFAULT_BASE_URL,
-        key: globalConfig.key || '', 
-        modelId: def.id,
-        endpoint: def.defaultEndpoint,
-        queryEndpoint: def.defaultQueryEndpoint || '',
-        downloadEndpoint: def.defaultDownloadEndpoint || ''
+      baseUrl: globalConfig.baseUrl || EnvConfig.DEFAULT_BASE_URL,
+      key: globalConfig.key,
+      modelId: "",
+      endpoint: "/v1/chat/completions",
     };
+  }
+
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(getStorageKey(modelName));
+    if (stored) {
+      const parsed = JSON.parse(stored);
+
+      // 自动更新过时的 endpoint
+      let endpoint = parsed.endpoint;
+      let queryEndpoint = parsed.queryEndpoint;
+      let downloadEndpoint = parsed.downloadEndpoint;
+
+      // 如果当前 endpoint 是旧的 chat completions，更新为新的 video create
+      if (endpoint === "/v1/chat/completions" && def.type === "VIDEO_GEN_STD") {
+        endpoint = def.defaultEndpoint;
+        queryEndpoint = def.defaultQueryEndpoint || "";
+        downloadEndpoint = def.defaultDownloadEndpoint || "";
+
+        // 保存更新后的配置
+        saveModelConfig(modelName, {
+          ...parsed,
+          endpoint,
+          queryEndpoint,
+          downloadEndpoint,
+        });
+      }
+
+      return {
+        // 模型特定配置优先，否则使用全局配置
+        baseUrl:
+          parsed.baseUrl || globalConfig.baseUrl || EnvConfig.DEFAULT_BASE_URL,
+        key: parsed.key || globalConfig.key || "",
+        modelId: parsed.modelId || def.id,
+        endpoint: endpoint || def.defaultEndpoint,
+        queryEndpoint: queryEndpoint || def.defaultQueryEndpoint || "",
+        downloadEndpoint: downloadEndpoint || def.defaultDownloadEndpoint || "",
+      };
+    }
+  }
+
+  // 没有模型特定配置时，使用全局配置
+  return {
+    baseUrl: globalConfig.baseUrl || EnvConfig.DEFAULT_BASE_URL,
+    key: globalConfig.key || "",
+    modelId: def.id,
+    endpoint: def.defaultEndpoint,
+    queryEndpoint: def.defaultQueryEndpoint || "",
+    downloadEndpoint: def.defaultDownloadEndpoint || "",
+  };
 };
 
 export const saveModelConfig = (modelName: string, config: ModelConfig) => {
-    localStorage.setItem(getStorageKey(modelName), JSON.stringify(config));
-    if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('modelConfigUpdated', { detail: { modelName } }));
-    }
+  localStorage.setItem(getStorageKey(modelName), JSON.stringify(config));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("modelConfigUpdated", { detail: { modelName } }),
+    );
+  }
 };
 
 export const registerCustomModel = (key: string, def: ModelDef) => {
-    MODEL_REGISTRY[key] = def;
-    const current = loadCustomModels();
-    current[key] = def;
-    localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(current));
-    // 如果之前隐藏过，取消隐藏
-    unhideModel(key);
-    if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('modelRegistryUpdated'));
-    }
+  MODEL_REGISTRY[key] = def;
+  const current = loadCustomModels();
+  current[key] = def;
+  localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(current));
+  // 如果之前隐藏过，取消隐藏
+  unhideModel(key);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("modelRegistryUpdated"));
+  }
 };
 
 // 删除模型（任意模型都可删除）
 export const deleteModel = (key: string): boolean => {
-    if (!MODEL_REGISTRY[key]) return false;
-    
-    // 从 MODEL_REGISTRY 中删除
-    delete MODEL_REGISTRY[key];
-    
-    // 如果是自定义模型，从自定义模型存储中删除
-    const customModels = loadCustomModels();
-    if (customModels[key]) {
-        delete customModels[key];
-        localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(customModels));
-    }
-    
-    // 记录已删除的内置模型
-    const deleted = loadDeletedModels();
-    deleted.add(key);
-    localStorage.setItem(DELETED_MODELS_KEY, JSON.stringify([...deleted]));
-    deletedModels.add(key);
-    
-    // 删除该模型的配置
-    localStorage.removeItem(`API_CONFIG_MODEL_${key}`);
-    
-    if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('modelRegistryUpdated'));
-    }
-    return true;
+  if (!MODEL_REGISTRY[key]) return false;
+
+  // 从 MODEL_REGISTRY 中删除
+  delete MODEL_REGISTRY[key];
+
+  // 如果是自定义模型，从自定义模型存储中删除
+  const customModels = loadCustomModels();
+  if (customModels[key]) {
+    delete customModels[key];
+    localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(customModels));
+  }
+
+  // 记录已删除的内置模型
+  const deleted = loadDeletedModels();
+  deleted.add(key);
+  localStorage.setItem(DELETED_MODELS_KEY, JSON.stringify([...deleted]));
+  deletedModels.add(key);
+
+  // 删除该模型的配置
+  localStorage.removeItem(`API_CONFIG_MODEL_${key}`);
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("modelRegistryUpdated"));
+  }
+  return true;
 };
 
 // 检查是否是自定义模型
 export const isCustomModel = (key: string): boolean => {
-    const customModels = loadCustomModels();
-    return !!customModels[key];
+  const customModels = loadCustomModels();
+  return !!customModels[key];
 };
 
 // 取消隐藏模型（从已删除列表中移除）
 export const unhideModel = (key: string) => {
-    const deleted = loadDeletedModels();
-    if (deleted.has(key)) {
-        deleted.delete(key);
-        localStorage.setItem(DELETED_MODELS_KEY, JSON.stringify([...deleted]));
-        deletedModels.delete(key);
-        // 如果模型不在注册表中，重新添加
-        if (!MODEL_REGISTRY[key]) {
-            // 这里可以添加逻辑来恢复内置模型
-        }
+  const deleted = loadDeletedModels();
+  if (deleted.has(key)) {
+    deleted.delete(key);
+    localStorage.setItem(DELETED_MODELS_KEY, JSON.stringify([...deleted]));
+    deletedModels.delete(key);
+    // 如果模型不在注册表中，重新添加
+    if (!MODEL_REGISTRY[key]) {
+      // 这里可以添加逻辑来恢复内置模型
     }
+  }
 };
 
 // 获取可见的模型列表（用于下拉框）
 export const getVisibleModels = (): string[] => {
-    return Object.keys(MODEL_REGISTRY);
+  return Object.keys(MODEL_REGISTRY);
 };

@@ -1,28 +1,37 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"
+    />
     <title>词元 AI 画布平台</title>
-    <meta name="description" content="taopipi - 免费 AI 画布平台，支持图片生成、视频创作" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>" />
+    <meta
+      name="description"
+      content="taopipi - 免费 AI 画布平台，支持图片生成、视频创作"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       /* CSS 变量用于主题支持 */
       :root {
-        --color-bg: #F5F7FA;
+        --color-bg: #f5f7fa;
         --color-text: #1f2937;
         --color-text-secondary: #6b7280;
         --color-border: #e5e7eb;
         --color-surface: #ffffff;
         --color-scrollbar: #d1d5db;
         --color-scrollbar-hover: #9ca3af;
-        --color-grid: #E4E4E7;
+        --color-grid: #e4e4e7;
       }
-      
+
       .dark {
-        --color-bg: #0B0C0E;
-        --color-text: #E4E4E7;
+        --color-bg: #0b0c0e;
+        --color-text: #e4e4e7;
         --color-text-secondary: #9ca3af;
         --color-border: #27272a;
         --color-surface: #18181b;
@@ -30,87 +39,145 @@
         --color-scrollbar-hover: #52525b;
         --color-grid: #1a1a1f;
       }
-      
-      body { 
-        margin: 0; 
-        padding: 0; 
-        overflow: hidden; 
-        background-color: var(--color-bg, #F5F7FA); 
-        font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: var(--color-bg, #f5f7fa);
+        font-family:
+          "Inter",
+          "SF Pro Display",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
         color: var(--color-text, #1f2937);
         font-size: 16px;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        transition: background-color 0.2s ease, color 0.2s ease;
+        transition:
+          background-color 0.2s ease,
+          color 0.2s ease;
       }
-      
+
       /* 自定义滚动条 - 浅色主题默认 */
-      .node-scroll::-webkit-scrollbar, .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-      .node-scroll::-webkit-scrollbar-track, .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-      .node-scroll::-webkit-scrollbar-thumb, .custom-scrollbar::-webkit-scrollbar-thumb { 
-        background: var(--color-scrollbar, #d1d5db); 
-        border-radius: 6px; 
+      .node-scroll::-webkit-scrollbar,
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
       }
-      .node-scroll::-webkit-scrollbar-thumb:hover, .custom-scrollbar::-webkit-scrollbar-thumb:hover { 
-        background: var(--color-scrollbar-hover, #9ca3af); 
+      .node-scroll::-webkit-scrollbar-track,
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
       }
-      
+      .node-scroll::-webkit-scrollbar-thumb,
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: var(--color-scrollbar, #d1d5db);
+        border-radius: 6px;
+      }
+      .node-scroll::-webkit-scrollbar-thumb:hover,
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: var(--color-scrollbar-hover, #9ca3af);
+      }
+
       /* 画布网格图案 */
       .grid-pattern {
         background-size: 20px 20px;
-        background-image: radial-gradient(var(--grid-color, #E4E4E7) 1px, transparent 1px);
+        background-image: radial-gradient(
+          var(--grid-color, #e4e4e7) 1px,
+          transparent 1px
+        );
       }
-      
+
       /* 隐藏滚动条 */
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
       /* 动画工具类 */
       @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
       }
       .animate-shimmer {
-        background: linear-gradient(90deg, transparent, rgba(0,0,0,0.03), transparent);
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(0, 0, 0, 0.03),
+          transparent
+        );
         background-size: 200% 100%;
         animation: shimmer 2s infinite;
       }
       .dark .animate-shimmer {
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.05),
+          transparent
+        );
         background-size: 200% 100%;
       }
-      
+
       /* 焦点环工具类 */
       .focus-ring {
         outline: none;
       }
       .focus-ring:focus-visible {
-        box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px #3b82f6;
+        box-shadow:
+          0 0 0 2px var(--color-bg),
+          0 0 0 4px #3b82f6;
       }
 
       /* 节点选中发光动画 */
       @keyframes node-selected-glow {
-        0%, 100% {
-          box-shadow: 0 0 0 1px rgba(250,204,21,0.3), 0 0 15px rgba(250,204,21,0.12), 0 0 30px rgba(250,204,21,0.04);
+        0%,
+        100% {
+          box-shadow:
+            0 0 0 1px rgba(250, 204, 21, 0.3),
+            0 0 15px rgba(250, 204, 21, 0.12),
+            0 0 30px rgba(250, 204, 21, 0.04);
         }
         50% {
-          box-shadow: 0 0 0 1px rgba(250,204,21,0.5), 0 0 20px rgba(250,204,21,0.2), 0 0 40px rgba(250,204,21,0.08);
+          box-shadow:
+            0 0 0 1px rgba(250, 204, 21, 0.5),
+            0 0 20px rgba(250, 204, 21, 0.2),
+            0 0 40px rgba(250, 204, 21, 0.08);
         }
       }
       .node-selected-glow {
         animation: node-selected-glow 2s ease-in-out infinite;
       }
-      
+
       /* 交互元素的平滑过渡 */
-      button, a, input, select, textarea {
+      button,
+      a,
+      input,
+      select,
+      textarea {
         transition: all 0.15s ease;
       }
     </style>
-    
+
     <!-- Inter 字体用于更好的排版 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

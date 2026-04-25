@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
-import { NodeData } from '../types';
+import { useState, useCallback, useRef } from "react";
+import { NodeData } from "../types";
 
 export interface GridSplitState {
   rows: number;
@@ -20,14 +20,16 @@ interface UseGridSplitReturn {
 
 export const useGridSplit = (
   data: NodeData,
-  updateData: (id: string, updates: Partial<NodeData>) => void
+  updateData: (id: string, updates: Partial<NodeData>) => void,
 ): UseGridSplitReturn => {
   const gridSplitRef = useRef<GridSplitState | null>(null);
 
   const isGridSplitting = !!data.gridSplit;
-  
+
   // 归一化 selectedCells：确保始终为 string[]
-  const normalizeSelectedCells = (cells: string[] | Set<string> | undefined): string[] => {
+  const normalizeSelectedCells = (
+    cells: string[] | Set<string> | undefined,
+  ): string[] => {
     if (!cells) return [];
     if (Array.isArray(cells)) return cells;
     if (cells instanceof Set) return Array.from(cells);
@@ -38,51 +40,64 @@ export const useGridSplit = (
     ? {
         rows: data.gridSplit.rows,
         cols: data.gridSplit.cols,
-        selectedCells: normalizeSelectedCells(data.gridSplit.selectedCells as string[] | undefined),
+        selectedCells: normalizeSelectedCells(
+          data.gridSplit.selectedCells as string[] | undefined,
+        ),
       }
     : null;
 
-  const enterGridSplit = useCallback((rows: number, cols: number) => {
-    const allCells: string[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        allCells.push(`${r}-${c}`);
+  const enterGridSplit = useCallback(
+    (rows: number, cols: number) => {
+      const allCells: string[] = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          allCells.push(`${r}-${c}`);
+        }
       }
-    }
-    gridSplitRef.current = { rows, cols, selectedCells: allCells };
-    updateData(data.id, {
-      gridSplit: { rows, cols, selectedCells: allCells },
-    });
-  }, [data.id, updateData]);
+      gridSplitRef.current = { rows, cols, selectedCells: allCells };
+      updateData(data.id, {
+        gridSplit: { rows, cols, selectedCells: allCells },
+      });
+    },
+    [data.id, updateData],
+  );
 
   const exitGridSplit = useCallback(() => {
     gridSplitRef.current = null;
     updateData(data.id, { gridSplit: undefined });
   }, [data.id, updateData]);
 
-  const setGridSize = useCallback((rows: number, cols: number) => {
-    const allCells: string[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        allCells.push(`${r}-${c}`);
+  const setGridSize = useCallback(
+    (rows: number, cols: number) => {
+      const allCells: string[] = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          allCells.push(`${r}-${c}`);
+        }
       }
-    }
-    gridSplitRef.current = { rows, cols, selectedCells: allCells };
-    updateData(data.id, {
-      gridSplit: { rows, cols, selectedCells: allCells },
-    });
-  }, [data.id, updateData]);
+      gridSplitRef.current = { rows, cols, selectedCells: allCells };
+      updateData(data.id, {
+        gridSplit: { rows, cols, selectedCells: allCells },
+      });
+    },
+    [data.id, updateData],
+  );
 
-  const toggleCell = useCallback((cellId: string) => {
-    if (!data.gridSplit) return;
-    const current = normalizeSelectedCells(data.gridSplit.selectedCells as string[] | undefined);
-    const newSelected = current.includes(cellId)
-      ? current.filter(id => id !== cellId)
-      : [...current, cellId];
-    updateData(data.id, {
-      gridSplit: { ...data.gridSplit, selectedCells: newSelected },
-    });
-  }, [data.id, data.gridSplit, updateData]);
+  const toggleCell = useCallback(
+    (cellId: string) => {
+      if (!data.gridSplit) return;
+      const current = normalizeSelectedCells(
+        data.gridSplit.selectedCells as string[] | undefined,
+      );
+      const newSelected = current.includes(cellId)
+        ? current.filter((id) => id !== cellId)
+        : [...current, cellId];
+      updateData(data.id, {
+        gridSplit: { ...data.gridSplit, selectedCells: newSelected },
+      });
+    },
+    [data.id, data.gridSplit, updateData],
+  );
 
   const selectAllCells = useCallback(() => {
     if (!data.gridSplit) return;

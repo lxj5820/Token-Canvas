@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { NodeData, AnnotationItem } from '../types';
-import { bakeAnnotationsToImage } from '../services/bakeAnnotations';
+import { useState, useEffect, useCallback } from "react";
+import { NodeData, AnnotationItem } from "../types";
+import { bakeAnnotationsToImage } from "../services/bakeAnnotations";
 
 /**
  * 标注功能可复用 Hook
@@ -19,62 +19,104 @@ export const useAnnotation = (
   }, [data.isAnnotating]);
 
   // 获取当前图片源（优先用原始 imageSrc，因为标注是画在原图上的）
-  const imageSrc = data.imageSrc || data.videoSrc || '';
+  const imageSrc = data.imageSrc || data.videoSrc || "";
 
   // 标注模式切换
   const toggleAnnotate = useCallback(() => {
-    setIsAnnotating(prev => {
+    setIsAnnotating((prev) => {
       if (prev) {
         // 退出标注模式时，烘焙标注到图片
         const currentAnnotations = data.annotations || [];
         if (currentAnnotations.length > 0 && imageSrc) {
-          bakeAnnotationsToImage(imageSrc, currentAnnotations, data.width, data.height)
-            .then(bakedSrc => {
-              updateData(data.id, { isAnnotating: false, annotatedImageSrc: bakedSrc });
+          bakeAnnotationsToImage(
+            imageSrc,
+            currentAnnotations,
+            data.width,
+            data.height,
+          )
+            .then((bakedSrc) => {
+              updateData(data.id, {
+                isAnnotating: false,
+                annotatedImageSrc: bakedSrc,
+              });
             })
             .catch((err) => {
-              console.warn('[Annotation] 烘焙失败，保留标注数据但跳过烘焙:', err);
+              console.warn(
+                "[Annotation] 烘焙失败，保留标注数据但跳过烘焙:",
+                err,
+              );
               // 降级：不烘焙但仍退出标注模式，标注数据保留以便下次重试
               updateData(data.id, { isAnnotating: false });
             });
         } else {
-          updateData(data.id, { isAnnotating: false, annotatedImageSrc: undefined });
+          updateData(data.id, {
+            isAnnotating: false,
+            annotatedImageSrc: undefined,
+          });
         }
       } else {
         updateData(data.id, { isAnnotating: true });
       }
       return !prev;
     });
-  }, [data.id, data.annotations, imageSrc, data.width, data.height, updateData]);
+  }, [
+    data.id,
+    data.annotations,
+    imageSrc,
+    data.width,
+    data.height,
+    updateData,
+  ]);
 
   // 标注数据变更
-  const handleAnnotationsChange = useCallback((annotations: AnnotationItem[]) => {
-    const updates: Partial<NodeData> = { annotations };
-    if (annotations.length === 0) {
-      updates.annotatedImageSrc = undefined;
-    }
-    updateData(data.id, updates);
-  }, [data.id, updateData]);
+  const handleAnnotationsChange = useCallback(
+    (annotations: AnnotationItem[]) => {
+      const updates: Partial<NodeData> = { annotations };
+      if (annotations.length === 0) {
+        updates.annotatedImageSrc = undefined;
+      }
+      updateData(data.id, updates);
+    },
+    [data.id, updateData],
+  );
 
   // 关闭标注
   const handleCloseAnnotation = useCallback(() => {
     const currentAnnotations = data.annotations || [];
     if (currentAnnotations.length > 0 && imageSrc) {
-      bakeAnnotationsToImage(imageSrc, currentAnnotations, data.width, data.height)
-        .then(bakedSrc => {
+      bakeAnnotationsToImage(
+        imageSrc,
+        currentAnnotations,
+        data.width,
+        data.height,
+      )
+        .then((bakedSrc) => {
           setIsAnnotating(false);
-          updateData(data.id, { isAnnotating: false, annotatedImageSrc: bakedSrc });
+          updateData(data.id, {
+            isAnnotating: false,
+            annotatedImageSrc: bakedSrc,
+          });
         })
         .catch((err) => {
-          console.warn('[Annotation] 烘焙失败，保留标注数据但跳过烘焙:', err);
+          console.warn("[Annotation] 烘焙失败，保留标注数据但跳过烘焙:", err);
           setIsAnnotating(false);
           updateData(data.id, { isAnnotating: false });
         });
     } else {
       setIsAnnotating(false);
-      updateData(data.id, { isAnnotating: false, annotatedImageSrc: undefined });
+      updateData(data.id, {
+        isAnnotating: false,
+        annotatedImageSrc: undefined,
+      });
     }
-  }, [data.id, data.annotations, imageSrc, data.width, data.height, updateData]);
+  }, [
+    data.id,
+    data.annotations,
+    imageSrc,
+    data.width,
+    data.height,
+    updateData,
+  ]);
 
   return {
     isAnnotating,
