@@ -1959,8 +1959,8 @@ const CanvasWithSidebar: React.FC = () => {
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Icons.Download size={15} />
-                <span>下载</span>
+                <Icons.Folder size={15} />
+                <span>项目</span>
               </button>
               <div
                 className={`w-px h-5 ${isDark ? "bg-zinc-700" : "bg-gray-200"}`}
