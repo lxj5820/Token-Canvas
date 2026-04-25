@@ -26,8 +26,8 @@ function historyReducer(
     case "PUSH": {
       const newEntries = state.entries.slice(0, state.index + 1);
       newEntries.push({
-        nodes: JSON.parse(JSON.stringify(action.nodes)),
-        connections: JSON.parse(JSON.stringify(action.connections)),
+        nodes: structuredClone(action.nodes),
+        connections: structuredClone(action.connections),
       });
       if (newEntries.length > MAX_HISTORY) {
         newEntries.shift();

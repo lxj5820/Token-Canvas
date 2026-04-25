@@ -78,6 +78,7 @@ export interface LightingGenerateParams {
   mainLight: LightSourceParams;
   fillLight: LightSourceParams;
   includePrompt: boolean;
+  prompt?: string;
   count: number;
 }
 
@@ -462,11 +463,16 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
   });
   const [activeTab, setActiveTab] = useState<"main" | "fill">("main");
   const [includePrompt, setIncludePrompt] = useState(false);
+  const [promptInput, setPromptInput] = useState(prompt || "");
   const [count, setCount] = useState(1);
   const [countDropdownOpen, setCountDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"perspective" | "front">(
     "perspective",
   );
+
+  useEffect(() => {
+    setPromptInput(prompt || "");
+  }, [prompt]);
 
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
@@ -600,8 +606,8 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
   // ===== 生成 =====
 
   const handleGenerateClick = useCallback(() => {
-    onGenerate({ mainLight, fillLight, includePrompt, count });
-  }, [mainLight, fillLight, includePrompt, count, onGenerate]);
+    onGenerate({ mainLight, fillLight, includePrompt, prompt: promptInput, count });
+  }, [mainLight, fillLight, includePrompt, promptInput, count, onGenerate]);
 
   // ===== 滑块渐变 =====
 
@@ -1190,22 +1196,15 @@ export const LightingEditor: React.FC<LightingEditorProps> = ({
           </button>
         </div>
 
-        {/* 灯光描述预览 */}
-        <div
-          className={`px-3 py-2 rounded-lg text-[11px] border ${
-            isDark
-              ? "bg-yellow-500/8 border-yellow-500/15 text-yellow-400"
-              : "bg-yellow-50 border-yellow-200 text-yellow-600"
-          }`}
-        >
-          主光：{mainLight.azimuth}°{getElevationLabel(mainLight.elevation)}
-          ，强度{mainLight.intensity}%，{mainLight.color}色光
-          {fillLight.enabled &&
-            ` | 辅光：${fillLight.azimuth}°${getElevationLabel(fillLight.elevation)}，强度${fillLight.intensity}%，${fillLight.color}光`}
-          {includePrompt && prompt
-            ? `。原始描述：${prompt.slice(0, 40)}${prompt.length > 40 ? "..." : ""}`
-            : ""}
-        </div>
+        {/* 原始描述输入框 - 提示词开关开启时显示 */}
+        {includePrompt && (
+          <textarea
+            className="w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500/20 min-h-[72px] no-scrollbar transition-all bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-yellow-500 text-white placeholder-zinc-500"
+            placeholder="输入原始描述提示词..."
+            value={promptInput}
+            onChange={(e) => setPromptInput(e.target.value)}
+          />
+        )}
       </div>
 
       {/* ===== Footer ===== */}

@@ -122,7 +122,7 @@ export const LocalCustomDropdown = ({
   };
 
   const handleMouseLeave = () => {
-    hoverTimeout.current = setTimeout(() => setHoveredGroup(null), 200);
+    hoverTimeout.current = setTimeout(() => setHoveredGroup(null), 300);
   };
 
   const handleMouseEnterFlyout = () => {
@@ -147,11 +147,9 @@ export const LocalCustomDropdown = ({
     : "bg-white border-gray-200 shadow-xl";
 
   const activeGroupItems = hoveredGroup
-    ? (options.find((o: string) =>
+    ? (options.find((o) =>
         typeof o === "object" && (o as any).label === hoveredGroup
-          ? (o as any).items || []
-          : [],
-      ) as string[])
+      ) as any)?.items || []
     : [];
 
   return (
@@ -242,7 +240,7 @@ export const LocalCustomDropdown = ({
                   onMouseEnter={(e) =>
                     isGroup
                       ? handleMouseEnterGroup(label, e)
-                      : setHoveredGroup(null)
+                      : null
                   }
                   onMouseLeave={handleMouseLeave}
                   onClick={(e) => {
@@ -274,7 +272,7 @@ export const LocalCustomDropdown = ({
           {/* 弹出菜单 */}
           {hoveredGroup && activeGroupItems.length > 0 && (
             <div
-              className={`absolute left-full ml-2 w-[150px] ${flyoutBg} border rounded-xl shadow-2xl py-1.5 z-[110] animate-in fade-in slide-in-from-left-2 duration-150 before:absolute before:-left-4 before:top-0 before:h-full before:w-4 before:bg-transparent`}
+              className={`absolute left-full ml-2 w-[150px] ${flyoutBg} border rounded-xl shadow-2xl py-1.5 z-[110] animate-in fade-in slide-in-from-left-2 duration-150 before:absolute before:-left-5 before:top-0 before:h-full before:w-5 before:bg-transparent`}
               style={{ top: flyoutTop }}
               onMouseEnter={handleMouseEnterFlyout}
               onMouseLeave={handleMouseLeave}

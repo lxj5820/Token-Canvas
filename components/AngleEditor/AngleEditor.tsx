@@ -57,6 +57,7 @@ export interface AngleGenerateParams {
   verticalAngle: number;
   zoom: number;
   includePrompt: boolean;
+  prompt?: string;
   count: number;
 }
 
@@ -84,9 +85,14 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
   const [vAngle, setVAngle] = useState(30);
   const [zoom, setZoom] = useState(0);
   const [includePrompt, setIncludePrompt] = useState(false);
+  const [promptInput, setPromptInput] = useState(prompt || "");
   const [count, setCount] = useState(1);
   const [activePreset, setActivePreset] = useState("全景俯拍");
   const [countDropdownOpen, setCountDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    setPromptInput(prompt || "");
+  }, [prompt]);
 
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
@@ -225,9 +231,10 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
       verticalAngle: vAngle,
       zoom,
       includePrompt,
+      prompt: promptInput,
       count,
     });
-  }, [hAngle, vAngle, zoom, includePrompt, count, onGenerate]);
+  }, [hAngle, vAngle, zoom, includePrompt, promptInput, count, onGenerate]);
 
   // ===== 滑块渐变计算 =====
 
@@ -516,7 +523,7 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
                 className="absolute flex items-center justify-center"
                 style={{
                   left: -16,
-                  top: -14,
+                  top: -13,
                   width: 32,
                   height: 26,
                   borderRadius: 6,
@@ -570,13 +577,13 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
               <div
                 className="absolute"
                 style={{
-                  left: -1,
-                  top: 14,
+                  left: 0,
+                  top: 0,
                   width: 2,
                   background: "rgba(234,179,8,0.4)",
                   transform: "translateZ(-4px) rotateX(-90deg)",
                   transformOrigin: "top center",
-                  height: cameraDistance - 14,
+                  height: cameraDistance,
                 }}
               />
             </div>
@@ -743,20 +750,15 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
           </button>
         </div>
 
-        {/* 角度描述预览 */}
-        <div
-          className={`px-3 py-2 rounded-lg text-[11px] border ${
-            isDark
-              ? "bg-yellow-500/8 border-yellow-500/15 text-yellow-400"
-              : "bg-yellow-50 border-yellow-200 text-yellow-600"
-          }`}
-        >
-          从{H_LABELS[hAngle] || `${hAngle}°`}
-          {getVLabel(vAngle)}的角度重新创作，{ZOOM_LABELS[zoom] || "全景"}视角
-          {includePrompt && prompt
-            ? `。原始描述：${prompt.slice(0, 50)}${prompt.length > 50 ? "..." : ""}`
-            : ""}
-        </div>
+        {/* 原始描述输入框 - 提示词开关开启时显示 */}
+        {includePrompt && (
+          <textarea
+            className="w-full border rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500/20 min-h-[72px] no-scrollbar transition-all bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 focus:border-yellow-500 text-white placeholder-zinc-500"
+            placeholder="输入原始描述提示词..."
+            value={promptInput}
+            onChange={(e) => setPromptInput(e.target.value)}
+          />
+        )}
       </div>
 
       {/* ===== Footer ===== */}

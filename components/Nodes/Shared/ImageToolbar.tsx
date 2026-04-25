@@ -61,7 +61,7 @@ export const ImageNodeToolbar: React.FC<ImageNodeToolbarProps> = ({
 
   return (
     <div
-      className={`bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50 box-border flex w-fit items-center justify-center gap-1.5 rounded-xl p-1.5 border shadow-md`}
+      className={`${isDark ? 'bg-[#1a1a1a]/95 border-zinc-700/50' : 'bg-white/95 border-gray-200'} backdrop-blur-xl box-border flex w-fit items-center justify-center gap-1.5 rounded-xl p-1.5 border shadow-md`}
     >
       {/* 多角度 */}
       <button

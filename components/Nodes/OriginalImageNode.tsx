@@ -79,6 +79,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
     handleAnnotationUndo,
     handleAnnotationRedo,
     handleAnnotationClear,
+    undoneAnnotations,
   } = useAnnotationWithUndo({ data, handleAnnotationsChange });
 
   const {

@@ -64,5 +64,6 @@ export const useAnnotationWithUndo = ({
     handleAnnotationUndo,
     handleAnnotationRedo,
     handleAnnotationClear,
+    undoneAnnotations,
   };
 };

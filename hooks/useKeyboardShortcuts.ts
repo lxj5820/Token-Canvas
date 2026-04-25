@@ -127,8 +127,12 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
     spacePressedRef,
   } = options;
 
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const opts = optionsRef.current;
       const target = e.target as HTMLElement;
       const isInput =
         target.tagName === "INPUT" ||
@@ -136,81 +140,81 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
         target.isContentEditable ||
         target.getAttribute("role") === "textbox";
       if (!isInput) {
-        if (e.key === "v" || e.key === "V") handleSelectMode();
-        if (e.key === "h" || e.key === "H") handlePanMode();
-        if (e.key === "[") handleZoomIn();
-        if (e.key === "]") handleZoomOut();
-        if (e.key === "0") handleZoomReset();
+        if (e.key === "v" || e.key === "V") opts.handleSelectMode();
+        if (e.key === "h" || e.key === "H") opts.handlePanMode();
+        if (e.key === "[") opts.handleZoomIn();
+        if (e.key === "]") opts.handleZoomOut();
+        if (e.key === "0") opts.handleZoomReset();
         if (e.key === "Delete" || e.key === "Backspace") {
-          if (selectedNodeIds.size > 0) deleteSelectedNodes();
-          if (selectedConnectionId) deleteSelectedConnection();
+          if (opts.selectedNodeIds.size > 0) opts.deleteSelectedNodes();
+          if (opts.selectedConnectionId) opts.deleteSelectedConnection();
         }
         if ((e.ctrlKey || e.metaKey) && e.key === "c") {
           e.preventDefault();
-          performCopy();
+          opts.performCopy();
         }
         if ((e.ctrlKey || e.metaKey) && e.key === "z") {
           e.preventDefault();
-          handleUndo();
+          opts.handleUndo();
         }
         if ((e.ctrlKey || e.metaKey) && e.key === "y") {
           e.preventDefault();
-          handleRedo();
+          opts.handleRedo();
         }
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
           if (e.key === "ArrowUp") {
             e.preventDefault();
-            handleAlign("UP");
+            opts.handleAlign("UP");
           }
           if (e.key === "ArrowDown") {
             e.preventDefault();
-            handleAlign("DOWN");
+            opts.handleAlign("DOWN");
           }
           if (e.key === "ArrowLeft") {
             e.preventDefault();
-            handleAlign("LEFT");
+            opts.handleAlign("LEFT");
           }
           if (e.key === "ArrowRight") {
             e.preventDefault();
-            handleAlign("RIGHT");
+            opts.handleAlign("RIGHT");
           }
         }
         if (!(e.ctrlKey || e.metaKey)) {
           if (e.key === "ArrowUp") {
             e.preventDefault();
-            if (selectedNodeIds.size >= 2) handleAlign("UP");
+            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("UP");
           }
           if (e.key === "ArrowDown") {
             e.preventDefault();
-            if (selectedNodeIds.size >= 2) handleAlign("DOWN");
+            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("DOWN");
           }
           if (e.key === "ArrowLeft") {
             e.preventDefault();
-            if (selectedNodeIds.size >= 2) handleAlign("LEFT");
+            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("LEFT");
           }
           if (e.key === "ArrowRight") {
             e.preventDefault();
-            if (selectedNodeIds.size >= 2) handleAlign("RIGHT");
+            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("RIGHT");
           }
         }
       }
 
       if (e.key === "Escape") {
-        if (previewMedia) setPreviewMedia(null);
-        if (contextMenu) setContextMenu(null);
-        if (quickAddMenu) setQuickAddMenu(null);
-        if (showNewWorkflowDialog) setShowNewWorkflowDialog(false);
-        if (isSettingsOpen) setIsSettingsOpen(false);
-        if (isStorageOpen) setIsStorageOpen(false);
-        if (isExportImportOpen) setIsExportImportOpen(false);
-        if (showCommunityPanel && setShowCommunityPanel)
-          setShowCommunityPanel(false);
+        if (opts.previewMedia) opts.setPreviewMedia(null);
+        if (opts.contextMenu) opts.setContextMenu(null);
+        if (opts.quickAddMenu) opts.setQuickAddMenu(null);
+        if (opts.showNewWorkflowDialog) opts.setShowNewWorkflowDialog(false);
+        if (opts.isSettingsOpen) opts.setIsSettingsOpen(false);
+        if (opts.isStorageOpen) opts.setIsStorageOpen(false);
+        if (opts.isExportImportOpen) opts.setIsExportImportOpen(false);
+        if (opts.showCommunityPanel && opts.setShowCommunityPanel)
+          opts.setShowCommunityPanel(false);
       }
-      if (e.code === "Space" && spacePressedRef) spacePressedRef.current = true;
+      if (e.code === "Space" && opts.spacePressedRef) opts.spacePressedRef.current = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space" && spacePressedRef)
-        spacePressedRef.current = false;
+      if (e.code === "Space" && optionsRef.current.spacePressedRef)
+        optionsRef.current.spacePressedRef.current = false;
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -219,19 +223,7 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [
-    selectedNodeIds,
-    selectedConnectionId,
-    previewMedia,
-    contextMenu,
-    quickAddMenu,
-    showNewWorkflowDialog,
-    isSettingsOpen,
-    isStorageOpen,
-    isExportImportOpen,
-    showCommunityPanel,
-    handleAlign,
-  ]);
+  }, []);
 };
 
 export const deleteSelectedNodesHelper = (

@@ -91,7 +91,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
 
   return (
     <div
-      className={`bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50 flex w-fit items-center gap-1.5 rounded-xl p-1.5 shadow-md border`}
+      className={`${isDark ? 'bg-[#1a1a1a]/95 border-zinc-700/50' : 'bg-white/95 border-gray-200'} backdrop-blur-xl flex w-fit items-center gap-1.5 rounded-xl p-1.5 shadow-md border`}
     >
       {/* 工具按钮组 */}
       {toolConfig.map((tool) => (
@@ -127,7 +127,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
 
         {/* 颜色弹出面板 - 向上弹出 */}
         {colorPickerOpen && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#1a1a1a]/95 backdrop-blur-xl border-zinc-700/50 border rounded-xl p-2.5 shadow-xl z-50">
+          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 ${isDark ? 'bg-[#1a1a1a]/95 border-zinc-700/50' : 'bg-white/95 border-gray-200'} backdrop-blur-xl border rounded-xl p-2.5 shadow-xl z-50`}>
             <div className="flex flex-wrap gap-2 max-w-[120px]">
               {COLORS.map((color) => (
                 <button
@@ -170,7 +170,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
           style={{ width: SLIDER_WIDTH }}
         >
           {/* 背景轨道 */}
-          <div className="pointer-events-none absolute inset-x-0 h-1 rounded-full bg-neutral-600" />
+          <div className={`pointer-events-none absolute inset-x-0 h-1 rounded-full ${isDark ? 'bg-neutral-600' : 'bg-gray-300'}`} />
           {/* 填充轨道 */}
           <div
             className="pointer-events-none absolute left-0 h-1 rounded-full bg-yellow-500/70"
@@ -202,8 +202,12 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       <button
         className={`inline-flex select-none items-center justify-center rounded-lg transition-colors h-7 w-7 min-w-7 p-1.5 ${
           canUndo
-            ? "text-zinc-300 hover:text-white hover:bg-zinc-700/50 active:bg-zinc-600/50 cursor-pointer"
-            : "text-zinc-300 opacity-50 cursor-not-allowed"
+            ? isDark
+              ? "text-zinc-300 hover:text-white hover:bg-zinc-700/50 active:bg-zinc-600/50 cursor-pointer"
+              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 cursor-pointer"
+            : isDark
+              ? "text-zinc-300 opacity-50 cursor-not-allowed"
+              : "text-gray-700 opacity-50 cursor-not-allowed"
         }`}
         title="撤销"
         onClick={onUndo}
@@ -216,8 +220,12 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       <button
         className={`inline-flex select-none items-center justify-center rounded-lg transition-colors h-7 w-7 min-w-7 p-1.5 ${
           canRedo
-            ? "text-zinc-300 hover:text-white hover:bg-zinc-700/50 active:bg-zinc-600/50 cursor-pointer"
-            : "text-zinc-300 opacity-50 cursor-not-allowed"
+            ? isDark
+              ? "text-zinc-300 hover:text-white hover:bg-zinc-700/50 active:bg-zinc-600/50 cursor-pointer"
+              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 cursor-pointer"
+            : isDark
+              ? "text-zinc-300 opacity-50 cursor-not-allowed"
+              : "text-gray-700 opacity-50 cursor-not-allowed"
         }`}
         title="重做"
         onClick={onRedo}
@@ -230,8 +238,12 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       <button
         className={`inline-flex select-none items-center justify-center rounded-lg transition-colors h-7 w-7 min-w-7 p-1.5 ${
           canUndo
-            ? "text-zinc-300 hover:text-red-400 hover:bg-zinc-700/50 active:bg-zinc-600/50 cursor-pointer"
-            : "text-zinc-300 opacity-50 cursor-not-allowed"
+            ? isDark
+              ? "text-zinc-300 hover:text-red-400 hover:bg-zinc-700/50 active:bg-zinc-600/50 cursor-pointer"
+              : "text-gray-700 hover:text-red-600 hover:bg-gray-100 active:bg-gray-200 cursor-pointer"
+            : isDark
+              ? "text-zinc-300 opacity-50 cursor-not-allowed"
+              : "text-gray-700 opacity-50 cursor-not-allowed"
         }`}
         title="清空"
         onClick={onClear}
@@ -243,7 +255,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
       {/* 保存按钮 */}
       <button
         type="button"
-        className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-lg px-3 leading-none bg-white text-neutral-950 hover:bg-neutral-200 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+        className={`inline-flex h-7 items-center justify-center whitespace-nowrap rounded-lg px-3 leading-none text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer ${isDark ? 'bg-white text-neutral-950 hover:bg-neutral-200' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
         onClick={onClose}
       >
         保存
