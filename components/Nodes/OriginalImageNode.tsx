@@ -16,6 +16,7 @@ import { useAnnotation } from "../../hooks/useAnnotation";
 import { useAnnotationWithUndo } from "../../hooks/useAnnotationWithUndo";
 import { useGridSplit } from "../../hooks/useGridSplit";
 import { useGridSplitActions } from "../../hooks/useGridSplitActions";
+import { getVisibleModels, MODEL_REGISTRY } from "../../services/mode/config";
 
 // 原始图片节点属性
 interface OriginalImageNodeProps {
@@ -59,6 +60,24 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
     : isDark
       ? "border-zinc-800"
       : "border-gray-200";
+
+  const [imageModels, setImageModels] = useState<string[]>([]);
+
+  const updateModels = useCallback(() => {
+    const visibleModels = getVisibleModels();
+    const models = visibleModels.filter(
+      (k) => MODEL_REGISTRY[k]?.category === "IMAGE",
+    );
+    setImageModels(models);
+  }, []);
+
+  useEffect(() => {
+    updateModels();
+    window.addEventListener("modelRegistryUpdated", updateModels);
+    return () => {
+      window.removeEventListener("modelRegistryUpdated", updateModels);
+    };
+  }, [updateModels]);
 
   // 标注功能
   const {
@@ -323,6 +342,10 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
             isDark={isDark}
             prompt={data.prompt}
             isLoading={data.isLoading}
+            model={data.model || "Banana 2"}
+            aspectRatio={data.aspectRatio || "1:1"}
+            resolution={data.resolution || "1k"}
+            imageModels={imageModels}
           />
         </div>
       )}
@@ -341,6 +364,10 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
             isDark={isDark}
             prompt={data.prompt}
             isLoading={data.isLoading}
+            model={data.model || "Banana 2"}
+            aspectRatio={data.aspectRatio || "1:1"}
+            resolution={data.resolution || "1k"}
+            imageModels={imageModels}
           />
         </div>
       )}

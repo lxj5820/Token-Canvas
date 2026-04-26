@@ -28,6 +28,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // 全局配置
   const [globalBaseUrl, setGlobalBaseUrl] = useState("https://newapi.asia");
   const [globalApiKey, setGlobalApiKey] = useState("");
+  const [showGlobalApiKey, setShowGlobalApiKey] = useState(false);
 
   // 模型配置
   const [configs, setConfigs] = useState<Record<string, ModelConfig>>({});
@@ -50,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newModelType, setNewModelType] = useState<"IMAGE" | "VIDEO" | "AUDIO">(
     "IMAGE",
   );
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
   const configInputRef = useRef<HTMLInputElement>(null);
 
@@ -453,14 +455,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div className="relative">
                   <input
-                    type={
-                      globalApiKey
-                        ? globalApiKey ===
-                          localStorage.getItem(GLOBAL_API_KEY_KEY + "_visible")
-                          ? "text"
-                          : "password"
-                        : "password"
-                    }
+                    type={showGlobalApiKey ? "text" : "password"}
                     value={globalApiKey}
                     onChange={(e) => setGlobalApiKey(e.target.value)}
                     onBlur={saveGlobalConfig}
@@ -469,28 +464,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      const currentVisible = localStorage.getItem(
-                        GLOBAL_API_KEY_KEY + "_visible",
-                      );
-                      if (currentVisible === globalApiKey) {
-                        localStorage.removeItem(
-                          GLOBAL_API_KEY_KEY + "_visible",
-                        );
-                      } else {
-                        localStorage.setItem(
-                          GLOBAL_API_KEY_KEY + "_visible",
-                          globalApiKey,
-                        );
-                      }
-                      setGlobalApiKey(globalApiKey + " ");
-                      setTimeout(() => setGlobalApiKey(globalApiKey), 0);
-                    }}
+                    onClick={() => setShowGlobalApiKey(!showGlobalApiKey)}
                     className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`}
                     title="显示/隐藏 API Key"
                   >
-                    {localStorage.getItem(GLOBAL_API_KEY_KEY + "_visible") ===
-                    globalApiKey ? (
+                    {showGlobalApiKey ? (
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
@@ -701,12 +679,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </label>
                           <div className="flex-1 relative">
                             <input
-                              type={
-                                config.key ===
-                                localStorage.getItem("model_key_visible_" + key)
-                                  ? "text"
-                                  : "password"
-                              }
+                              type={visibleKeys.has(key) ? "text" : "password"}
                               value={config.key || ""}
                               onChange={(e) =>
                                 updateConfig(key, "key", e.target.value)
@@ -718,35 +691,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             />
                             <button
                               type="button"
-                              onClick={() => {
-                                const visibleKey = "model_key_visible_" + key;
-                                const currentVisible =
-                                  localStorage.getItem(visibleKey);
-                                if (currentVisible === config.key) {
-                                  localStorage.removeItem(visibleKey);
-                                } else {
-                                  localStorage.setItem(
-                                    visibleKey,
-                                    config.key || "",
-                                  );
-                                }
-                                updateConfig(
-                                  key,
-                                  "key",
-                                  (config.key || "") + " ",
-                                );
-                                setTimeout(
-                                  () =>
-                                    updateConfig(key, "key", config.key || ""),
-                                  0,
-                                );
-                              }}
+                              onClick={() =>
+                                setVisibleKeys((prev) => {
+                                  const newSet = new Set(prev);
+                                  if (newSet.has(key)) newSet.delete(key);
+                                  else newSet.add(key);
+                                  return newSet;
+                                })
+                              }
                               className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`}
                               title="显示/隐藏 API Key"
                             >
-                              {localStorage.getItem(
-                                "model_key_visible_" + key,
-                              ) === config.key ? (
+                              {visibleKeys.has(key) ? (
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
                                   width="14"

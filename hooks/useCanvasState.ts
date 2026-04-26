@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   NodeData,
   Connection,
@@ -8,6 +8,11 @@ import {
 } from "../types";
 
 const EMPTY_ARRAY: string[] = [];
+
+const STORAGE_KEYS = {
+  THEME: "token-canvas-theme",
+  CANVAS_BG: "token-canvas-canvas-bg",
+};
 
 export interface UseCanvasStateReturn {
   nodes: NodeData[];
@@ -25,8 +30,9 @@ export interface UseCanvasStateReturn {
   currentMode: "select" | "pan";
   setCurrentMode: React.Dispatch<React.SetStateAction<"select" | "pan">>;
   canvasBg: string;
-  setCanvasBg: React.Dispatch<React.SetStateAction<string>>;
+  setCanvasBg: (bg: string) => void;
   isDark: boolean;
+  setIsDark: React.Dispatch<React.SetStateAction<boolean>>;
   projectName: string;
   setProjectName: React.Dispatch<React.SetStateAction<string>>;
   selectionBox: { x: number; y: number; w: number; h: number } | null;
@@ -56,7 +62,51 @@ export const useCanvasState = (): UseCanvasStateReturn => {
     null,
   );
   const [currentMode, setCurrentMode] = useState<"select" | "pan">("select");
-  const [canvasBg, setCanvasBg] = useState("#0B0C0E");
+
+  const [canvasBg, setCanvasBg] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(STORAGE_KEYS.CANVAS_BG);
+      if (saved) return saved;
+    }
+    return "#0B0C0E";
+  });
+
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+      if (saved !== null) return saved === "true";
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEYS.THEME, isDark.toString());
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEYS.CANVAS_BG, canvasBg);
+    }
+  }, [canvasBg]);
+
+  const isValidHexColor = (color: string): boolean => {
+    if (!color.startsWith("#") || color.length !== 7) return false;
+    const hexPart = color.slice(1);
+    return /^[0-9A-Fa-f]{6}$/.test(hexPart);
+  };
+
+  const handleSetCanvasBg = useCallback((bg: string) => {
+    if (!isValidHexColor(bg)) return;
+    setCanvasBg(bg);
+    const r = parseInt(bg.slice(1, 3), 16);
+    const g = parseInt(bg.slice(3, 5), 16);
+    const b = parseInt(bg.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    setIsDark(luminance < 0.5);
+  }, []);
+
   const [projectName, setProjectName] = useState("未命名项目");
   const [selectionBox, setSelectionBox] = useState<{
     x: number;
@@ -68,23 +118,38 @@ export const useCanvasState = (): UseCanvasStateReturn => {
     string | null
   >(null);
 
-  const isDark = canvasBg === "#0B0C0E";
+  // 只跟踪与连线图片相关的字段，拖拽位移不触发 inputsMap 重算
+  const nodeImageData = useMemo(
+    () =>
+      nodes.map((n) => ({
+        id: n.id,
+        imageSrc: n.imageSrc,
+        videoSrc: n.videoSrc,
+        annotatedImageSrc: n.annotatedImageSrc,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      // 通过 JSON key 稳定性来跟踪变化：只要图片字段没变就不触发
+      nodes.map((n) => `${n.id}:${n.imageSrc}:${n.videoSrc}:${n.annotatedImageSrc}`).join("|"),
+    ],
+  );
 
   const inputsMap = useMemo(() => {
+    // 建立 id→node 的 Map，内层查找 O(1)
+    const nodeById = new Map(nodeImageData.map((n) => [n.id, n]));
     const map: Record<string, string[]> = {};
-    nodes.forEach((node) => {
-      map[node.id] = connections
-        .filter((c) => c.targetId === node.id)
-        .map((c) => nodes.find((n) => n.id === c.sourceId))
-        .filter((n) => n && (n.imageSrc || n.videoSrc))
-        .map((n) => {
-          // 优先使用带标注的图片，确保标注内容传递给下游节点
-          if (n?.annotatedImageSrc) return n.annotatedImageSrc;
-          return n?.imageSrc || n?.videoSrc || "";
-        });
+    connections.forEach((c) => {
+      if (!map[c.targetId]) map[c.targetId] = [];
+      const src = nodeById.get(c.sourceId);
+      if (src && (src.imageSrc || src.videoSrc)) {
+        // 优先使用带标注的图片，确保标注内容传递给下游节点
+        map[c.targetId].push(
+          src.annotatedImageSrc || src.imageSrc || src.videoSrc || "",
+        );
+      }
     });
     return map;
-  }, [nodes, connections]);
+  }, [nodeImageData, connections]);
 
   const getInputImages = useCallback(
     (nodeId: string) => {
@@ -117,8 +182,9 @@ export const useCanvasState = (): UseCanvasStateReturn => {
     currentMode,
     setCurrentMode,
     canvasBg,
-    setCanvasBg,
+    setCanvasBg: handleSetCanvasBg,
     isDark,
+    setIsDark,
     projectName,
     setProjectName,
     selectionBox,

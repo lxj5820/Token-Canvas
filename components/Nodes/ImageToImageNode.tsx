@@ -246,7 +246,7 @@ export const ImageToImageNode: React.FC<ImageToImageNodeProps> = ({
                           <LocalCustomDropdown 
                               options={imageModels} 
                               value={data.model || 'Banana 2'} 
-                              onChange={(val: any) => updateData(data.id, { model: val })} 
+                              onChange={(val: string) => updateData(data.id, { model: val })} 
                               isOpen={activeDropdown === 'model'} 
                               onToggle={() => setActiveDropdown(activeDropdown === 'model' ? null : 'model')} 
                               onClose={() => setActiveDropdown(null)} 
@@ -272,7 +272,7 @@ export const ImageToImageNode: React.FC<ImageToImageNodeProps> = ({
                                   icon={Icons.Monitor} 
                                   options={supportedResolutions} 
                                   value={data.resolution || '1k'} 
-                                  onChange={(val: any) => updateData(data.id, { resolution: val })} 
+                                  onChange={(val: string) => updateData(data.id, { resolution: val })} 
                                   isOpen={activeDropdown === 'res'} 
                                   onToggle={() => setActiveDropdown(activeDropdown === 'res' ? null : 'res')} 
                                   onClose={() => setActiveDropdown(null)} 
@@ -284,7 +284,7 @@ export const ImageToImageNode: React.FC<ImageToImageNodeProps> = ({
                                   icon={Icons.Layers} 
                                   options={[1, 2, 3, 4]} 
                                   value={data.count || 1} 
-                                  onChange={(val: any) => updateData(data.id, { count: val })} 
+                                  onChange={(val: string) => updateData(data.id, { count: val })} 
                                   isOpen={activeDropdown === 'count'} 
                                   onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} 
                                   onClose={() => setActiveDropdown(null)} 

@@ -8,30 +8,36 @@ interface AIPanelProps {
 }
 
 // AI 模型配置
-type AIModel =
-  | "gemini-3.1-flash-lite-preview"
-  | "gpt-5.4"
-  | "gpt-5.4-mini"
-  | "claude-sonnet-4-6"
-  | "claude-opus-4-7"
-  | "glm-5"
-  | "glm-5.1"
-  | "deepseek-v3.2";
+type AIModel = string;
 
 interface ModelInfo {
   id: AIModel;
   name: string;
   defaultUrl: string;
   defaultModel: string;
+  isCustom?: boolean;
+}
+
+interface CustomModelConfig {
+  id: string;
+  name: string;
+  baseUrl: string;
+  modelName: string;
 }
 
 // AI 模型配置列表
 const MODELS: ModelInfo[] = [
   {
     id: "gemini-3.1-flash-lite-preview",
-    name: "Gemini-3.1",
+    name: "gemini-3.1-flash",
     defaultUrl: "https://newapi.asia/v1",
     defaultModel: "gemini-3.1-flash-lite-preview",
+  },
+  {
+    id: "gemini-3.1-pro-preview",
+    name: "gemini-3.1-pro",
+    defaultUrl: "https://newapi.asia/v1",
+    defaultModel: "gemini-3.1-pro-preview",
   },
   {
     id: "gpt-5.4",
@@ -40,10 +46,10 @@ const MODELS: ModelInfo[] = [
     defaultModel: "gpt-5.4",
   },
   {
-    id: "gpt-5.4-mini",
-    name: "gpt-5.4 mini",
+    id: "gpt-5.5",
+    name: "gpt-5.5",
     defaultUrl: "https://newapi.asia/v1",
-    defaultModel: "gpt-5.4-mini",
+    defaultModel: "gpt-5.5",
   },
   {
     id: "claude-sonnet-4-6",
@@ -70,10 +76,10 @@ const MODELS: ModelInfo[] = [
     defaultModel: "glm-5.1",
   },
   {
-    id: "deepseek-v3.2",
-    name: "DeepSeek",
+    id: "deepseek-v4-pro",
+    name: "deepseek-v4-pro",
     defaultUrl: "https://newapi.asia/v1",
-    defaultModel: "deepseek-v3.2",
+    defaultModel: "deepseek-v4-pro",
   },
 ];
 
@@ -111,11 +117,40 @@ export const AIPanel: React.FC<AIPanelProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState<AIModel>("gpt-5.4");
+  const [customModels, setCustomModels] = useState<CustomModelConfig[]>(() => {
+    const saved = localStorage.getItem("ai-custom-models");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+  const [allModels, setAllModels] = useState<ModelInfo[]>([...MODELS]);
+  const [selectedModel, setSelectedModel] = useState<AIModel>(MODELS[0].id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showCustomModel, setShowCustomModel] = useState(false);
+  const [newCustomModel, setNewCustomModel] = useState<CustomModelConfig>({
+    id: "",
+    name: "",
+    baseUrl: "https://newapi.asia/v1",
+    modelName: "",
+  });
+
+  // 合并预设模型和自定义模型
+  useEffect(() => {
+    const customModelInfos: ModelInfo[] = customModels.map((cm) => ({
+      id: cm.id,
+      name: cm.name,
+      defaultUrl: cm.baseUrl,
+      defaultModel: cm.modelName,
+      isCustom: true,
+    }));
+    setAllModels([...MODELS, ...customModelInfos]);
+  }, [customModels]);
 
   const [modelConfig, setModelConfig] = useState<ChatModelConfig>(() => {
     const saved = localStorage.getItem("ai-model-config");
@@ -128,7 +163,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
     return {
       apiKey: "",
       baseUrl: "https://newapi.asia/v1",
-      model: "Gemini-3.1",
+      model: MODELS[0].name,
     };
   });
 
@@ -156,6 +191,33 @@ export const AIPanel: React.FC<AIPanelProps> = ({
     }));
   };
 
+  const addCustomModel = () => {
+    if (!newCustomModel.name || !newCustomModel.modelName) return;
+    const modelId = newCustomModel.id || `custom-${Date.now()}`;
+    const updatedCustomModels = [
+      ...customModels,
+      { ...newCustomModel, id: modelId },
+    ];
+    setCustomModels(updatedCustomModels);
+    localStorage.setItem("ai-custom-models", JSON.stringify(updatedCustomModels));
+    setNewCustomModel({
+      id: "",
+      name: "",
+      baseUrl: "https://newapi.asia/v1",
+      modelName: "",
+    });
+    setShowCustomModel(false);
+  };
+
+  const removeCustomModel = (modelId: string) => {
+    const updatedCustomModels = customModels.filter((m) => m.id !== modelId);
+    setCustomModels(updatedCustomModels);
+    localStorage.setItem("ai-custom-models", JSON.stringify(updatedCustomModels));
+    if (selectedModel === modelId) {
+      setSelectedModel(MODELS[0].id);
+    }
+  };
+
   const callAI = async (
     model: AIModel,
     messages: Message[],
@@ -165,12 +227,23 @@ export const AIPanel: React.FC<AIPanelProps> = ({
       throw new Error("请先配置 API Key");
     }
 
-    const modelInfo = MODELS.find((m) => m.id === model);
+    const modelInfo = allModels.find((m) => m.id === model);
     if (!modelInfo) throw new Error("未知模型");
+
+    // 自定义模型使用自己的 baseUrl 和 modelName
+    let baseUrl = config.baseUrl;
+    let modelName = model;
+    if (modelInfo.isCustom) {
+      const customModel = customModels.find((cm) => cm.id === model);
+      if (customModel) {
+        baseUrl = customModel.baseUrl;
+        modelName = customModel.modelName;
+      }
+    }
 
     if (model.startsWith("claude")) {
       // Anthropic API
-      const response = await fetch(`${config.baseUrl}/messages`, {
+      const response = await fetch(`${baseUrl}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +251,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: model,
+          model: modelName,
           max_tokens: 4096,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
         }),
@@ -193,14 +266,14 @@ export const AIPanel: React.FC<AIPanelProps> = ({
       return data.content[0]?.text || "";
     } else if (model.startsWith("glm")) {
       // 智谱 API
-      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      const response = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
-          model: model,
+          model: modelName,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
@@ -213,15 +286,15 @@ export const AIPanel: React.FC<AIPanelProps> = ({
       const data = await response.json();
       return data.choices[0]?.message?.content || "";
     } else {
-      // OpenAI 兼容 API (包括 DeepSeek)
-      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      // OpenAI 兼容 API (包括 DeepSeek 和自定义模型)
+      const response = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
-          model: model,
+          model: modelName,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
@@ -452,35 +525,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
                 />
               </div>
 
-              <div
-                className={`p-3 rounded-lg text-xs ${isDark ? "bg-zinc-800 text-gray-400" : "bg-gray-50 text-gray-500"}`}
-              >
-                <p className="font-medium mb-1">提示：</p>
-                <p>
-                  • 使用 New 词元: URL 填{" "}
-                  <code
-                    className={`${isDark ? "text-yellow-400" : "text-yellow-600"}`}
-                  >
-                    https://newapi.asia/v1
-                  </code>
-                </p>
-                <p>
-                  • 使用 OpenAI API: URL 填{" "}
-                  <code
-                    className={`${isDark ? "text-yellow-400" : "text-yellow-600"}`}
-                  >
-                    https://api.openai.com/v1
-                  </code>
-                </p>
-                <p>
-                  • 使用智谱 API: URL 填{" "}
-                  <code
-                    className={`${isDark ? "text-yellow-400" : "text-yellow-600"}`}
-                  >
-                    https://newapi.asia/v1
-                  </code>
-                </p>
-              </div>
+
             </div>
 
             <div className="mt-4">
@@ -498,12 +543,12 @@ export const AIPanel: React.FC<AIPanelProps> = ({
         <div
           className={`px-4 py-2 border-b ${isDark ? "border-zinc-800" : "border-gray-200"}`}
         >
-          <div className="flex flex-wrap gap-1.5">
-            {MODELS.map((model) => {
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {allModels.map((model) => {
               const isSelected = selectedModel === model.id;
 
               return (
-                <div key={model.id}>
+                <div key={model.id} className="flex items-center gap-1">
                   <button
                     onClick={() => setSelectedModel(model.id)}
                     className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
@@ -521,10 +566,158 @@ export const AIPanel: React.FC<AIPanelProps> = ({
                       <span className="ml-1 text-green-500">✓</span>
                     )}
                   </button>
+                  {model.isCustom && (
+                    <button
+                      onClick={() => removeCustomModel(model.id)}
+                      className={`p-0.5 rounded ${
+                        isDark
+                          ? "hover:bg-red-500/20 text-red-400"
+                          : "hover:bg-red-100 text-red-600"
+                      }`}
+                      title="删除自定义模型"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               );
             })}
+            <button
+              onClick={() => setShowCustomModel(!showCustomModel)}
+              className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                isDark
+                  ? "bg-zinc-800 text-gray-400 border border-dashed border-zinc-600 hover:border-zinc-400"
+                  : "bg-gray-100 text-gray-600 border border-dashed border-gray-400 hover:border-gray-600"
+              }`}
+            >
+              + 添加模型
+            </button>
           </div>
+          {/* 自定义模型表单 */}
+          {showCustomModel && (
+            <div
+              className={`mt-3 p-3 rounded-lg ${
+                isDark ? "bg-zinc-800/50" : "bg-gray-100"
+              }`}
+            >
+              <div className="space-y-3">
+                <div>
+                  <label
+                    className={`block text-xs font-medium mb-1 ${
+                      isDark ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
+                    模型显示名称
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomModel.name}
+                    onChange={(e) =>
+                      setNewCustomModel((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    placeholder="例如：我的自定义模型"
+                    className={`w-full px-2 py-1.5 text-xs rounded border ${
+                      isDark
+                        ? "bg-zinc-700 border-zinc-600 text-white placeholder-zinc-400"
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`block text-xs font-medium mb-1 ${
+                      isDark ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
+                    Base URL
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomModel.baseUrl}
+                    onChange={(e) =>
+                      setNewCustomModel((prev) => ({
+                        ...prev,
+                        baseUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://api.example.com/v1"
+                    className={`w-full px-2 py-1.5 text-xs rounded border ${
+                      isDark
+                        ? "bg-zinc-700 border-zinc-600 text-white placeholder-zinc-400"
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`block text-xs font-medium mb-1 ${
+                      isDark ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
+                    模型 ID/名称
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomModel.modelName}
+                    onChange={(e) =>
+                      setNewCustomModel((prev) => ({
+                        ...prev,
+                        modelName: e.target.value,
+                      }))
+                    }
+                    placeholder="例如：gpt-4o"
+                    className={`w-full px-2 py-1.5 text-xs rounded border ${
+                      isDark
+                        ? "bg-zinc-700 border-zinc-600 text-white placeholder-zinc-400"
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"
+                    }`}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={addCustomModel}
+                    className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-yellow-500 text-white hover:bg-yellow-400 transition-colors"
+                  >
+                    添加
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCustomModel(false);
+                      setNewCustomModel({
+                        id: "",
+                        name: "",
+                        baseUrl: "https://newapi.asia/v1",
+                        modelName: "",
+                      });
+                    }}
+                    className={`px-3 py-1.5 text-xs rounded-lg ${
+                      isDark
+                        ? "bg-zinc-700 text-gray-300 hover:bg-zinc-600"
+                        : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                    }`}
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 内容区域 */}
@@ -544,7 +737,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
                 <p
                   className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}
                 >
-                  双击模型按钮配置 API，双击后即可开始对话
+                  选择模型开始对话
                 </p>
                 {!hasApiKey && (
                   <p
@@ -654,10 +847,12 @@ export const AIPanel: React.FC<AIPanelProps> = ({
               </button>
             </div>
             <div
-              className={`flex items-center justify-between mt-2 text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`flex items-center justify-between mt-2 text-xs ${
+                isDark ? "text-gray-500" : "text-gray-400"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span>{MODELS.find((m) => m.id === selectedModel)?.name}</span>
+                <span>{allModels.find((m) => m.id === selectedModel)?.name}</span>
                 {!hasApiKey && <span className="text-yellow-500">⚠️</span>}
               </div>
               <div className="flex items-center gap-1">

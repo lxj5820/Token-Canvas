@@ -137,7 +137,7 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
 
     // 处理生成进度的逻辑
     useEffect(() => {
-        let interval: any;
+        let interval: ReturnType<typeof setInterval> | undefined;
         if (data.isLoading) {
             setProgress(0);
             // 每200ms更新一次进度，模拟生成过程
@@ -308,7 +308,7 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
                        <LocalCustomDropdown 
                            options={groupedVideoModels} 
                            value={data.model || 'Sora 2'} 
-                           onChange={(val: any) => updateData(data.id, { model: val })} 
+                           onChange={(val: string) => updateData(data.id, { model: val })} 
                            isOpen={activeDropdown === 'model'} 
                            onToggle={() => setActiveDropdown(activeDropdown === 'model' ? null : 'model')} 
                            onClose={() => setActiveDropdown(null)} 
@@ -335,7 +335,7 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
                               icon={Icons.Monitor} 
                               options={resOptions} 
                               value={displayResValue || '720p'} 
-                              onChange={(val: any) => updateData(data.id, { resolution: val })} 
+                              onChange={(val: string) => updateData(data.id, { resolution: val })} 
                               isOpen={activeDropdown === 'res'} 
                               onToggle={() => setActiveDropdown(activeDropdown === 'res' ? null : 'res')} 
                               onClose={() => setActiveDropdown(null)} 
@@ -347,7 +347,7 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
                               icon={Icons.Clock} 
                               options={durOptions} 
                               value={data.duration || '5s'} 
-                              onChange={(val: any) => updateData(data.id, { duration: val })} 
+                              onChange={(val: string) => updateData(data.id, { duration: val })} 
                               isOpen={activeDropdown === 'duration'} 
                               onToggle={() => setActiveDropdown(activeDropdown === 'duration' ? null : 'duration')} 
                               onClose={() => setActiveDropdown(null)} 
@@ -359,7 +359,7 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
                               icon={Icons.Layers} 
                               options={[1, 2, 3, 4]} 
                               value={data.count || 1} 
-                              onChange={(val: any) => updateData(data.id, { count: val })} 
+                              onChange={(val: string) => updateData(data.id, { count: val })} 
                               isOpen={activeDropdown === 'count'} 
                               onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} 
                               onClose={() => setActiveDropdown(null)} 

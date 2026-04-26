@@ -86,6 +86,7 @@ import {
   Hash,
   Eraser,
   Type,
+  MessageCircle,
 } from "lucide-react";
 
 export const Icons = {
@@ -174,5 +175,6 @@ export const Icons = {
   Hash,
   Eraser,
   Type,
+  MessageCircle,
   History: Clock,
 };

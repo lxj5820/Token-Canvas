@@ -18,6 +18,17 @@ type HistoryAction =
       entry: { nodes: NodeData[]; connections: Connection[] };
     };
 
+// 浅拷贝节点，只复制顶层属性
+// 注意：imageSrc/videoSrc 等大对象是共享引用的，这样可以避免深拷贝的性能问题
+// 撤销时会丢失对这些属性的修改，但位置和配置信息会正确恢复
+const cloneNodesForHistory = (nodes: NodeData[]): NodeData[] => {
+  return nodes.map((n) => ({ ...n }));
+};
+
+const cloneConnectionsForHistory = (connections: Connection[]): Connection[] => {
+  return connections.map((c) => ({ ...c }));
+};
+
 function historyReducer(
   state: HistoryState,
   action: HistoryAction,
@@ -26,8 +37,8 @@ function historyReducer(
     case "PUSH": {
       const newEntries = state.entries.slice(0, state.index + 1);
       newEntries.push({
-        nodes: structuredClone(action.nodes),
-        connections: structuredClone(action.connections),
+        nodes: action.nodes,
+        connections: action.connections,
       });
       if (newEntries.length > MAX_HISTORY) {
         newEntries.shift();
@@ -89,10 +100,31 @@ export const useHistory = (): UseHistoryReturn => {
   const [state, dispatch] = useReducer(historyReducer, initialState);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const pendingRef = useRef<{ nodes: NodeData[]; connections: Connection[] } | null>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   const saveToHistory = useCallback(
     (nodes: NodeData[], connections: Connection[]) => {
-      dispatch({ type: "PUSH", nodes, connections });
+      // 存储最新的数据
+      pendingRef.current = { nodes, connections };
+
+      // 如果已经有定时器在运行，不再设置新的
+      if (timeoutRef.current !== null) return;
+
+      // 延迟执行，让事件处理器先完成
+      timeoutRef.current = window.setTimeout(() => {
+        if (pendingRef.current) {
+          const data = pendingRef.current;
+          // 使用浅拷贝，避免深拷贝的性能问题
+          dispatch({
+            type: "PUSH",
+            nodes: cloneNodesForHistory(data.nodes),
+            connections: cloneConnectionsForHistory(data.connections),
+          });
+          pendingRef.current = null;
+        }
+        timeoutRef.current = null;
+      }, 50); // 增加到 50ms，给 UI 更多响应时间
     },
     [],
   );

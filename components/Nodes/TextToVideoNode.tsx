@@ -115,7 +115,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
     } else setDeferredInputs(false);
   }, [isSelectedAndStable, showControls]);
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (data.isLoading) {
       setProgress(0);
       interval = setInterval(() => {
@@ -362,7 +362,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
               <LocalCustomDropdown
                 options={groupedVideoModels}
                 value={data.model || "Sora 2"}
-                onChange={(val: any) => updateData(data.id, { model: val })}
+                onChange={(val: string) => updateData(data.id, { model: val })}
                 isOpen={activeDropdown === "model"}
                 onToggle={() =>
                   setActiveDropdown(activeDropdown === "model" ? null : "model")
@@ -389,7 +389,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
                 icon={Icons.Monitor}
                 options={resOptions}
                 value={displayResValue || "720p"}
-                onChange={(val: any) =>
+                onChange={(val: string) =>
                   updateData(data.id, { resolution: val })
                 }
                 isOpen={activeDropdown === "res"}
@@ -404,7 +404,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
                 icon={Icons.Clock}
                 options={durOptions}
                 value={data.duration || "5s"}
-                onChange={(val: any) => updateData(data.id, { duration: val })}
+                onChange={(val: string) => updateData(data.id, { duration: val })}
                 isOpen={activeDropdown === "duration"}
                 onToggle={() =>
                   setActiveDropdown(
@@ -419,7 +419,7 @@ export const TextToVideoNode: React.FC<TextToVideoNodeProps> = ({
                 icon={Icons.Layers}
                 options={[1, 2, 3, 4]}
                 value={data.count || 1}
-                onChange={(val: any) => updateData(data.id, { count: val })}
+                onChange={(val: string) => updateData(data.id, { count: val })}
                 isOpen={activeDropdown === "count"}
                 onToggle={() =>
                   setActiveDropdown(activeDropdown === "count" ? null : "count")

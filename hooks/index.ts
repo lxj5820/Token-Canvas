@@ -1,5 +1,4 @@
 export { useCanvasState } from "./useCanvasState";
-export { useNodeOperations } from "./useNodeOperations";
 export { useHistory } from "./useHistory";
 export { useAutoSave, useLoadWorkflow } from "./useAutoSave";
 export {
@@ -10,3 +9,7 @@ export { useAnnotation } from "./useAnnotation";
 export { useAnnotationWithUndo } from "./useAnnotationWithUndo";
 export { useGridSplitActions } from "./useGridSplitActions";
 export { useGeneration } from "./useGeneration";
+export { useZoom } from "./useZoom";
+export { useNodeActions } from "./useNodeActions";
+export { useWorkflowIO } from "./useWorkflowIO";
+export { useCanvasInteraction } from "./useCanvasInteraction";

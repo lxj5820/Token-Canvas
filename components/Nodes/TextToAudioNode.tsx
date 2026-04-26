@@ -102,7 +102,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
     } else setDeferredInputs(false);
   }, [isSelectedAndStable, showControls]);
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (data.isLoading) {
       setProgress(0);
       interval = setInterval(() => {
@@ -404,7 +404,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
               <LocalCustomDropdown
                 options={audioModels}
                 value={data.model || "Suno"}
-                onChange={(val: any) => updateData(data.id, { model: val })}
+                onChange={(val: string) => updateData(data.id, { model: val })}
                 isOpen={activeDropdown === "model"}
                 onToggle={() =>
                   setActiveDropdown(activeDropdown === "model" ? null : "model")
@@ -420,7 +420,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
                 icon={Icons.Clock}
                 options={durationOptions}
                 value={data.duration || "30s"}
-                onChange={(val: any) => updateData(data.id, { duration: val })}
+                onChange={(val: string) => updateData(data.id, { duration: val })}
                 isOpen={activeDropdown === "duration"}
                 onToggle={() =>
                   setActiveDropdown(
@@ -436,7 +436,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
                 icon={Icons.Layers}
                 options={styleOptions}
                 value={data.style || "pop"}
-                onChange={(val: any) => updateData(data.id, { style: val })}
+                onChange={(val: string) => updateData(data.id, { style: val })}
                 isOpen={activeDropdown === "style"}
                 onToggle={() =>
                   setActiveDropdown(activeDropdown === "style" ? null : "style")
@@ -450,7 +450,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
                 <LocalCustomDropdown
                   options={modeOptions}
                   value={data.mode || "fast"}
-                  onChange={(val: any) => updateData(data.id, { mode: val })}
+                  onChange={(val: string) => updateData(data.id, { mode: val })}
                   isOpen={activeDropdown === "mode"}
                   onToggle={() =>
                     setActiveDropdown(activeDropdown === "mode" ? null : "mode")
@@ -467,7 +467,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
                 icon={Icons.Images}
                 options={[1, 2, 3, 4]}
                 value={data.count || 1}
-                onChange={(val: any) => updateData(data.id, { count: val })}
+                onChange={(val: string) => updateData(data.id, { count: val })}
                 isOpen={activeDropdown === "count"}
                 onToggle={() =>
                   setActiveDropdown(activeDropdown === "count" ? null : "count")

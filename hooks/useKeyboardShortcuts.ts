@@ -40,7 +40,7 @@ export interface UseKeyboardShortcutsOptions {
   handleZoomIn: () => void;
   handleZoomOut: () => void;
   handleZoomReset: () => void;
-  handleAlign: (direction: "UP" | "DOWN" | "LEFT" | "RIGHT") => void;
+  handleAlign: (direction: "UP" | "DOWN" | "LEFT" | "RIGHT", selectedNodeIds: Set<string>) => void;
   handleUndo: () => void;
   handleRedo: () => void;
   performCopy: () => void;
@@ -130,6 +130,82 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  const handleModeShortcuts = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    const modeMap: Record<string, () => void> = {
+      v: opts.handleSelectMode,
+      V: opts.handleSelectMode,
+      h: opts.handlePanMode,
+      H: opts.handlePanMode,
+    };
+    const zoomMap: Record<string, () => void> = {
+      "[": opts.handleZoomIn,
+      "]": opts.handleZoomOut,
+      "0": opts.handleZoomReset,
+    };
+    if (modeMap[e.key]) { modeMap[e.key](); return true; }
+    if (zoomMap[e.key]) { zoomMap[e.key](); return true; }
+    return false;
+  };
+
+  const handleDeleteShortcut = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return false;
+    if (opts.selectedNodeIds.size > 0) opts.deleteSelectedNodes();
+    if (opts.selectedConnectionId) opts.deleteSelectedConnection();
+    return true;
+  };
+
+  const handleClipboardShortcut = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (!(e.ctrlKey || e.metaKey) || e.key !== "c") return false;
+    e.preventDefault();
+    opts.performCopy();
+    return true;
+  };
+
+  const handleHistoryShortcuts = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (!(e.ctrlKey || e.metaKey)) return false;
+    if (e.key === "z") { e.preventDefault(); opts.handleUndo(); return true; }
+    if (e.key === "y") { e.preventDefault(); opts.handleRedo(); return true; }
+    return false;
+  };
+
+  const handleAlignShortcut = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    const arrowMap: Record<string, "UP" | "DOWN" | "LEFT" | "RIGHT"> = {
+      ArrowUp: "UP",
+      ArrowDown: "DOWN",
+      ArrowLeft: "LEFT",
+      ArrowRight: "RIGHT",
+    };
+    const direction = arrowMap[e.key];
+    if (!direction) return false;
+    e.preventDefault();
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      opts.handleAlign(direction, opts.selectedNodeIds);
+    } else if (!(e.ctrlKey || e.metaKey)) {
+      if (opts.selectedNodeIds.size >= 2) opts.handleAlign(direction, opts.selectedNodeIds);
+    }
+    return true;
+  };
+
+  const handleEscapeShortcut = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (e.key !== "Escape") return false;
+    if (opts.previewMedia) opts.setPreviewMedia(null);
+    if (opts.contextMenu) opts.setContextMenu(null);
+    if (opts.quickAddMenu) opts.setQuickAddMenu(null);
+    if (opts.showNewWorkflowDialog) opts.setShowNewWorkflowDialog(false);
+    if (opts.isSettingsOpen) opts.setIsSettingsOpen(false);
+    if (opts.isStorageOpen) opts.setIsStorageOpen(false);
+    if (opts.isExportImportOpen) opts.setIsExportImportOpen(false);
+    if (opts.showCommunityPanel && opts.setShowCommunityPanel)
+      opts.setShowCommunityPanel(false);
+    return true;
+  };
+
+  const handleSpaceShortcut = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (e.code !== "Space" || !opts.spacePressedRef) return false;
+    opts.spacePressedRef.current = true;
+    return true;
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const opts = optionsRef.current;
@@ -139,78 +215,17 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
         target.tagName === "TEXTAREA" ||
         target.isContentEditable ||
         target.getAttribute("role") === "textbox";
+
       if (!isInput) {
-        if (e.key === "v" || e.key === "V") opts.handleSelectMode();
-        if (e.key === "h" || e.key === "H") opts.handlePanMode();
-        if (e.key === "[") opts.handleZoomIn();
-        if (e.key === "]") opts.handleZoomOut();
-        if (e.key === "0") opts.handleZoomReset();
-        if (e.key === "Delete" || e.key === "Backspace") {
-          if (opts.selectedNodeIds.size > 0) opts.deleteSelectedNodes();
-          if (opts.selectedConnectionId) opts.deleteSelectedConnection();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-          e.preventDefault();
-          opts.performCopy();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-          e.preventDefault();
-          opts.handleUndo();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-          e.preventDefault();
-          opts.handleRedo();
-        }
-        if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-          if (e.key === "ArrowUp") {
-            e.preventDefault();
-            opts.handleAlign("UP");
-          }
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            opts.handleAlign("DOWN");
-          }
-          if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            opts.handleAlign("LEFT");
-          }
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            opts.handleAlign("RIGHT");
-          }
-        }
-        if (!(e.ctrlKey || e.metaKey)) {
-          if (e.key === "ArrowUp") {
-            e.preventDefault();
-            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("UP");
-          }
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("DOWN");
-          }
-          if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("LEFT");
-          }
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            if (opts.selectedNodeIds.size >= 2) opts.handleAlign("RIGHT");
-          }
-        }
+        if (handleModeShortcuts(e, opts)) return;
+        if (handleDeleteShortcut(e, opts)) return;
+        if (handleClipboardShortcut(e, opts)) return;
+        if (handleHistoryShortcuts(e, opts)) return;
+        if (handleAlignShortcut(e, opts)) return;
       }
 
-      if (e.key === "Escape") {
-        if (opts.previewMedia) opts.setPreviewMedia(null);
-        if (opts.contextMenu) opts.setContextMenu(null);
-        if (opts.quickAddMenu) opts.setQuickAddMenu(null);
-        if (opts.showNewWorkflowDialog) opts.setShowNewWorkflowDialog(false);
-        if (opts.isSettingsOpen) opts.setIsSettingsOpen(false);
-        if (opts.isStorageOpen) opts.setIsStorageOpen(false);
-        if (opts.isExportImportOpen) opts.setIsExportImportOpen(false);
-        if (opts.showCommunityPanel && opts.setShowCommunityPanel)
-          opts.setShowCommunityPanel(false);
-      }
-      if (e.code === "Space" && opts.spacePressedRef) opts.spacePressedRef.current = true;
+      if (handleEscapeShortcut(e, opts)) return;
+      if (handleSpaceShortcut(e, opts)) return;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space" && optionsRef.current.spacePressedRef)

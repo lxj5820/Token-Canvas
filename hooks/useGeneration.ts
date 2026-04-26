@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { NodeData, Connection, NodeType } from "../types";
 import {
   generateCreativeDescription,
@@ -8,6 +8,9 @@ import {
 } from "../services/geminiService";
 import { generateId } from "../services/canvasConstants";
 import { saveAssetToIndexedDB } from "../services/saveAssetToIndexedDB";
+import { logger } from "../services/logger";
+import type { AngleGenerateParams } from "../components/AngleEditor";
+import type { LightingGenerateParams } from "../components/LightingEditor";
 
 interface UseGenerationParams {
   nodes: NodeData[];
@@ -28,19 +31,37 @@ export const useGeneration = ({
   setNodes,
   setConnections,
 }: UseGenerationParams) => {
+  const nodesRef = useRef(nodes);
+  const connectionsRef = useRef(connections);
+  const updateNodeDataRef = useRef(updateNodeData);
+  const getInputImagesRef = useRef(getInputImages);
+  const saveToHistoryRef = useRef(saveToHistory);
+  const setNodesRef = useRef(setNodes);
+  const setConnectionsRef = useRef(setConnections);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+    connectionsRef.current = connections;
+    updateNodeDataRef.current = updateNodeData;
+    getInputImagesRef.current = getInputImages;
+    saveToHistoryRef.current = saveToHistory;
+    setNodesRef.current = setNodes;
+    setConnectionsRef.current = setConnections;
+  });
+
   const handleGenerate = useCallback(
     async (nodeId: string) => {
-      const node = nodes.find((n) => n.id === nodeId);
+      const node = nodesRef.current.find((n) => n.id === nodeId);
       if (!node) return;
-      updateNodeData(nodeId, { isLoading: true });
-      const inputs = getInputImages(nodeId);
+      updateNodeDataRef.current(nodeId, { isLoading: true });
+      const inputs = getInputImagesRef.current(nodeId);
       try {
         if (node.type === NodeType.CREATIVE_DESC) {
           const res = await generateCreativeDescription(
             node.prompt || "",
             node.model === "TEXT_TO_VIDEO" ? "VIDEO" : "IMAGE",
           );
-          updateNodeData(nodeId, { optimizedPrompt: res, isLoading: false });
+          updateNodeDataRef.current(nodeId, { optimizedPrompt: res, isLoading: false });
         } else {
           let results: string[] = [];
           if (node.type === NodeType.TEXT_TO_IMAGE) {
@@ -114,23 +135,23 @@ export const useGeneration = ({
             } else if (node.type === NodeType.TEXT_TO_AUDIO) {
               updates.audioSrc = results[0];
             }
-            updateNodeData(nodeId, updates);
+            updateNodeDataRef.current(nodeId, updates);
           } else {
             throw new Error("未返回结果");
           }
         }
       } catch (e) {
-        console.error(e);
+        logger.error("handleGenerate failed", e);
         alert(`生成失败: ${(e as Error).message}`);
-        updateNodeData(nodeId, { isLoading: false });
+        updateNodeDataRef.current(nodeId, { isLoading: false });
       }
     },
-    [nodes, updateNodeData, getInputImages],
+    [],
   );
 
   const handleAngleGenerate = useCallback(
-    async (nodeId: string, params: any) => {
-      const node = nodes.find((n) => n.id === nodeId);
+    async (nodeId: string, params: AngleGenerateParams) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId);
       if (!node) return;
 
       const H_LABELS: Record<number, string> = {
@@ -170,48 +191,126 @@ export const useGeneration = ({
       const inputImage = node.annotatedImageSrc || node.imageSrc;
       const inputs = inputImage ? [inputImage] : [];
 
-      updateNodeData(nodeId, { isLoading: true });
+      const isOriginalImage = node.type === NodeType.ORIGINAL_IMAGE;
+      const count = params.count || 1;
 
-      try {
-        const results = await generateImage(
-          anglePrompt,
-          node.aspectRatio,
-          node.model,
-          node.resolution,
-          params.count || 1,
-          inputs,
-          node.promptOptimize,
-        );
+      if (isOriginalImage) {
+        updateNodeDataRef.current(nodeId, { isAngleEditing: false });
 
-        if (results.length > 0) {
-          const currentArtifacts = node.outputArtifacts || [];
-          if (node.imageSrc && !currentArtifacts.includes(node.imageSrc))
-            currentArtifacts.push(node.imageSrc);
-          const newArtifacts = [...results, ...currentArtifacts];
-          updateNodeData(nodeId, {
-            isLoading: false,
-            imageSrc: results[0],
-            outputArtifacts: newArtifacts,
-            annotations: [],
-            annotatedImageSrc: undefined,
-            isAngleEditing: false,
+        const gap = 30;
+        const newNodeSize = 300;
+        const spacing = newNodeSize + gap;
+        const cols = Math.ceil(Math.sqrt(count));
+        const newNodeIds: string[] = [];
+        const newNodes: NodeData[] = [];
+        const newConns: Connection[] = [];
+
+        for (let i = 0; i < count; i++) {
+          const newNodeId = `node_${Date.now()}_${i}`;
+          newNodeIds.push(newNodeId);
+          const r = Math.floor(i / cols);
+          const c = i % cols;
+          newNodes.push({
+            id: newNodeId,
+            type: NodeType.TEXT_TO_IMAGE,
+            x: node.x + node.width + gap + 60 + c * spacing,
+            y: node.y + r * spacing,
+            width: newNodeSize,
+            height: newNodeSize,
+            title: `角度 #${i + 1}`,
+            prompt: fullPrompt,
+            isLoading: true,
+            model: params.model || node.model,
+            aspectRatio: params.aspectRatio || node.aspectRatio,
+            resolution: params.resolution || node.resolution,
           });
-          await saveAssetToIndexedDB(nodeId, results[0], "image");
-        } else {
-          throw new Error("未返回结果");
+          newConns.push({
+            id: generateId(),
+            sourceId: nodeId,
+            targetId: newNodeId,
+          });
         }
-      } catch (e) {
-        console.error(e);
-        alert(`生成失败: ${(e as Error).message}`);
-        updateNodeData(nodeId, { isLoading: false });
+
+        setNodesRef.current((prev) => [...prev, ...newNodes]);
+        setConnectionsRef.current((prev) => [...prev, ...newConns]);
+
+        try {
+          const results = await generateImage(
+            anglePrompt,
+            params.aspectRatio || node.aspectRatio,
+            params.model || node.model,
+            params.resolution || node.resolution,
+            count,
+            inputs,
+            node.promptOptimize,
+          );
+
+          if (results.length > 0) {
+            for (let i = 0; i < results.length && i < newNodeIds.length; i++) {
+              updateNodeDataRef.current(newNodeIds[i], {
+                isLoading: false,
+                imageSrc: results[i],
+                outputArtifacts: [results[i]],
+              });
+              await saveAssetToIndexedDB(newNodeIds[i], results[i], "image");
+            }
+            for (let i = results.length; i < newNodeIds.length; i++) {
+              updateNodeDataRef.current(newNodeIds[i], { isLoading: false });
+            }
+          } else {
+            throw new Error("未返回结果");
+          }
+        } catch (e) {
+          logger.error("handleAngleGenerate: batch generate failed", e);
+          alert(`生成失败: ${(e as Error).message}`);
+          for (const nid of newNodeIds) {
+            updateNodeDataRef.current(nid, { isLoading: false });
+          }
+        }
+      } else {
+        updateNodeDataRef.current(nodeId, { isLoading: true });
+
+        try {
+          const results = await generateImage(
+            anglePrompt,
+            params.aspectRatio || node.aspectRatio,
+            params.model || node.model,
+            params.resolution || node.resolution,
+            count,
+            inputs,
+            node.promptOptimize,
+          );
+
+          if (results.length > 0) {
+            const currentArtifacts = node.outputArtifacts || [];
+            if (node.imageSrc && !currentArtifacts.includes(node.imageSrc))
+              currentArtifacts.push(node.imageSrc);
+            const newArtifacts = [...results, ...currentArtifacts];
+            updateNodeDataRef.current(nodeId, {
+              isLoading: false,
+              imageSrc: results[0],
+              outputArtifacts: newArtifacts,
+              annotations: [],
+              annotatedImageSrc: undefined,
+              isAngleEditing: false,
+            });
+            await saveAssetToIndexedDB(nodeId, results[0], "image");
+          } else {
+            throw new Error("未返回结果");
+          }
+        } catch (e) {
+          logger.error("handleAngleGenerate: single generate failed", e);
+          alert(`生成失败: ${(e as Error).message}`);
+          updateNodeDataRef.current(nodeId, { isLoading: false });
+        }
       }
     },
-    [nodes, updateNodeData],
+    [],
   );
 
   const handleLightGenerate = useCallback(
-    async (nodeId: string, params: any) => {
-      const node = nodes.find((n) => n.id === nodeId);
+    async (nodeId: string, params: LightingGenerateParams) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId);
       if (!node) return;
 
       const getElevationLabel = (e: number) => {
@@ -228,7 +327,7 @@ export const useGeneration = ({
       const mainIntensity = params.mainLight.intensity;
       const mainColor = params.mainLight.color;
 
-      let lightPrompt = `主光：${mainAz}°${mainEl}，强度${mainIntensity}%，${mainColor}色光`;
+      let lightPrompt = `重新打光图像，使其呈现设定的效果。保持主体和构图完全不变，但彻底改变光照，灯光参数为：主光：${mainAz}°${mainEl}，强度${mainIntensity}%，${mainColor}色光`;
 
       if (params.fillLight?.enabled) {
         const fillAz = params.fillLight.azimuth;
@@ -244,96 +343,178 @@ export const useGeneration = ({
       const inputImage = node.annotatedImageSrc || node.imageSrc;
       const inputs = inputImage ? [inputImage] : [];
 
-      updateNodeData(nodeId, { isLoading: true });
+      const isOriginalImage = node.type === NodeType.ORIGINAL_IMAGE;
+      const count = params.count || 1;
 
-      try {
-        const results = await generateImage(
-          fullPrompt,
-          node.aspectRatio,
-          node.model,
-          node.resolution,
-          params.count || 1,
-          inputs,
-          node.promptOptimize,
-        );
+      if (isOriginalImage) {
+        updateNodeDataRef.current(nodeId, { isLightEditing: false });
 
-        if (results.length > 0) {
-          const currentArtifacts = node.outputArtifacts || [];
-          if (node.imageSrc && !currentArtifacts.includes(node.imageSrc))
-            currentArtifacts.push(node.imageSrc);
+        const gap = 30;
+        const newNodeSize = 300;
+        const spacing = newNodeSize + gap;
+        const cols = Math.ceil(Math.sqrt(count));
+        const newNodeIds: string[] = [];
+        const newNodes: NodeData[] = [];
+        const newConns: Connection[] = [];
 
-          if (results.length > 1) {
-            const newArtifacts = [results[0], ...currentArtifacts];
-            updateNodeData(nodeId, {
-              isLoading: false,
-              imageSrc: results[0],
-              outputArtifacts: newArtifacts,
-              annotations: [],
-              annotatedImageSrc: undefined,
-              isLightEditing: false,
-            });
-            await saveAssetToIndexedDB(nodeId, results[0], "image");
+        for (let i = 0; i < count; i++) {
+          const newNodeId = `node_${Date.now()}_${i}`;
+          newNodeIds.push(newNodeId);
+          const r = Math.floor(i / cols);
+          const c = i % cols;
+          newNodes.push({
+            id: newNodeId,
+            type: NodeType.TEXT_TO_IMAGE,
+            x: node.x + node.width + gap + 60 + c * spacing,
+            y: node.y + r * spacing,
+            width: newNodeSize,
+            height: newNodeSize,
+            title: `灯光 #${i + 1}`,
+            prompt: fullPrompt,
+            isLoading: true,
+            model: params.model || node.model,
+            aspectRatio: params.aspectRatio || node.aspectRatio,
+            resolution: params.resolution || node.resolution,
+          });
+          newConns.push({
+            id: generateId(),
+            sourceId: nodeId,
+            targetId: newNodeId,
+          });
+        }
 
-            const gap = 30;
-            const newNodeSize = 300;
-            const spacing = newNodeSize + gap;
-            const cols = Math.ceil(Math.sqrt(results.length - 1));
-            const extraNodes: NodeData[] = [];
-            const extraConns: Connection[] = [];
+        setNodesRef.current((prev) => [...prev, ...newNodes]);
+        setConnectionsRef.current((prev) => [...prev, ...newConns]);
 
-            for (let i = 1; i < results.length; i++) {
-              const newNodeId = `node_${Date.now()}_${i}`;
-              const r = Math.floor((i - 1) / cols);
-              const c = (i - 1) % cols;
-              extraNodes.push({
-                id: newNodeId,
-                type: NodeType.ORIGINAL_IMAGE,
-                x: node.x + node.width + gap + 60 + c * spacing,
-                y: node.y + r * spacing,
-                width: newNodeSize,
-                height: newNodeSize,
-                title: `灯光 #${i + 1}`,
+        try {
+          const results = await generateImage(
+            fullPrompt,
+            params.aspectRatio || node.aspectRatio,
+            params.model || node.model,
+            params.resolution || node.resolution,
+            count,
+            inputs,
+            node.promptOptimize,
+          );
+
+          if (results.length > 0) {
+            for (let i = 0; i < results.length && i < newNodeIds.length; i++) {
+              updateNodeDataRef.current(newNodeIds[i], {
+                isLoading: false,
                 imageSrc: results[i],
                 outputArtifacts: [results[i]],
               });
-              extraConns.push({
-                id: generateId(),
-                sourceId: nodeId,
-                targetId: newNodeId,
-              });
+              await saveAssetToIndexedDB(newNodeIds[i], results[i], "image");
             }
-
-            setNodes((prev) => [...prev, ...extraNodes]);
-            setConnections((prev) => [...prev, ...extraConns]);
-
-            for (let i = 1; i < results.length; i++) {
-              await saveAssetToIndexedDB(
-                extraNodes[i - 1].id,
-                results[i],
-                "image",
-              );
+            for (let i = results.length; i < newNodeIds.length; i++) {
+              updateNodeDataRef.current(newNodeIds[i], { isLoading: false });
             }
           } else {
-            updateNodeData(nodeId, {
-              isLoading: false,
-              imageSrc: results[0],
-              outputArtifacts: [results[0], ...currentArtifacts],
-              annotations: [],
-              annotatedImageSrc: undefined,
-              isLightEditing: false,
-            });
-            await saveAssetToIndexedDB(nodeId, results[0], "image");
+            throw new Error("未返回结果");
           }
-        } else {
-          throw new Error("未返回结果");
+        } catch (e) {
+          logger.error("handleLightGenerate: batch generate failed", e);
+          alert(`生成失败: ${(e as Error).message}`);
+          for (const nid of newNodeIds) {
+            updateNodeDataRef.current(nid, { isLoading: false });
+          }
         }
-      } catch (e) {
-        console.error(e);
-        alert(`生成失败: ${(e as Error).message}`);
-        updateNodeData(nodeId, { isLoading: false });
+      } else {
+        updateNodeDataRef.current(nodeId, { isLoading: true });
+
+        try {
+          const results = await generateImage(
+            fullPrompt,
+            params.aspectRatio || node.aspectRatio,
+            params.model || node.model,
+            params.resolution || node.resolution,
+            count,
+            inputs,
+            node.promptOptimize,
+          );
+
+          if (results.length > 0) {
+            const currentArtifacts = node.outputArtifacts || [];
+            if (node.imageSrc && !currentArtifacts.includes(node.imageSrc))
+              currentArtifacts.push(node.imageSrc);
+
+            if (results.length > 1) {
+              const newArtifacts = [results[0], ...currentArtifacts];
+              updateNodeDataRef.current(nodeId, {
+                isLoading: false,
+                imageSrc: results[0],
+                outputArtifacts: newArtifacts,
+                annotations: [],
+                annotatedImageSrc: undefined,
+                isLightEditing: false,
+              });
+              await saveAssetToIndexedDB(nodeId, results[0], "image");
+
+              const gap = 30;
+              const newNodeSize = 300;
+              const spacing = newNodeSize + gap;
+              const cols = Math.ceil(Math.sqrt(results.length - 1));
+              const extraNodes: NodeData[] = [];
+              const extraConns: Connection[] = [];
+
+              for (let i = 1; i < results.length; i++) {
+                const newNodeId = `node_${Date.now()}_${i}`;
+                const r = Math.floor((i - 1) / cols);
+                const c = (i - 1) % cols;
+                extraNodes.push({
+                  id: newNodeId,
+                  type: NodeType.TEXT_TO_IMAGE,
+                  x: node.x + node.width + gap + 60 + c * spacing,
+                  y: node.y + r * spacing,
+                  width: newNodeSize,
+                  height: newNodeSize,
+                  title: `灯光 #${i + 1}`,
+                  prompt: fullPrompt,
+                  imageSrc: results[i],
+                  outputArtifacts: [results[i]],
+                  model: params.model || node.model,
+                  aspectRatio: params.aspectRatio || node.aspectRatio,
+                  resolution: params.resolution || node.resolution,
+                });
+                extraConns.push({
+                  id: generateId(),
+                  sourceId: nodeId,
+                  targetId: newNodeId,
+                });
+              }
+
+              setNodesRef.current((prev) => [...prev, ...extraNodes]);
+              setConnectionsRef.current((prev) => [...prev, ...extraConns]);
+
+              for (let i = 1; i < results.length; i++) {
+                await saveAssetToIndexedDB(
+                  extraNodes[i - 1].id,
+                  results[i],
+                  "image",
+                );
+              }
+            } else {
+              updateNodeDataRef.current(nodeId, {
+                isLoading: false,
+                imageSrc: results[0],
+                outputArtifacts: [results[0], ...currentArtifacts],
+                annotations: [],
+                annotatedImageSrc: undefined,
+                isLightEditing: false,
+              });
+              await saveAssetToIndexedDB(nodeId, results[0], "image");
+            }
+          } else {
+            throw new Error("未返回结果");
+          }
+        } catch (e) {
+          logger.error("handleLightGenerate: single generate failed", e);
+          alert(`生成失败: ${(e as Error).message}`);
+          updateNodeDataRef.current(nodeId, { isLoading: false });
+        }
       }
     },
-    [nodes, updateNodeData, setNodes, setConnections],
+    [],
   );
 
   const handleGridSplitCreateNodes = useCallback(
@@ -341,7 +522,7 @@ export const useGeneration = ({
       sourceNodeId: string,
       cells: { dataUrl: string; label: string; row?: number; col?: number }[],
     ) => {
-      const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+      const sourceNode = nodesRef.current.find((n) => n.id === sourceNodeId);
       if (!sourceNode) return;
 
       const newNodeSize = 300;
@@ -393,10 +574,10 @@ export const useGeneration = ({
         });
       });
 
-      setNodes((prev) => [...prev, ...newNodes]);
-      setConnections((prev) => [...prev, ...newConns]);
+      setNodesRef.current((prev) => [...prev, ...newNodes]);
+      setConnectionsRef.current((prev) => [...prev, ...newConns]);
     },
-    [nodes, setNodes, setConnections],
+    [],
   );
 
   return {

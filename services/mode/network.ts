@@ -25,22 +25,18 @@ export const fetchThirdParty = async (
   }
 
   const headers: any = {};
-  // 兼容 Gemini 原生格式 (x-goog-api-key) 和 OpenAI (Authorization)
-  // 如果是原生 Gemini 路径，通常使用 query param key=API_KEY 或 header x-goog-api-key
-  // 但对于中转商，Authorization: Bearer 通常也是支持的。
-  // 为了稳妥，如果检测到是原生路径，我们尝试同时加上 x-goog-api-key
+  let requestUrl = url;
   if (url.includes("generateContent")) {
     headers["x-goog-api-key"] = config.key;
     headers["Authorization"] = `Bearer ${config.key}`;
     if (!url.includes("key=")) {
       const separator = url.includes("?") ? "&" : "?";
-      url = `${url}${separator}key=${config.key}`;
+      requestUrl = `${url}${separator}key=${config.key}`;
     }
   } else if (url.includes("api.poe.com")) {
-    // Poe API 可能需要使用 query parameter 传递 API key
     const separator = url.includes("?") ? "&" : "?";
     if (!url.includes("poe_api_key=") && !url.includes("key=")) {
-      url = `${url}${separator}poe_api_key=${config.key}`;
+      requestUrl = `${url}${separator}poe_api_key=${config.key}`;
     }
     headers["Authorization"] = `Bearer ${config.key}`;
   } else {
@@ -69,7 +65,7 @@ export const fetchThirdParty = async (
     }
 
     try {
-      const response = await fetch(url, fetchOptions);
+      const response = await fetch(requestUrl, fetchOptions);
       clearTimeout(timeoutId);
 
       if (!response.ok) {

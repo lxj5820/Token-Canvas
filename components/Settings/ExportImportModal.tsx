@@ -35,7 +35,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("export");
   const [exportMode, setExportMode] = useState<ExportMode>("json");
-  const [localProjectName, setLocalProjectName] = useState(projectName);
+  const [localProjectName, setLocalProjectName] = useState(projectName ?? "");
   const [isExporting, setIsExporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -44,6 +44,13 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   const [importProgress, setImportProgress] = useState<string>("");
 
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // 当 modal 打开时，同步 localProjectName
+  useEffect(() => {
+    if (isOpen) {
+      setLocalProjectName(projectName ?? "");
+    }
+  }, [isOpen, projectName]);
 
   const handleFile = async (file: File) => {
     if (isImporting) return;

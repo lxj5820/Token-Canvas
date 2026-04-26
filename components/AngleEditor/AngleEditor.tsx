@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Icons } from "../Icons";
+import { LocalCustomDropdown } from "../Nodes/Shared/LocalNodeComponents";
+import { IMAGE_HANDLERS } from "../../services/mode/image/configurations";
 
 // ===== 常量 =====
 
@@ -59,6 +61,9 @@ export interface AngleGenerateParams {
   includePrompt: boolean;
   prompt?: string;
   count: number;
+  model?: string;
+  aspectRatio?: string;
+  resolution?: string;
 }
 
 interface AngleEditorProps {
@@ -68,6 +73,10 @@ interface AngleEditorProps {
   isDark?: boolean;
   prompt?: string;
   isLoading?: boolean;
+  model?: string;
+  aspectRatio?: string;
+  resolution?: string;
+  imageModels?: string[];
 }
 
 // ===== 组件 =====
@@ -79,8 +88,11 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
   isDark = true,
   prompt,
   isLoading,
+  model: defaultModel,
+  aspectRatio: defaultAspectRatio,
+  resolution: defaultResolution,
+  imageModels = [],
 }) => {
-  // 状态
   const [hAngle, setHAngle] = useState(45);
   const [vAngle, setVAngle] = useState(30);
   const [zoom, setZoom] = useState(0);
@@ -89,10 +101,35 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
   const [count, setCount] = useState(1);
   const [activePreset, setActivePreset] = useState("全景俯拍");
   const [countDropdownOpen, setCountDropdownOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(defaultModel || "Banana 2");
+  const [selectedRatio, setSelectedRatio] = useState(defaultAspectRatio || "1:1");
+  const [selectedResolution, setSelectedResolution] = useState(defaultResolution || "1k");
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     setPromptInput(prompt || "");
   }, [prompt]);
+
+  useEffect(() => {
+    if (defaultModel) setSelectedModel(defaultModel);
+  }, [defaultModel]);
+
+  useEffect(() => {
+    if (defaultAspectRatio) setSelectedRatio(defaultAspectRatio);
+  }, [defaultAspectRatio]);
+
+  useEffect(() => {
+    if (defaultResolution) setSelectedResolution(defaultResolution);
+  }, [defaultResolution]);
+
+  const handler = IMAGE_HANDLERS[selectedModel] || IMAGE_HANDLERS["Banana 2"];
+  const rules = handler.rules;
+  const supportedRatios = rules.ratios || ["1:1", "16:9"];
+  const supportedResolutions = rules.resolutions || ["1k"];
+
+  const handleRatioChange = useCallback((val: string) => {
+    setSelectedRatio(val);
+  }, []);
 
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
@@ -233,8 +270,11 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
       includePrompt,
       prompt: promptInput,
       count,
+      model: selectedModel,
+      aspectRatio: selectedRatio,
+      resolution: selectedResolution,
     });
-  }, [hAngle, vAngle, zoom, includePrompt, promptInput, count, onGenerate]);
+  }, [hAngle, vAngle, zoom, includePrompt, promptInput, count, onGenerate, selectedModel, selectedRatio, selectedResolution]);
 
   // ===== 滑块渐变计算 =====
 
@@ -765,18 +805,53 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
       <div className="flex items-center px-4 py-3">
         {/* 重置按钮 */}
         <button
-          className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] transition-colors cursor-pointer ${
+          className={`group/reset relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors cursor-pointer ${
             isDark
-              ? "text-zinc-400 bg-zinc-700/50 hover:text-zinc-200 hover:bg-zinc-700/70"
-              : "text-gray-500 bg-gray-100 hover:text-gray-700 hover:bg-gray-200"
+              ? "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700/70"
+              : "text-gray-400 hover:text-gray-700 hover:bg-gray-200"
           }`}
           onClick={handleReset}
+          title="重置参数"
         >
-          <Icons.RotateCcw size={14} />
-          <span>重置参数</span>
+          <Icons.RotateCcw size={15} />
         </button>
 
         <div className="flex-1" />
+
+        <div className="flex items-center gap-2 mr-3">
+          <LocalCustomDropdown
+            options={imageModels}
+            value={selectedModel}
+            onChange={(val: string) => setSelectedModel(val)}
+            isOpen={activeDropdown === "model"}
+            onToggle={() => setActiveDropdown(activeDropdown === "model" ? null : "model")}
+            onClose={() => setActiveDropdown(null)}
+            align="left"
+            width="w-[130px]"
+            isDark={isDark}
+          />
+          <LocalCustomDropdown
+            icon={Icons.Crop}
+            options={supportedRatios}
+            value={selectedRatio}
+            onChange={handleRatioChange}
+            isOpen={activeDropdown === "ratio"}
+            onToggle={() => setActiveDropdown(activeDropdown === "ratio" ? null : "ratio")}
+            onClose={() => setActiveDropdown(null)}
+            isDark={isDark}
+          />
+          <LocalCustomDropdown
+            icon={Icons.Monitor}
+            options={supportedResolutions}
+            value={selectedResolution}
+            onChange={(val: string) => setSelectedResolution(val)}
+            isOpen={activeDropdown === "res"}
+            onToggle={() => setActiveDropdown(activeDropdown === "res" ? null : "res")}
+            onClose={() => setActiveDropdown(null)}
+            disabledOptions={["1k", "2k", "4k"].filter((r) => !supportedResolutions.includes(r))}
+            isDark={isDark}
+          />
+        </div>
 
         {/* 数量选择 */}
         <div className="flex items-center gap-2 mr-3 count-dropdown-container relative">

@@ -4,7 +4,7 @@ import { NodeType } from "../types";
 
 export const DEFAULT_NODE_WIDTH = 320;
 export const DEFAULT_NODE_HEIGHT = 240;
-export const ZOOM_MIN = 0.2;
+export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 5;
 export const MAX_SIDE_IMPORT = 750;
 export const OVERLAP_THRESHOLD = 10;

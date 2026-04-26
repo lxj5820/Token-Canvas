@@ -463,7 +463,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                 <LocalCustomDropdown
                   options={imageModels}
                   value={data.model || "Banana 2"}
-                  onChange={(val: any) => updateData(data.id, { model: val })}
+                  onChange={(val: string) => updateData(data.id, { model: val })}
                   isOpen={activeDropdown === "model"}
                   onToggle={() =>
                     setActiveDropdown(
@@ -493,7 +493,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                   icon={Icons.Monitor}
                   options={supportedResolutions}
                   value={data.resolution || "1k"}
-                  onChange={(val: any) =>
+                  onChange={(val: string) =>
                     updateData(data.id, { resolution: val })
                   }
                   isOpen={activeDropdown === "res"}
@@ -510,7 +510,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                   icon={Icons.Layers}
                   options={[1, 2, 3, 4]}
                   value={data.count || 1}
-                  onChange={(val: any) => updateData(data.id, { count: val })}
+                  onChange={(val: string) => updateData(data.id, { count: val })}
                   isOpen={activeDropdown === "count"}
                   onToggle={() =>
                     setActiveDropdown(
@@ -611,6 +611,10 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
             isDark={isDark}
             prompt={data.prompt}
             isLoading={data.isLoading}
+            model={data.model || "Banana 2"}
+            aspectRatio={data.aspectRatio || "1:1"}
+            resolution={data.resolution || "1k"}
+            imageModels={imageModels}
           />
         </div>
       )}
@@ -629,6 +633,10 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
             isDark={isDark}
             prompt={data.prompt}
             isLoading={data.isLoading}
+            model={data.model || "Banana 2"}
+            aspectRatio={data.aspectRatio || "1:1"}
+            resolution={data.resolution || "1k"}
+            imageModels={imageModels}
           />
         </div>
       )}

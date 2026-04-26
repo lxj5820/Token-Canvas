@@ -1,18 +1,22 @@
-import React from "react";
+import React, { memo } from "react";
 import { NodeData, NodeType } from "../../types";
 
 interface BaseNodeProps {
   data: NodeData;
   selected: boolean;
-  onMouseDown: (e: React.MouseEvent) => void;
-  onContextMenu: (e: React.MouseEvent) => void;
-  onConnectStart: (e: React.MouseEvent, type: "source" | "target") => void;
+  /** 稳定引用：由 BaseNode 内部绑定 data.id */
+  onMouseDown: (e: React.MouseEvent, id: string) => void;
+  /** 稳定引用：由 BaseNode 内部绑定 data.id + data.type */
+  onContextMenu: (e: React.MouseEvent, id: string, type: NodeType) => void;
+  /** 稳定引用：由 BaseNode 内部绑定 data.id */
+  onConnectStart: (e: React.MouseEvent, nodeId: string, type: "source" | "target") => void;
   onPortMouseUp?: (
     e: React.MouseEvent,
     nodeId: string,
     type: "source" | "target",
   ) => void;
-  onResizeStart?: (e: React.MouseEvent) => void;
+  /** 稳定引用：由 BaseNode 内部绑定 data.id */
+  onResizeStart?: (e: React.MouseEvent, nodeId: string) => void;
   children: React.ReactNode;
   scale: number;
   isDark?: boolean;
@@ -68,7 +72,7 @@ const ConnectionPort: React.FC<{
   );
 };
 
-const BaseNode: React.FC<BaseNodeProps> = ({
+const BaseNodeComponent: React.FC<BaseNodeProps> = ({
   data,
   selected,
   onMouseDown,
@@ -111,8 +115,8 @@ const BaseNode: React.FC<BaseNodeProps> = ({
         zIndex: data.isStackOpen ? 100 : selected ? 50 : 10,
         overflow: "visible",
       }}
-      onMouseDown={onMouseDown}
-      onContextMenu={onContextMenu}
+      onMouseDown={(e) => onMouseDown(e, data.id)}
+      onContextMenu={(e) => onContextMenu(e, data.id, data.type)}
     >
       {/* 主内容区域，包含节点内容 */}
       <div className="relative w-full h-full">
@@ -130,7 +134,7 @@ const BaseNode: React.FC<BaseNodeProps> = ({
         <ConnectionPort
           type="output"
           isDark={isDark}
-          onMouseDown={(e) => onConnectStart(e, "source")}
+          onMouseDown={(e) => onConnectStart(e, data.id, "source")}
         />
 
         {/* 调整大小句柄 */}
@@ -140,7 +144,7 @@ const BaseNode: React.FC<BaseNodeProps> = ({
                 flex items-center justify-center
                 opacity-0 group-hover:opacity-100 transition-opacity duration-200
               `}
-          onMouseDown={onResizeStart}
+          onMouseDown={(e) => onResizeStart?.(e, data.id)}
         >
           <svg
             width="10"
@@ -161,4 +165,5 @@ const BaseNode: React.FC<BaseNodeProps> = ({
   );
 };
 
+export const BaseNode = memo(BaseNodeComponent);
 export default BaseNode;

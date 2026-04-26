@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NodeData, Connection, CanvasTransform } from "../types";
 import { indexedDbService } from "../services/indexedDbService";
+import { logger } from "../services/logger";
 
 export interface UseAutoSaveOptions {
   nodes: NodeData[];
@@ -60,7 +61,7 @@ export const useLoadWorkflow = (
           setConnections(saved.connections);
           if (saved.transform) setTransform(saved.transform);
           if (saved.projectName) setProjectName(saved.projectName);
-          console.log("[App] 已从IndexedDB加载工作流");
+          logger.debug("[useAutoSave] 已从IndexedDB加载工作流");
           setInitialHistory({
             nodes: saved.nodes,
             connections: saved.connections,

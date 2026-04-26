@@ -11,9 +11,6 @@ import {
 import BaseNode from "./components/Nodes/BaseNode";
 import { NodeContent } from "./components/Nodes/NodeContent";
 import { Icons } from "./components/Icons";
-import { indexedDbService } from "./services/indexedDbService";
-import { saveAssetToIndexedDB } from "./services/saveAssetToIndexedDB";
-import { logger } from "./services/logger";
 import Minimap from "./components/Minimap";
 import { SettingsModal } from "./components/Settings/SettingsModal";
 import { StorageModal } from "./components/Settings/StorageModal";
@@ -32,27 +29,19 @@ import {
 } from "./hooks/useKeyboardShortcuts";
 import { useCanvasState } from "./hooks/useCanvasState";
 import { useGeneration } from "./hooks/useGeneration";
+import { useZoom } from "./hooks/useZoom";
+import { useNodeActions } from "./hooks/useNodeActions";
+import { useWorkflowIO } from "./hooks/useWorkflowIO";
+import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
 import { ConnectionRenderer, SelectionBox, PreviewMedia } from "./renderers";
 import { NewWorkflowDialog, ContextMenu, QuickAddMenu } from "./dialogs";
-import { validateWorkflow } from "./services/workflowValidator";
-import {
-  DEFAULT_NODE_WIDTH,
-  DEFAULT_NODE_HEIGHT,
-  ZOOM_MIN,
-  ZOOM_MAX,
-  generateId,
-  calculateImportDimensions,
-  getDefaultNodeSize,
-  getDefaultNodeConfig,
-  WORKFLOW_STORAGE_KEY,
-} from "./services/canvasConstants";
+import { importFileAsNode } from "./utils/importFileAsNode";
 
 const App: React.FC = () => {
   return <CanvasWithSidebar />;
 };
 
 const CanvasWithSidebar: React.FC = () => {
-  // 核心画布状态 — 从 useCanvasState hook 提取
   const {
     nodes,
     setNodes,
@@ -70,38 +59,21 @@ const CanvasWithSidebar: React.FC = () => {
     setCurrentMode,
     canvasBg,
     setCanvasBg,
+    isDark,
+    setIsDark,
     projectName,
     setProjectName,
     selectionBox,
     setSelectionBox,
     selectedConnectionId,
     setSelectedConnectionId,
-    isDark,
     inputsMap,
     getInputImages,
     screenToWorld,
   } = useCanvasState();
 
-  const dragModeRef = useRef(dragMode);
-  const nodesRef = useRef(nodes);
-  const connectionsRef = useRef(connections);
-  const saveToHistoryRef = useRef<
-    (nodes: NodeData[], connections: Connection[]) => void
-  >(undefined as any);
   const [showAIPanel, setShowAIPanel] = useState(false);
-  const [showCommunityPanel, setShowCommunityPanel] = useState(false);
   const [showShortcutsPanel, setShowShortcutsPanel] = useState(false);
-
-  // 首次加载时显示社区气泡
-  useEffect(() => {
-    setShowCommunityPanel(true);
-    const timer = setTimeout(() => {
-      setShowCommunityPanel(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-  const [showZoomPanel, setShowZoomPanel] = useState(false);
   const [showNewWorkflowDialog, setShowNewWorkflowDialog] = useState(false);
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -138,28 +110,9 @@ const CanvasWithSidebar: React.FC = () => {
   } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragStartRef = useRef<{
-    x: number;
-    y: number;
-    w?: number;
-    h?: number;
-    nodeId?: string;
-  }>({ x: 0, y: 0 });
-  const initialTransformRef = useRef<CanvasTransform>({ x: 0, y: 0, k: 1 });
-  const initialNodePositionsRef = useRef<
-    { id: string; x: number; y: number }[]
-  >([]);
-  const connectionStartRef = useRef<{
-    nodeId: string;
-    type: "source" | "target";
-  } | null>(null);
-  const [tempConnection, setTempConnection] = useState<Point | null>(null);
-  const lastMousePosRef = useRef<Point>({ x: 0, y: 0 });
-  const workflowInputRef = useRef<HTMLInputElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
   const replaceImageRef = useRef<HTMLInputElement>(null);
   const nodeToReplaceRef = useRef<string | null>(null);
-  const [suggestedNodes, setSuggestedNodes] = useState<NodeData[]>([]);
   const spacePressed = useRef(false);
 
   const {
@@ -181,14 +134,94 @@ const CanvasWithSidebar: React.FC = () => {
 
   useAutoSave({ nodes, connections, transform, projectName });
 
-  const updateNodeData = useCallback(
-    (id: string, updates: Partial<NodeData>) => {
-      setNodes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, ...updates } : n)),
-      );
-    },
-    [],
-  );
+  const { handleZoomIn, handleZoomOut, handleZoomReset } =
+    useZoom({ transform, setTransform, nodes, containerRef });
+
+  const {
+    updateNodeData,
+    addNode,
+    handleQuickAddNode: handleQuickAddNodeFromHook,
+    deleteNode,
+    performCopy: performCopyFromHook,
+    performPaste: performPasteFromHook,
+    handleAlign,
+    handleMaximize: handleMaximizeFromHook,
+    copyImageToClipboard,
+    triggerReplaceImage: triggerReplaceImageFromHook,
+    handleReplaceImage: handleReplaceImageFromHook,
+  } = useNodeActions({
+    nodes,
+    connections,
+    setNodes,
+    setConnections,
+    setSelectedNodeIds,
+    setDeletedNodes,
+    saveToHistory,
+    screenToWorld,
+    containerRef,
+  });
+
+  const {
+    handleSaveWorkflow,
+    handleLoadWorkflow,
+    handleConfirmNew: handleConfirmNewFromHook,
+    handleDownload,
+    handleImportWorkflow,
+  } = useWorkflowIO({
+    nodes,
+    connections,
+    transform,
+    projectName,
+    setNodes,
+    setConnections,
+    setTransform,
+    setProjectName,
+    setSelectedNodeIds,
+    setSelectionBox,
+    setDeletedNodes,
+    saveToHistory,
+  });
+
+  const {
+    handleMouseDown,
+    handleNodeMouseDown,
+    handleNodeContextMenu,
+    handleCanvasContextMenu,
+    handleResizeStart,
+    handleConnectStart,
+    handlePortMouseUp,
+    handleMouseMove,
+    handleMouseUp,
+    handleGlobalMouseUp,
+    createConnection,
+    removeConnection,
+    tempConnection,
+    suggestedNodes,
+    lastMousePosRef,
+    connectionStartRef,
+    getCanvasCursor,
+  } = useCanvasInteraction({
+    nodes,
+    connections,
+    transform,
+    setTransform,
+    selectedNodeIds,
+    setSelectedNodeIds,
+    dragMode,
+    setDragMode,
+    currentMode,
+    setSelectionBox,
+    selectedConnectionId,
+    setSelectedConnectionId,
+    setNodes,
+    setConnections,
+    setQuickAddMenu,
+    setContextMenu,
+    saveToHistory,
+    screenToWorld,
+    containerRef,
+    spacePressed,
+  });
 
   const {
     handleGenerate,
@@ -205,15 +238,127 @@ const CanvasWithSidebar: React.FC = () => {
     setConnections,
   });
 
-  useEffect(() => {
-    dragModeRef.current = dragMode;
-  }, [dragMode]);
+  const performCopy = () => {
+    const result = performCopyFromHook(selectedNodeIds);
+    if (result) setInternalClipboard(result);
+  };
 
-  useEffect(() => {
-    nodesRef.current = nodes;
-    connectionsRef.current = connections;
-    saveToHistoryRef.current = saveToHistory;
-  }, [nodes, connections, saveToHistory]);
+  const performPaste = (targetPos: Point) => {
+    if (internalClipboard) {
+      performPasteFromHook(targetPos, internalClipboard, selectedNodeIds);
+    }
+  };
+
+  const handleQuickAddNode = (type: NodeType) => {
+    if (quickAddMenu) {
+      handleQuickAddNodeFromHook(type, quickAddMenu);
+      setQuickAddMenu(null);
+    }
+  };
+
+  const handleMaximize = (nodeId: string) => {
+    const result = handleMaximizeFromHook(nodeId);
+    if (result) setPreviewMedia(result);
+  };
+
+  const triggerReplaceImage = () => {
+    triggerReplaceImageFromHook(replaceImageRef);
+  };
+
+  const handleReplaceImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleReplaceImageFromHook(e, nodeToReplaceRef);
+    if (replaceImageRef.current) replaceImageRef.current.value = "";
+  };
+
+  const handleConfirmNew = async (shouldSave: boolean) => {
+    await handleConfirmNewFromHook(shouldSave);
+    setShowNewWorkflowDialog(false);
+  };
+
+  const handleNewWorkflow = () => setShowNewWorkflowDialog(true);
+
+  const handleSelectMode = useCallback(() => {
+    setCurrentMode("select");
+    setDragMode("NONE");
+  }, []);
+
+  const handlePanMode = useCallback(() => {
+    setCurrentMode("pan");
+    setDragMode("PAN");
+  }, []);
+
+  const toggleTheme = (dark: boolean) => {
+    setIsDark(dark);
+    setCanvasBg(dark ? "#0B0C0E" : "#F5F7FA");
+  };
+
+  const handleScreenshot = useCallback(async () => {
+    const container = containerRef.current;
+    if (!container || isScreenshotting) return;
+    setIsScreenshotting(true);
+    try {
+      const rect = container.getBoundingClientRect();
+      const pixelRatio = window.devicePixelRatio || 1;
+      const dataUrl = await toPng(container, {
+        width: rect.width,
+        height: rect.height,
+        pixelRatio: pixelRatio,
+        backgroundColor: canvasBg,
+        style: { transform: "none" },
+        filter: (node: HTMLElement) => {
+          if (
+            node.classList &&
+            (node.classList.contains("minimap-container") ||
+              (node.classList.contains("absolute") &&
+                node.closest(".minimap-container")))
+          ) {
+            return false;
+          }
+          return true;
+        },
+      });
+      const link = document.createElement("a");
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .slice(0, 19);
+      link.download = `token-canvas-${timestamp}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      logger.error("[Screenshot] Failed:", err);
+    } finally {
+      setIsScreenshotting(false);
+    }
+  }, [canvasBg, isScreenshotting]);
+
+  const handleImportAsset = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    const center = rect
+      ? screenToWorld(rect.width / 2, rect.height / 2)
+      : { x: 0, y: 0 };
+    importFileAsNode(file, center, addNode);
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files: File[] = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+    const worldPos = screenToWorld(e.clientX, e.clientY);
+    files.forEach((file, index) => {
+      const offset = { x: worldPos.x + index * 20, y: worldPos.y + index * 20 };
+      importFileAsNode(file, offset, addNode);
+    });
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -252,1085 +397,9 @@ const CanvasWithSidebar: React.FC = () => {
       setStorageDirName(name);
     };
     loadStorageInfo();
-    const handleGlobalMouseUp = () => {
-      if (dragModeRef.current !== "NONE") {
-        // 拖拽/Resize 结束时保存历史（画布外释放鼠标的场景）
-        if (
-          dragModeRef.current === "DRAG_NODE" ||
-          dragModeRef.current === "RESIZE_NODE"
-        ) {
-          const startRef = dragStartRef.current;
-          const hasMoved = startRef.x !== 0 || startRef.y !== 0;
-          if (hasMoved && nodesRef.current && connectionsRef.current) {
-            saveToHistoryRef.current(nodesRef.current, connectionsRef.current);
-          }
-        }
-        setDragMode("NONE");
-        setTempConnection(null);
-        connectionStartRef.current = null;
-        dragStartRef.current = { x: 0, y: 0 };
-        setSuggestedNodes([]);
-        setSelectionBox(null);
-      }
-    };
     window.addEventListener("mouseup", handleGlobalMouseUp);
     return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
-  }, [isStorageOpen]);
-
-  const handleSelectMode = useCallback(() => {
-    setCurrentMode("select");
-    setDragMode("NONE");
   }, []);
-
-  const handlePanMode = useCallback(() => {
-    setCurrentMode("pan");
-    setDragMode("PAN");
-  }, []);
-
-  const getZoomStep = (currentK: number) => 0.08 * (currentK / 1);
-
-  const handleZoomIn = useCallback(() => {
-    setTransform((prev) => {
-      const step = getZoomStep(prev.k);
-      const newK = Math.min(prev.k + step, ZOOM_MAX);
-      const container = containerRef.current;
-      if (!container) return { ...prev, k: newK };
-      const rect = container.getBoundingClientRect();
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const worldX = (centerX - prev.x) / prev.k;
-      const worldY = (centerY - prev.y) / prev.k;
-      return {
-        x: centerX - worldX * newK,
-        y: centerY - worldY * newK,
-        k: newK,
-      };
-    });
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    setTransform((prev) => {
-      const step = getZoomStep(prev.k);
-      const newK = Math.max(prev.k - step, ZOOM_MIN);
-      const container = containerRef.current;
-      if (!container) return { ...prev, k: newK };
-      const rect = container.getBoundingClientRect();
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const worldX = (centerX - prev.x) / prev.k;
-      const worldY = (centerY - prev.y) / prev.k;
-      return {
-        x: centerX - worldX * newK,
-        y: centerY - worldY * newK,
-        k: newK,
-      };
-    });
-  }, []);
-
-  const handleZoomReset = useCallback(() => {
-    if (nodes.length === 0) {
-      setTransform({ x: 0, y: 0, k: 1 });
-      return;
-    }
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    nodes.forEach((node) => {
-      minX = Math.min(minX, node.x);
-      minY = Math.min(minY, node.y);
-      maxX = Math.max(maxX, node.x + node.width);
-      maxY = Math.max(maxY, node.y + node.height);
-    });
-    const container = containerRef.current;
-    if (!container) {
-      setTransform({ x: 0, y: 0, k: 1 });
-      return;
-    }
-    const padding = 50;
-    const scaleX = (container.clientWidth - padding * 2) / (maxX - minX);
-    const scaleY = (container.clientHeight - padding * 2) / (maxY - minY);
-    const newScale = Math.min(scaleX, scaleY, 1);
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    setTransform({
-      x: container.clientWidth / 2 - centerX * newScale,
-      y: container.clientHeight / 2 - centerY * newScale,
-      k: newScale,
-    });
-  }, [nodes]);
-
-  const handleAlign = useCallback(
-    (direction: "UP" | "DOWN" | "LEFT" | "RIGHT") => {
-      if (selectedNodeIds.size < 2) return;
-      saveToHistory(nodes, connections);
-      setNodes((prevNodes) => {
-        const selected = prevNodes.filter((n) => selectedNodeIds.has(n.id));
-        const unselected = prevNodes.filter((n) => !selectedNodeIds.has(n.id));
-        const updatedNodes = selected.map((n) => ({ ...n }));
-        const isVerticalAlign = direction === "UP" || direction === "DOWN";
-        const OVERLAP_THRESHOLD = 10;
-        const isOverlap = (a: NodeData, b: NodeData) => {
-          if (isVerticalAlign) {
-            const overlap =
-              Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
-            return overlap > OVERLAP_THRESHOLD;
-          } else {
-            const overlap =
-              Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
-            return overlap > OVERLAP_THRESHOLD;
-          }
-        };
-        const clusters: NodeData[][] = [];
-        const visited = new Set<string>();
-        for (const node of updatedNodes) {
-          if (visited.has(node.id)) continue;
-          const cluster = [node];
-          visited.add(node.id);
-          const queue = [node];
-          while (queue.length > 0) {
-            const current = queue.shift()!;
-            for (const other of updatedNodes) {
-              if (!visited.has(other.id) && isOverlap(current, other)) {
-                visited.add(other.id);
-                cluster.push(other);
-                queue.push(other);
-              }
-            }
-          }
-          clusters.push(cluster);
-        }
-        const minTop = Math.min(...updatedNodes.map((n) => n.y));
-        const maxBottom = Math.max(...updatedNodes.map((n) => n.y + n.height));
-        const minLeft = Math.min(...updatedNodes.map((n) => n.x));
-        const maxRight = Math.max(...updatedNodes.map((n) => n.x + n.width));
-        const HORIZONTAL_GAP = 20;
-        const VERTICAL_GAP = 60;
-        clusters.forEach((cluster) => {
-          if (direction === "UP") {
-            cluster.sort((a, b) => a.y - b.y || a.id.localeCompare(b.id));
-            let currentY = minTop;
-            cluster.forEach((node) => {
-              node.y = currentY;
-              currentY += node.height + VERTICAL_GAP;
-            });
-          } else if (direction === "DOWN") {
-            cluster.sort((a, b) => b.y - a.y || a.id.localeCompare(b.id));
-            let currentBottom = maxBottom;
-            cluster.forEach((node) => {
-              node.y = currentBottom - node.height;
-              currentBottom -= node.height + VERTICAL_GAP;
-            });
-          } else if (direction === "LEFT") {
-            cluster.sort((a, b) => a.x - b.x || a.id.localeCompare(b.id));
-            let currentX = minLeft;
-            cluster.forEach((node) => {
-              node.x = currentX;
-              currentX += node.width + HORIZONTAL_GAP;
-            });
-          } else if (direction === "RIGHT") {
-            cluster.sort((a, b) => b.x - a.x || a.id.localeCompare(b.id));
-            let currentRight = maxRight;
-            cluster.forEach((node) => {
-              node.x = currentRight - node.width;
-              currentRight -= node.width + HORIZONTAL_GAP;
-            });
-          }
-        });
-        return [...unselected, ...updatedNodes];
-      });
-    },
-    [selectedNodeIds, nodes, connections, saveToHistory],
-  );
-
-  const performCopy = () => {
-    if (selectedNodeIds.size === 0) return;
-    const selectedNodes = nodes.filter((n) => selectedNodeIds.has(n.id));
-    const selectedConnections = connections.filter(
-      (c) => selectedNodeIds.has(c.sourceId) && selectedNodeIds.has(c.targetId),
-    );
-    setInternalClipboard({
-      nodes: selectedNodes,
-      connections: selectedConnections,
-    });
-  };
-
-  const performPaste = (targetPos: Point) => {
-    if (!internalClipboard || internalClipboard.nodes.length === 0) return;
-    const { nodes: clipboardNodes, connections: clipboardConnections } =
-      internalClipboard;
-    let minX = Infinity,
-      minY = Infinity;
-    clipboardNodes.forEach((n) => {
-      if (n.x < minX) minX = n.x;
-      if (n.y < minY) minY = n.y;
-    });
-    const idMap = new Map<string, string>();
-    const newNodes: NodeData[] = [];
-    clipboardNodes.forEach((node) => {
-      const newId = generateId();
-      idMap.set(node.id, newId);
-      newNodes.push({
-        ...node,
-        id: newId,
-        x: targetPos.x + (node.x - minX),
-        y: targetPos.y + (node.y - minY),
-        title: node.title.endsWith("(Copy)")
-          ? node.title
-          : `${node.title} (Copy)`,
-        isLoading: false,
-      });
-    });
-    const newConnections: Connection[] = clipboardConnections.map((c) => ({
-      id: generateId(),
-      sourceId: idMap.get(c.sourceId)!,
-      targetId: idMap.get(c.targetId)!,
-    }));
-    saveToHistory(nodes, connections);
-    setNodes((prev) => [...prev, ...newNodes]);
-    setConnections((prev) => [...prev, ...newConnections]);
-    setSelectedNodeIds(new Set(newNodes.map((n) => n.id)));
-  };
-
-  const addNode = (
-    type: NodeType,
-    x?: number,
-    y?: number,
-    dataOverride?: Partial<NodeData>,
-  ) => {
-    if (x === undefined || y === undefined) {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const center = screenToWorld(rect.width / 2, rect.height / 2);
-        x = center.x - DEFAULT_NODE_WIDTH / 2;
-        y = center.y - DEFAULT_NODE_HEIGHT / 2;
-      } else {
-        x = 0;
-        y = 0;
-      }
-    }
-    const { width, height } = getDefaultNodeSize(type, dataOverride);
-    const defaultConfig = getDefaultNodeConfig(type);
-    const newNode: NodeData = {
-      id: generateId(),
-      type,
-      x,
-      y,
-      width,
-      height,
-      title: dataOverride?.title || defaultConfig.title,
-      aspectRatio: dataOverride?.aspectRatio || defaultConfig.aspectRatio,
-      model: dataOverride?.model || defaultConfig.model,
-      resolution: dataOverride?.resolution || defaultConfig.resolution,
-      duration: dataOverride?.duration || defaultConfig.duration,
-      count: dataOverride?.count || defaultConfig.count,
-      prompt: dataOverride?.prompt || defaultConfig.prompt,
-      imageSrc: dataOverride?.imageSrc,
-      videoSrc: dataOverride?.videoSrc,
-      outputArtifacts:
-        dataOverride?.outputArtifacts ||
-        (dataOverride?.imageSrc || dataOverride?.videoSrc
-          ? [dataOverride.imageSrc || dataOverride.videoSrc!]
-          : []),
-    };
-    saveToHistory(nodes, connections);
-    setNodes((prev) => [...prev, newNode]);
-    setSelectedNodeIds(new Set([newNode.id]));
-  };
-
-  const handleQuickAddNode = (type: NodeType) => {
-    if (!quickAddMenu) return;
-    const { width, height } = getDefaultNodeSize(type);
-    const defaultConfig = getDefaultNodeConfig(type);
-    const newNode: NodeData = {
-      id: generateId(),
-      type,
-      x: quickAddMenu.worldX,
-      y: quickAddMenu.worldY - height / 2,
-      width,
-      height,
-      title: defaultConfig.title,
-      aspectRatio: defaultConfig.aspectRatio,
-      model: defaultConfig.model,
-      resolution: defaultConfig.resolution,
-      duration: defaultConfig.duration,
-      count: defaultConfig.count,
-      prompt: defaultConfig.prompt,
-      outputArtifacts: [],
-    };
-    saveToHistory(nodes, connections);
-    setNodes((prev) => [...prev, newNode]);
-    setConnections((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        sourceId: quickAddMenu.sourceId,
-        targetId: newNode.id,
-      },
-    ]);
-    setQuickAddMenu(null);
-  };
-
-  const handleMaximize = (nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
-    // 优先使用带标注的烘焙图
-    const displaySrc = node.annotatedImageSrc || node.imageSrc;
-    if (node.videoSrc) setPreviewMedia({ url: node.videoSrc, type: "video" });
-    else if (displaySrc) setPreviewMedia({ url: displaySrc, type: "image" });
-    else alert("没有可预览的内容");
-  };
-
-  const copyImageToClipboard = async (nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    // 优先复制带标注的烘焙图
-    const src = node?.annotatedImageSrc || node?.imageSrc;
-    if (src) {
-      try {
-        const res = await fetch(src);
-        const blob = await res.blob();
-        await navigator.clipboard.write([
-          new ClipboardItem({ [blob.type]: blob as Blob }),
-        ]);
-        alert("图片已复制到剪贴板");
-      } catch (e) {
-        console.error(e);
-        alert("复制图片失败");
-      }
-    }
-  };
-
-  const triggerReplaceImage = (nodeId: string) => {
-    nodeToReplaceRef.current = nodeId;
-    replaceImageRef.current?.click();
-  };
-
-  const handleReplaceImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const nodeId = nodeToReplaceRef.current;
-    if (file && nodeId) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const img = new Image();
-        img.onload = async () => {
-          const node = nodes.find((n) => n.id === nodeId);
-          if (node) {
-            const { width, height, ratio } = calculateImportDimensions(
-              img.width,
-              img.height,
-            );
-            const src = event.target?.result as string;
-            const currentArtifacts = node.outputArtifacts || [];
-            const newArtifacts = [src, ...currentArtifacts];
-            updateNodeData(nodeId, {
-              imageSrc: src,
-              width,
-              height,
-              aspectRatio: `${ratio}:1`,
-              outputArtifacts: newArtifacts,
-              // 清除旧标注（新图片不再适用旧标注）
-              annotations: [],
-              annotatedImageSrc: undefined,
-              isAnnotating: false,
-            });
-            await saveAssetToIndexedDB(nodeId, src, "image");
-          }
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-    if (replaceImageRef.current) replaceImageRef.current.value = "";
-    nodeToReplaceRef.current = null;
-  };
-
-  const handleSaveWorkflow = () => {
-    const workflowData = {
-      nodes,
-      connections,
-      transform,
-      projectName,
-      version: "1.0",
-    };
-    const blob = new Blob([JSON.stringify(workflowData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    const safeName =
-      projectName.replace(/[<>:"/\\|?*]/g, "_").trim() || "未命名项目";
-    link.download = `${safeName}.aistudio-flow`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleNewWorkflow = () => setShowNewWorkflowDialog(true);
-
-  const handleConfirmNew = async (shouldSave: boolean) => {
-    if (shouldSave) handleSaveWorkflow();
-    const withContent = nodes.filter((n) => n.imageSrc || n.videoSrc);
-    if (withContent.length > 0)
-      setDeletedNodes((prev) => [...prev, ...withContent]);
-    setNodes([]);
-    setConnections([]);
-    setTransform({ x: 0, y: 0, k: 1 });
-    setProjectName("未命名项目");
-    setShowNewWorkflowDialog(false);
-    setSelectedNodeIds(new Set());
-    setSelectionBox(null);
-    await indexedDbService.deleteWorkflow("current");
-  };
-
-  const handleLoadWorkflow = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const rawData = JSON.parse(event.target?.result as string);
-        const result = validateWorkflow(rawData);
-        if (!result.valid) {
-          alert(`工作流文件校验失败:\n${result.errors.join("\n")}`);
-          return;
-        }
-        if (result.errors.length > 0) {
-          logger.warn("[App] 工作流导入部分数据有问题:", result.errors);
-        }
-        setNodes(result.data!.nodes);
-        setConnections(result.data!.connections);
-        if (result.data!.transform) setTransform(result.data!.transform);
-        if (result.data!.projectName) setProjectName(result.data!.projectName);
-      } catch (err) {
-        console.error(err);
-        alert("Invalid workflow file");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const handleDownload = async (nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
-    // 优先下载带标注的烘焙图
-    const url = node.videoSrc || node.annotatedImageSrc || node.imageSrc;
-    if (!url) {
-      alert("No content to download.");
-      return;
-    }
-    const ext = node.videoSrc ? "mp4" : "png";
-    const filename = `${node.title.replace(/\s+/g, "_")}_${Date.now()}.${ext}`;
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const { storageService } = await import("./services/storageService");
-      const saved = await storageService.saveFile(blob, filename);
-      if (saved) return;
-      const blobUrl = URL.createObjectURL(blob as Blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch (e) {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const handleImportAsset = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    const center = rect
-      ? screenToWorld(rect.width / 2, rect.height / 2)
-      : { x: 0, y: 0 };
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const { width, height, ratio } = calculateImportDimensions(
-            img.width,
-            img.height,
-          );
-          const src = event.target?.result as string;
-          addNode(
-            NodeType.ORIGINAL_IMAGE,
-            center.x - width / 2,
-            center.y - height / 2,
-            {
-              width,
-              height,
-              imageSrc: src,
-              aspectRatio: `${ratio}:1`,
-              outputArtifacts: [src],
-            },
-          );
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    } else if (file.type.startsWith("video/")) {
-      const url = URL.createObjectURL(file);
-      const video = document.createElement("video");
-      video.preload = "metadata";
-      video.onloadedmetadata = () => {
-        const { width, height, ratio } = calculateImportDimensions(
-          video.videoWidth,
-          video.videoHeight,
-        );
-        addNode(
-          NodeType.ORIGINAL_IMAGE,
-          center.x - width / 2,
-          center.y - height / 2,
-          {
-            width,
-            height,
-            videoSrc: url,
-            title: file.name,
-            aspectRatio: `${ratio}:1`,
-            outputArtifacts: [url],
-          },
-        );
-      };
-      video.src = url;
-    }
-    e.target.value = "";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files: File[] = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-    const worldPos = screenToWorld(e.clientX, e.clientY);
-    files.forEach((file, index) => {
-      const offsetX = index * 20;
-      const offsetY = index * 20;
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const src = event.target?.result as string;
-          const img = new Image();
-          img.onload = () => {
-            const { width, height, ratio } = calculateImportDimensions(
-              img.width,
-              img.height,
-            );
-            addNode(
-              NodeType.ORIGINAL_IMAGE,
-              worldPos.x - width / 2 + offsetX,
-              worldPos.y - height / 2 + offsetY,
-              {
-                width,
-                height,
-                imageSrc: src,
-                aspectRatio: `${ratio}:1`,
-                outputArtifacts: [src],
-              },
-            );
-          };
-          img.src = src;
-        };
-        reader.readAsDataURL(file);
-      } else if (file.type.startsWith("video/")) {
-        const url = URL.createObjectURL(file);
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        video.onloadedmetadata = () => {
-          const { width, height, ratio } = calculateImportDimensions(
-            video.videoWidth,
-            video.videoHeight,
-          );
-          addNode(
-            NodeType.ORIGINAL_IMAGE,
-            worldPos.x - width / 2 + offsetX,
-            worldPos.y - height / 2 + offsetY,
-            {
-              width,
-              height,
-              videoSrc: url,
-              title: file.name,
-              aspectRatio: `${ratio}:1`,
-              outputArtifacts: [url],
-            },
-          );
-        };
-        video.src = url;
-      }
-    });
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) e.preventDefault();
-    const zoomIntensity = 0.1;
-    const direction = e.deltaY > 0 ? -1 : 1;
-    let newK = transform.k + direction * zoomIntensity;
-    newK = Math.min(Math.max(ZOOM_MIN, newK), ZOOM_MAX);
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const worldX = (e.clientX - rect.left - transform.x) / transform.k;
-    const worldY = (e.clientY - rect.top - transform.y) / transform.k;
-    setTransform({
-      x: e.clientX - rect.left - worldX * newK,
-      y: e.clientY - rect.top - worldY * newK,
-      k: newK,
-    });
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (contextMenu) setContextMenu(null);
-    if (quickAddMenu) setQuickAddMenu(null);
-    if (selectedConnectionId) setSelectedConnectionId(null);
-    if (
-      currentMode === "pan" ||
-      e.button === 1 ||
-      (e.button === 0 && spacePressed.current)
-    ) {
-      setDragMode("PAN");
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
-      initialTransformRef.current = { ...transform };
-      e.preventDefault();
-      return;
-    }
-    if (e.target === containerRef.current && e.button === 0) {
-      setDragMode("SELECT");
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
-      setSelectionBox({ x: 0, y: 0, w: 0, h: 0 });
-      if (!e.shiftKey) setSelectedNodeIds(new Set());
-    }
-  };
-
-  const handleNodeMouseDown = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (contextMenu) setContextMenu(null);
-    if (quickAddMenu) setQuickAddMenu(null);
-    if (selectedConnectionId) setSelectedConnectionId(null);
-    if (e.button === 0) {
-      setDragMode("DRAG_NODE");
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
-      const isAlreadySelected = selectedNodeIds.has(id);
-      let newSelection = new Set(selectedNodeIds);
-      if (e.shiftKey) {
-        isAlreadySelected ? newSelection.delete(id) : newSelection.add(id);
-      } else {
-        if (!isAlreadySelected) {
-          newSelection.clear();
-          newSelection.add(id);
-        }
-      }
-      setSelectedNodeIds(newSelection);
-      initialNodePositionsRef.current = nodes.map((n) => ({
-        id: n.id,
-        x: n.x,
-        y: n.y,
-      }));
-    }
-  };
-
-  const handleNodeContextMenu = (
-    e: React.MouseEvent,
-    id: string,
-    type: NodeType,
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const worldPos = screenToWorld(e.clientX, e.clientY);
-    setContextMenu({
-      type: "NODE",
-      nodeId: id,
-      nodeType: type,
-      x: e.clientX,
-      y: e.clientY,
-      worldX: worldPos.x,
-      worldY: worldPos.y,
-    });
-    if (!selectedNodeIds.has(id)) setSelectedNodeIds(new Set([id]));
-  };
-
-  const getCanvasCursor = () => {
-    if (dragMode === "PAN") return "cursor-grabbing";
-    if (dragMode === "DRAG_NODE") return "cursor-move";
-    if (dragMode === "SELECT") return "cursor-default";
-    if (dragMode === "CONNECT") return "cursor-crosshair";
-    if (dragMode === "RESIZE_NODE") return "cursor-nwse-resize";
-    if (currentMode === "pan" || spacePressed.current) return "cursor-grab";
-    return "cursor-default";
-  };
-
-  const handleCanvasContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const worldPos = screenToWorld(e.clientX, e.clientY);
-    setContextMenu({
-      type: "CANVAS",
-      x: e.clientX,
-      y: e.clientY,
-      worldX: worldPos.x,
-      worldY: worldPos.y,
-    });
-  };
-
-  const handleResizeStart = (e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
-    setDragMode("RESIZE_NODE");
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      w: node.width,
-      h: node.height,
-      nodeId: nodeId,
-    };
-    setSelectedNodeIds(new Set([nodeId]));
-  };
-
-  const handleConnectStart = (
-    e: React.MouseEvent,
-    nodeId: string,
-    type: "source" | "target",
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    connectionStartRef.current = { nodeId, type };
-    setDragMode("CONNECT");
-    setTempConnection(screenToWorld(e.clientX, e.clientY));
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    const worldPos = screenToWorld(e.clientX, e.clientY);
-    if (dragMode !== "NONE" && e.buttons === 0) {
-      setDragMode("NONE");
-      dragStartRef.current = { x: 0, y: 0 };
-      return;
-    }
-    if (dragMode === "PAN") {
-      setTransform({
-        ...initialTransformRef.current,
-        x: initialTransformRef.current.x + (e.clientX - dragStartRef.current.x),
-        y: initialTransformRef.current.y + (e.clientY - dragStartRef.current.y),
-      });
-    } else if (dragMode === "DRAG_NODE") {
-      const dx = (e.clientX - dragStartRef.current.x) / transform.k;
-      const dy = (e.clientY - dragStartRef.current.y) / transform.k;
-      setNodes((prev) =>
-        prev.map((n) => {
-          if (selectedNodeIds.has(n.id)) {
-            const initial = initialNodePositionsRef.current.find(
-              (init) => init.id === n.id,
-            );
-            if (initial) return { ...n, x: initial.x + dx, y: initial.y + dy };
-          }
-          return n;
-        }),
-      );
-    } else if (dragMode === "SELECT") {
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
-      const x = Math.min(dragStartRef.current.x, e.clientX);
-      const y = Math.min(dragStartRef.current.y, e.clientY);
-      const w = Math.abs(e.clientX - dragStartRef.current.x);
-      const h = Math.abs(e.clientY - dragStartRef.current.y);
-      setSelectionBox({
-        x: x - containerRect.left,
-        y: y - containerRect.top,
-        w,
-        h,
-      });
-      const worldStartX = (x - containerRect.left - transform.x) / transform.k;
-      const worldStartY = (y - containerRect.top - transform.y) / transform.k;
-      const worldWidth = w / transform.k;
-      const worldHeight = h / transform.k;
-      const newSelection = new Set<string>();
-      nodes.forEach((n) => {
-        if (
-          n.x < worldStartX + worldWidth &&
-          n.x + n.width > worldStartX &&
-          n.y < worldStartY + worldHeight &&
-          n.y + n.height > worldStartY
-        ) {
-          newSelection.add(n.id);
-        }
-      });
-      setSelectedNodeIds(newSelection);
-    } else if (dragMode === "CONNECT") {
-      setTempConnection(worldPos);
-      if (connectionStartRef.current?.type === "source") {
-        const candidates = nodes
-          .filter((n) => n.id !== connectionStartRef.current?.nodeId)
-          .filter((n) => n.type !== NodeType.ORIGINAL_IMAGE)
-          .map((n) => ({
-            node: n,
-            dist: Math.sqrt(
-              Math.pow(worldPos.x - (n.x + n.width / 2), 2) +
-                Math.pow(worldPos.y - (n.y + n.height / 2), 2),
-            ),
-          }))
-          .filter((item) => item.dist < 500)
-          .sort((a, b) => a.dist - b.dist)
-          .slice(0, 3)
-          .map((item) => item.node);
-        setSuggestedNodes(candidates);
-      }
-    } else if (dragMode === "RESIZE_NODE") {
-      const nodeId = dragStartRef.current.nodeId;
-      const node = nodes.find((n) => n.id === nodeId);
-      if (node) {
-        const dx = (e.clientX - dragStartRef.current.x) / transform.k;
-        let ratio = 1.33;
-        if (node.aspectRatio) {
-          const ar = node.aspectRatio === "auto" ? "1:1" : node.aspectRatio;
-          const [w, h] = ar.split(":").map(Number);
-          if (!isNaN(w) && !isNaN(h) && h !== 0) ratio = w / h;
-        } else if (node.type === NodeType.ORIGINAL_IMAGE) {
-          ratio = (dragStartRef.current.w || 1) / (dragStartRef.current.h || 1);
-        }
-        let minWidth = 150;
-        if (node.type !== NodeType.CREATIVE_DESC) {
-          const limit1 = ratio >= 1 ? 400 * ratio : 400;
-          minWidth = Math.max(limit1, 400);
-        } else minWidth = 280;
-        let newWidth = Math.max(minWidth, (dragStartRef.current.w || 0) + dx);
-        setNodes((prev) =>
-          prev.map((n) =>
-            n.id === nodeId
-              ? { ...n, width: newWidth, height: newWidth / ratio }
-              : n,
-          ),
-        );
-      }
-    }
-  };
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (
-      dragMode === "CONNECT" &&
-      connectionStartRef.current?.type === "source"
-    ) {
-      setQuickAddMenu({
-        sourceId: connectionStartRef.current.nodeId,
-        x: e.clientX,
-        y: e.clientY,
-        worldX: screenToWorld(e.clientX, e.clientY).x,
-        worldY: screenToWorld(e.clientX, e.clientY).y,
-      });
-    }
-    // 拖拽/Resize 结束时保存历史（仅在有实际位移时）
-    if (dragMode === "DRAG_NODE" || dragMode === "RESIZE_NODE") {
-      const startRef = dragStartRef.current;
-      const hasMoved = startRef.x !== 0 || startRef.y !== 0;
-      if (hasMoved) {
-        saveToHistory(nodes, connections);
-      }
-    }
-    if (dragMode !== "NONE") {
-      setDragMode("NONE");
-      setTempConnection(null);
-      connectionStartRef.current = null;
-      setSuggestedNodes([]);
-      setSelectionBox(null);
-    }
-  };
-
-  const createConnection = (sourceId: string, targetId: string) => {
-    if (
-      !connections.some(
-        (c) => c.sourceId === sourceId && c.targetId === targetId,
-      )
-    ) {
-      saveToHistory(nodes, connections);
-      setConnections((prev) => [
-        ...prev,
-        { id: generateId(), sourceId, targetId },
-      ]);
-    }
-    setDragMode("NONE");
-    setTempConnection(null);
-    connectionStartRef.current = null;
-    setSuggestedNodes([]);
-  };
-
-  const handlePortMouseUp = (
-    e: React.MouseEvent,
-    nodeId: string,
-    type: "source" | "target",
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (
-      dragMode === "CONNECT" &&
-      connectionStartRef.current &&
-      connectionStartRef.current.type === "source" &&
-      type === "target" &&
-      connectionStartRef.current.nodeId !== nodeId
-    ) {
-      createConnection(connectionStartRef.current.nodeId, nodeId);
-    }
-  };
-
-  const deleteNode = (id: string) => {
-    const node = nodes.find((n) => n.id === id);
-    if (node && (node.imageSrc || node.videoSrc))
-      setDeletedNodes((prev) => [...prev, node]);
-    saveToHistory(nodes, connections);
-    setNodes((prev) => prev.filter((n) => n.id !== id));
-    setConnections((prev) =>
-      prev.filter((c) => c.sourceId !== id && c.targetId !== id),
-    );
-  };
-
-  const removeConnection = (id: string) => {
-    saveToHistory(nodes, connections);
-    setConnections((prev) => prev.filter((c) => c.id !== id));
-    setSelectedConnectionId(null);
-  };
-
-  const toggleTheme = (dark: boolean) => {
-    setCanvasBg(dark ? "#0B0C0E" : "#F5F7FA");
-  };
-
-  const handleScreenshot = useCallback(async () => {
-    const container = containerRef.current;
-    if (!container || isScreenshotting) return;
-    setIsScreenshotting(true);
-    try {
-      const rect = container.getBoundingClientRect();
-      const pixelRatio = window.devicePixelRatio || 1;
-      const dataUrl = await toPng(container, {
-        width: rect.width,
-        height: rect.height,
-        pixelRatio: pixelRatio,
-        backgroundColor: canvasBg,
-        style: { transform: "none" },
-        filter: (node: HTMLElement) => {
-          if (
-            node.classList &&
-            (node.classList.contains("minimap-container") ||
-              (node.classList.contains("absolute") &&
-                node.closest(".minimap-container")))
-          ) {
-            return false;
-          }
-          return true;
-        },
-      });
-      const link = document.createElement("a");
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:.]/g, "-")
-        .slice(0, 19);
-      link.download = `token-canvas-${timestamp}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error("[Screenshot] Failed:", err);
-    } finally {
-      setIsScreenshotting(false);
-    }
-  }, [canvasBg, isScreenshotting]);
-
-  const handleOpenStorageSettings = () => setIsStorageOpen(true);
-
-  const handleImportWorkflow = async (rawData: {
-    nodes: NodeData[];
-    connections: Connection[];
-    transform?: CanvasTransform;
-    projectName?: string;
-  }) => {
-    // 校验导入数据
-    const result = validateWorkflow(rawData);
-    if (!result.valid) {
-      alert(`导入数据校验失败:\n${result.errors.join("\n")}`);
-      return;
-    }
-    if (result.errors.length > 0) {
-      logger.warn("[App] 导入部分数据有问题:", result.errors);
-    }
-    const data = result.data!;
-    const withContent = nodes.filter((n) => n.imageSrc || n.videoSrc);
-    if (withContent.length > 0)
-      setDeletedNodes((prev) => [...prev, ...withContent]);
-    let processedNodes = [...data.nodes];
-    const resourcePromises: Promise<void>[] = [];
-    const timestamp = Date.now();
-    processedNodes.forEach((node, index) => {
-      if (node.imageSrc && node.imageSrc.startsWith("data:")) {
-        resourcePromises.push(
-          (async () => {
-            try {
-              const assetId = `imported_img_${node.id}_${timestamp}_${index}`;
-              await indexedDbService.saveAsset("current", {
-                id: assetId,
-                url: node.imageSrc,
-                type: "image",
-                data: node.imageSrc,
-              });
-            } catch (e) {}
-          })(),
-        );
-      }
-      if (
-        node.videoSrc &&
-        (node.videoSrc.startsWith("data:") || node.videoSrc.startsWith("blob:"))
-      ) {
-        resourcePromises.push(
-          (async () => {
-            try {
-              let base64Data = node.videoSrc;
-              if (node.videoSrc.startsWith("blob:")) {
-                try {
-                  const response = await fetch(node.videoSrc);
-                  const blob = await response.blob();
-                  base64Data = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result as string);
-                    reader.readAsDataURL(blob);
-                  });
-                } catch (e) {
-                  return;
-                }
-              }
-              const assetId = `imported_vid_${node.id}_${timestamp}_${index}`;
-              await indexedDbService.saveAsset("current", {
-                id: assetId,
-                url: base64Data,
-                type: "video",
-                data: base64Data,
-              });
-            } catch (e) {}
-          })(),
-        );
-      }
-    });
-    if (resourcePromises.length > 0) {
-      try {
-        await Promise.all(resourcePromises);
-      } catch (e) {}
-    }
-    setNodes(processedNodes);
-    setConnections(data.connections);
-    if (data.transform) setTransform(data.transform);
-    if (data.projectName) setProjectName(data.projectName);
-    setSelectedNodeIds(new Set());
-  };
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -1349,51 +418,11 @@ const CanvasWithSidebar: React.FC = () => {
           if (item.type.indexOf("image") !== -1) {
             hasSystemMedia = true;
             const file = item.getAsFile();
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                  const { width, height, ratio } = calculateImportDimensions(
-                    img.width,
-                    img.height,
-                  );
-                  const src = event.target?.result as string;
-                  addNode(NodeType.ORIGINAL_IMAGE, worldPos.x, worldPos.y, {
-                    width,
-                    height,
-                    imageSrc: src,
-                    aspectRatio: `${ratio}:1`,
-                    outputArtifacts: [src],
-                  });
-                };
-                img.src = event.target?.result as string;
-              };
-              reader.readAsDataURL(file);
-            }
+            if (file) importFileAsNode(file, worldPos, addNode);
           } else if (item.type.indexOf("video") !== -1) {
             hasSystemMedia = true;
             const file = item.getAsFile();
-            if (file) {
-              const url = URL.createObjectURL(file);
-              const video = document.createElement("video");
-              video.preload = "metadata";
-              video.onloadedmetadata = () => {
-                const { width, height, ratio } = calculateImportDimensions(
-                  video.videoWidth,
-                  video.videoHeight,
-                );
-                addNode(NodeType.ORIGINAL_IMAGE, worldPos.x, worldPos.y, {
-                  width,
-                  height,
-                  videoSrc: url,
-                  title: file.name,
-                  aspectRatio: `${ratio}:1`,
-                  outputArtifacts: [url],
-                });
-              };
-              video.src = url;
-            }
+            if (file) importFileAsNode(file, worldPos, addNode);
           }
         }
       }
@@ -1416,7 +445,6 @@ const CanvasWithSidebar: React.FC = () => {
     isSettingsOpen,
     isStorageOpen,
     isExportImportOpen,
-    showCommunityPanel,
     handleSelectMode,
     handlePanMode,
     handleZoomIn,
@@ -1453,7 +481,6 @@ const CanvasWithSidebar: React.FC = () => {
     setIsSettingsOpen,
     setIsStorageOpen,
     setIsExportImportOpen,
-    setShowCommunityPanel,
     transform,
     internalClipboard,
     performPaste,
@@ -1526,7 +553,7 @@ const CanvasWithSidebar: React.FC = () => {
             <Icons.MinusCircle size={18} />
           </button>
           <button
-            onClick={() => setShowZoomPanel(!showZoomPanel)}
+            onClick={handleZoomReset}
             className={`px-3 py-1.5 text-sm font-medium tabular-nums rounded-lg transition-all ${isDark ? "text-gray-300 hover:text-white hover:bg-white/5" : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"}`}
           >
             {Math.round(transform.k * 100)}%
@@ -1620,13 +647,6 @@ const CanvasWithSidebar: React.FC = () => {
 
       <input
         type="file"
-        ref={workflowInputRef}
-        hidden
-        accept=".aistudio-flow,.json"
-        onChange={handleLoadWorkflow}
-      />
-      <input
-        type="file"
         ref={assetInputRef}
         hidden
         accept="image/*,video/*"
@@ -1648,7 +668,6 @@ const CanvasWithSidebar: React.FC = () => {
             "--grid-color": isDark ? "#27272a" : "#E4E4E7",
           } as React.CSSProperties
         }
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -1680,13 +699,11 @@ const CanvasWithSidebar: React.FC = () => {
               key={node.id}
               data={node}
               selected={selectedNodeIds.has(node.id)}
-              onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-              onContextMenu={(e) =>
-                handleNodeContextMenu(e, node.id, node.type)
-              }
-              onConnectStart={(e, type) => handleConnectStart(e, node.id, type)}
+              onMouseDown={handleNodeMouseDown}
+              onContextMenu={handleNodeContextMenu}
+              onConnectStart={handleConnectStart}
               onPortMouseUp={handlePortMouseUp}
-              onResizeStart={(e) => handleResizeStart(e, node.id)}
+              onResizeStart={handleResizeStart}
               scale={transform.k}
               isDark={isDark}
             >
@@ -1863,14 +880,9 @@ const CanvasWithSidebar: React.FC = () => {
         </div>
 
         <div className="absolute top-4 right-4 z-50 flex items-start gap-2">
-          {/* 社区按钮（独立按钮） */}
-          <div
-            className="relative group"
-            onMouseEnter={() => setShowCommunityPanel(true)}
-            onMouseLeave={() => setShowCommunityPanel(false)}
-          >
+          <div className="relative group">
             <div
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all cursor-pointer ${
                 isDark
                   ? "bg-[#18181b]/90 border-zinc-800 shadow-xl"
                   : "bg-white/90 border-gray-200 shadow-lg"
@@ -1883,47 +895,54 @@ const CanvasWithSidebar: React.FC = () => {
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
                 title="社区"
-                onClick={() => setShowCommunityPanel(!showCommunityPanel)}
               >
                 <Icons.User size={15} />
                 <span>社区</span>
               </button>
             </div>
-            {showCommunityPanel && (
+            <div
+              className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 rounded-2xl backdrop-blur-xl border shadow-xl transition-all opacity-0 invisible group-hover:opacity-100 group-hover:visible ${isDark ? "bg-[#18181b]/95 border-zinc-800" : "bg-white/95 border-gray-200"}`}
+            >
               <div
-                className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 p-4 rounded-2xl backdrop-blur-xl border shadow-xl ${isDark ? "bg-[#18181b]/95 border-zinc-800" : "bg-white/95 border-gray-200"}`}
+                className={`text-sm font-bold mb-2 ${isDark ? "text-white" : "text-gray-900"}`}
+              >
+                社区
+              </div>
+              <div
+                className={`p-3 rounded-xl border ${isDark ? "border-zinc-800 bg-zinc-800/30" : "border-gray-100 bg-gray-50"}`}
               >
                 <div
-                  className={`text-sm font-bold mb-3 ${isDark ? "text-white" : "text-gray-900"}`}
+                  className={`text-xs font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
                 >
-                  社区
+                  微信群
                 </div>
-
-                {/* 微信群二维码区域 */}
-                <div
-                  className={`p-4 rounded-xl border ${isDark ? "border-zinc-800 bg-zinc-800/30" : "border-gray-100 bg-gray-50"}`}
-                >
-                  <div
-                    className={`text-xs font-medium mb-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-                  >
-                    微信群
-                  </div>
-                  <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-                    <img
-                      src="https://lxj-picgo.oss-cn-chengdu.aliyuncs.com/20260425151212856.png"
-                      alt="微信群二维码"
-                      className="w-full h-auto"
-                    />
-                  </div>
-                  <p className={`text-[11px] text-gray-500 mt-2 text-center`}>
-                    扫码加入微信群，获取更多福利
-                  </p>
+                <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                  <img
+                    src="https://lxj-picgo.oss-cn-chengdu.aliyuncs.com/20260425151212856.png"
+                    alt="微信群二维码"
+                    className="w-full h-auto"
+                  />
                 </div>
+                <p className={`text-[11px] text-gray-500 mt-2 text-center`}>
+                  扫码加入微信群，获取更多福利
+                </p>
               </div>
-            )}
+              <a
+                href="https://ucnuixcl6oxb.feishu.cn/share/base/form/shrcnqq90Z3wS7Y2wntCGrTnIpG"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                  isDark
+                    ? "bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20"
+                    : "bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-200"
+                }`}
+              >
+                <Icons.MessageCircle size={14} />
+                <span>意见反馈</span>
+              </a>
+            </div>
           </div>
 
-          {/* 其他按钮 */}
           <div className="relative">
             <div
               className={`flex items-center gap-1 px-2 py-1.5 rounded-2xl backdrop-blur-xl border transition-all ${
@@ -1990,7 +1009,7 @@ const CanvasWithSidebar: React.FC = () => {
                 className={`w-px h-5 ${isDark ? "bg-zinc-700" : "bg-gray-200"}`}
               />
               <button
-                onClick={handleOpenStorageSettings}
+                onClick={() => setIsStorageOpen(true)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
                   storageDirName
                     ? isDark

@@ -8,6 +8,7 @@
  */
 
 import { indexedDbService } from "./indexedDbService";
+import { logger } from "./logger";
 
 const DB_NAME = "canvas_storage_db";
 const DB_VERSION = 2;
@@ -498,7 +499,10 @@ class StorageService {
           const cacheKeys = await cache.keys();
           stats.cacheAPIUsage += cacheKeys.length * 100000; // 估算
         }
-      } catch (e) {}
+      } catch (e) {
+        // Cache API may be unavailable in some browser contexts (e.g., private mode, cross-origin)
+        logger.warn("getStorageStats: cache API unavailable, skipping", e);
+      }
     }
 
     // LocalStorage
@@ -510,7 +514,10 @@ class StorageService {
         }
       }
       stats.localStorageUsage = total;
-    } catch (e) {}
+    } catch (e) {
+      // LocalStorage may throw if storage quota is exceeded or in private mode
+      logger.warn("getStorageStats: localStorage access failed, skipping", e);
+    }
 
     // 缓存条目统计
     const cacheStats = await this.getCacheStats();

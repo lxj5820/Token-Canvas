@@ -201,11 +201,9 @@ class IndexedDbService {
         "readwrite",
       );
 
-      // 删除工作流
       const workflowStore = transaction.objectStore(STORES.WORKFLOWS);
       workflowStore.delete(workflowId);
 
-      // 删除关联的资源
       const assetStore = transaction.objectStore(STORES.ASSETS);
       const index = assetStore.index("workflowId");
       const request = index.openCursor(workflowId);
@@ -215,8 +213,6 @@ class IndexedDbService {
         if (cursor) {
           cursor.delete();
           cursor.continue();
-        } else {
-          resolve();
         }
       };
 
