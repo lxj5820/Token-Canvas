@@ -46,16 +46,102 @@ export const CropEditor: React.FC<CropEditorProps> = ({
   const [flipV, setFlipV] = useState(false);
   const [selectedRatio, setSelectedRatio] = useState("原比例");
   const [renderedUrl, setRenderedUrl] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
   const imgRectRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const objectUrlRef = useRef<string>("");
 
   const [crop, setCrop] = useState<Rect>({ x: 0, y: 0, w: 0, h: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragType, setDragType] = useState<HandleId | "move">("move");
   const dragStartRef = useRef({ x: 0, y: 0, crop: { x: 0, y: 0, w: 0, h: 0 } });
+  const rafRef = useRef<number>(0);
+  const pendingCropRef = useRef<Rect | null>(null);
+
+  const getTargetRatio = useCallback((): number | null => {
+    if (selectedRatio === "任意") return null;
+    if (selectedRatio === "原比例") {
+      const isRotated = rotation === 90 || rotation === 270;
+      const imgW = isRotated ? origImageHeight : origImageWidth;
+      const imgH = isRotated ? origImageWidth : origImageHeight;
+      if (imgW === 0 || imgH === 0) return null;
+      return imgW / imgH;
+    }
+
+    const [w, h] = selectedRatio.split(":").map(Number);
+    if (isNaN(w) || isNaN(h) || h === 0) return null;
+    return w / h;
+  }, [selectedRatio, origImageWidth, origImageHeight, rotation]);
+
+  const calculateLayout = useCallback((img: HTMLImageElement) => {
+    const container = previewRef.current;
+    if (!container) return;
+
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    let scale = Math.min(
+      containerWidth / img.width,
+      containerHeight / img.height,
+      1
+    );
+
+    scale = Math.max(scale, 0.01);
+
+    const scaledW = img.width * scale;
+    const scaledH = img.height * scale;
+    const offsetX = (containerWidth - scaledW) / 2;
+    const offsetY = (containerHeight - scaledH) / 2;
+
+    scaleRef.current = scale;
+    imgRectRef.current = { x: offsetX, y: offsetY, width: scaledW, height: scaledH };
+
+    const targetRatio = getTargetRatio();
+    let cw: number, ch: number;
+
+    if (targetRatio !== null) {
+      const imgAspect = scaledW / scaledH;
+      if (imgAspect > targetRatio) {
+        ch = scaledH * 0.9;
+        cw = ch * targetRatio;
+      } else {
+        cw = scaledW * 0.9;
+        ch = cw / targetRatio;
+      }
+    } else {
+      cw = scaledW * 0.9;
+      ch = scaledH * 0.9;
+    }
+
+    const cx = offsetX + (scaledW - cw) / 2;
+    const cy = offsetY + (scaledH - ch) / 2;
+
+    setCrop({
+      x: cx,
+      y: cy,
+      w: cw,
+      h: ch,
+    });
+  }, [getTargetRatio]);
 
   useEffect(() => {
+    setIsLoading(true);
+
+    const needsTransform = rotation !== 0 || flipH || flipV;
+
+    if (!needsTransform) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageSrc;
+      img.onload = () => {
+        setRenderedUrl(imageSrc);
+        calculateLayout(img);
+        setIsLoading(false);
+      };
+      return;
+    }
+
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = imageSrc;
@@ -74,82 +160,42 @@ export const CropEditor: React.FC<CropEditorProps> = ({
       ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
       ctx.drawImage(img, -img.width / 2, -img.height / 2);
 
-      setRenderedUrl(cvs.toDataURL("image/png"));
-    };
-  }, [imageSrc, rotation, flipH, flipV]);
+      cvs.toBlob((blob) => {
+        if (!blob) return;
+        if (objectUrlRef.current) {
+          URL.revokeObjectURL(objectUrlRef.current);
+        }
+        const url = URL.createObjectURL(blob);
+        objectUrlRef.current = url;
+        setRenderedUrl(url);
 
-  const getTargetRatio = useCallback((): number | null => {
-    if (selectedRatio === "任意") return null;
-    if (selectedRatio === "原比例") {
-      const isRotated = rotation === 90 || rotation === 270;
-      const imgW = isRotated ? origImageHeight : origImageWidth;
-      const imgH = isRotated ? origImageWidth : origImageHeight;
-      if (imgW === 0 || imgH === 0) return null;
-      return imgW / imgH;
-    }
-    
-    const [w, h] = selectedRatio.split(":").map(Number);
-    if (isNaN(w) || isNaN(h) || h === 0) return null;
-    return w / h;
-  }, [selectedRatio, origImageWidth, origImageHeight, rotation]);
+        const renderedImg = new Image();
+        renderedImg.src = url;
+        renderedImg.onload = () => {
+          calculateLayout(renderedImg);
+          setIsLoading(false);
+        };
+      }, "image/png");
+    };
+  }, [imageSrc, rotation, flipH, flipV, calculateLayout]);
 
   useEffect(() => {
-    if (!renderedUrl) return;
-    
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!renderedUrl || !selectedRatio) return;
+
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.src = renderedUrl;
     img.onload = () => {
-      const container = previewRef.current;
-      if (!container) return;
-
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      
-      let scale = Math.min(
-        containerWidth / img.width,
-        containerHeight / img.height,
-        1
-      );
-      
-      scale = Math.max(scale, 0.01);
-      
-      const scaledW = img.width * scale;
-      const scaledH = img.height * scale;
-      const offsetX = (containerWidth - scaledW) / 2;
-      const offsetY = (containerHeight - scaledH) / 2;
-
-      scaleRef.current = scale;
-      imgRectRef.current = { x: offsetX, y: offsetY, width: scaledW, height: scaledH };
-
-      const targetRatio = getTargetRatio();
-      let cw: number, ch: number;
-      
-      if (targetRatio !== null) {
-        const imgAspect = scaledW / scaledH;
-        if (imgAspect > targetRatio) {
-          ch = scaledH * 0.9;
-          cw = ch * targetRatio;
-        } else {
-          cw = scaledW * 0.9;
-          ch = cw / targetRatio;
-        }
-      } else {
-        cw = scaledW * 0.9;
-        ch = scaledH * 0.9;
-      }
-
-      const cx = offsetX + (scaledW - cw) / 2;
-      const cy = offsetY + (scaledH - ch) / 2;
-
-      setCrop({
-        x: cx,
-        y: cy,
-        w: cw,
-        h: ch,
-      });
+      calculateLayout(img);
     };
-  }, [renderedUrl, getTargetRatio]);
+  }, [selectedRatio, renderedUrl, calculateLayout]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, type: HandleId | "move") => {
@@ -176,103 +222,123 @@ export const CropEditor: React.FC<CropEditorProps> = ({
       const imgRect = imgRectRef.current;
       const targetRatio = getTargetRatio();
 
+      let newCrop: Rect;
+
       if (dragType === "move") {
         let newX = sc.x + dx;
         let newY = sc.y + dy;
         newX = Math.max(imgRect.x, Math.min(imgRect.x + imgRect.width - sc.w, newX));
         newY = Math.max(imgRect.y, Math.min(imgRect.y + imgRect.height - sc.h, newY));
-        setCrop({ x: newX, y: newY, w: sc.w, h: sc.h });
-        return;
-      }
-
-      const h = dragType;
-
-      const isLeft = h === "nw" || h === "w" || h === "sw";
-      const isRight = h === "ne" || h === "e" || h === "se";
-      const isTop = h === "nw" || h === "n" || h === "ne";
-      const isBottom = h === "sw" || h === "s" || h === "se";
-
-      let anchorX: number, anchorY: number;
-      if (isLeft) anchorX = sc.x + sc.w;
-      else if (isRight) anchorX = sc.x;
-      else anchorX = sc.x + sc.w / 2;
-
-      if (isTop) anchorY = sc.y + sc.h;
-      else if (isBottom) anchorY = sc.y;
-      else anchorY = sc.y + sc.h / 2;
-
-      let newWidth: number, newHeight: number;
-
-      if (h === "n" || h === "s") {
-        const deltaH = h === "n" ? -dy : dy;
-        newHeight = sc.h + deltaH;
-        if (targetRatio !== null) {
-          newWidth = newHeight * targetRatio;
-        } else {
-          newWidth = sc.w;
-        }
-      } else if (h === "e" || h === "w") {
-        const deltaW = h === "w" ? -dx : dx;
-        newWidth = sc.w + deltaW;
-        if (targetRatio !== null) {
-          newHeight = newWidth / targetRatio;
-        } else {
-          newHeight = sc.h;
-        }
+        newCrop = { x: newX, y: newY, w: sc.w, h: sc.h };
       } else {
-        const handleStartX = isLeft ? sc.x : sc.x + sc.w;
-        const handleStartY = isTop ? sc.y : sc.y + sc.h;
-        const startDist = Math.sqrt((handleStartX - anchorX) ** 2 + (handleStartY - anchorY) ** 2);
-        const newDist = Math.sqrt((handleStartX + dx - anchorX) ** 2 + (handleStartY + dy - anchorY) ** 2);
-        const scaleFactor = startDist > 0 ? newDist / startDist : 1;
-        newWidth = sc.w * scaleFactor;
-        newHeight = targetRatio !== null ? newWidth / targetRatio : sc.h * scaleFactor;
-      }
+        const h = dragType;
 
-      if (newWidth < MIN_CROP_SIZE) {
-        newWidth = MIN_CROP_SIZE;
-        if (targetRatio !== null) {
-          newHeight = newWidth / targetRatio;
+        const isLeft = h === "nw" || h === "w" || h === "sw";
+        const isRight = h === "ne" || h === "e" || h === "se";
+        const isTop = h === "nw" || h === "n" || h === "ne";
+        const isBottom = h === "sw" || h === "s" || h === "se";
+
+        let anchorX: number, anchorY: number;
+        if (isLeft) anchorX = sc.x + sc.w;
+        else if (isRight) anchorX = sc.x;
+        else anchorX = sc.x + sc.w / 2;
+
+        if (isTop) anchorY = sc.y + sc.h;
+        else if (isBottom) anchorY = sc.y;
+        else anchorY = sc.y + sc.h / 2;
+
+        let newWidth: number, newHeight: number;
+
+        if (h === "n" || h === "s") {
+          const deltaH = h === "n" ? -dy : dy;
+          newHeight = sc.h + deltaH;
+          if (targetRatio !== null) {
+            newWidth = newHeight * targetRatio;
+          } else {
+            newWidth = sc.w;
+          }
+        } else if (h === "e" || h === "w") {
+          const deltaW = h === "w" ? -dx : dx;
+          newWidth = sc.w + deltaW;
+          if (targetRatio !== null) {
+            newHeight = newWidth / targetRatio;
+          } else {
+            newHeight = sc.h;
+          }
+        } else {
+          const handleStartX = isLeft ? sc.x : sc.x + sc.w;
+          const handleStartY = isTop ? sc.y : sc.y + sc.h;
+          const startDist = Math.sqrt((handleStartX - anchorX) ** 2 + (handleStartY - anchorY) ** 2);
+          const newDist = Math.sqrt((handleStartX + dx - anchorX) ** 2 + (handleStartY + dy - anchorY) ** 2);
+          const scaleFactor = startDist > 0 ? newDist / startDist : 1;
+          newWidth = sc.w * scaleFactor;
+          newHeight = targetRatio !== null ? newWidth / targetRatio : sc.h * scaleFactor;
         }
-      }
-      if (newHeight < MIN_CROP_SIZE) {
-        newHeight = MIN_CROP_SIZE;
-        if (targetRatio !== null) {
-          newWidth = newHeight * targetRatio;
+
+        if (newWidth < MIN_CROP_SIZE) {
+          newWidth = MIN_CROP_SIZE;
+          if (targetRatio !== null) {
+            newHeight = newWidth / targetRatio;
+          }
         }
-      }
-
-      if (newWidth > imgRect.width) {
-        newWidth = imgRect.width;
-        if (targetRatio !== null) {
-          newHeight = newWidth / targetRatio;
+        if (newHeight < MIN_CROP_SIZE) {
+          newHeight = MIN_CROP_SIZE;
+          if (targetRatio !== null) {
+            newWidth = newHeight * targetRatio;
+          }
         }
-      }
-      if (newHeight > imgRect.height) {
-        newHeight = imgRect.height;
-        if (targetRatio !== null) {
-          newWidth = newHeight * targetRatio;
+
+        if (newWidth > imgRect.width) {
+          newWidth = imgRect.width;
+          if (targetRatio !== null) {
+            newHeight = newWidth / targetRatio;
+          }
         }
+        if (newHeight > imgRect.height) {
+          newHeight = imgRect.height;
+          if (targetRatio !== null) {
+            newWidth = newHeight * targetRatio;
+          }
+        }
+
+        let newLeft: number, newTop: number;
+        if (isLeft) newLeft = anchorX - newWidth;
+        else if (isRight) newLeft = anchorX;
+        else newLeft = anchorX - newWidth / 2;
+
+        if (isTop) newTop = anchorY - newHeight;
+        else if (isBottom) newTop = anchorY;
+        else newTop = anchorY - newHeight / 2;
+
+        if (newLeft < imgRect.x) newLeft = imgRect.x;
+        if (newTop < imgRect.y) newTop = imgRect.y;
+        if (newLeft + newWidth > imgRect.x + imgRect.width) newLeft = imgRect.x + imgRect.width - newWidth;
+        if (newTop + newHeight > imgRect.y + imgRect.height) newTop = imgRect.y + imgRect.height - newHeight;
+
+        newCrop = { x: newLeft, y: newTop, w: newWidth, h: newHeight };
       }
 
-      let newLeft: number, newTop: number;
-      if (isLeft) newLeft = anchorX - newWidth;
-      else if (isRight) newLeft = anchorX;
-      else newLeft = anchorX - newWidth / 2;
-
-      if (isTop) newTop = anchorY - newHeight;
-      else if (isBottom) newTop = anchorY;
-      else newTop = anchorY - newHeight / 2;
-
-      if (newLeft < imgRect.x) newLeft = imgRect.x;
-      if (newTop < imgRect.y) newTop = imgRect.y;
-      if (newLeft + newWidth > imgRect.x + imgRect.width) newLeft = imgRect.x + imgRect.width - newWidth;
-      if (newTop + newHeight > imgRect.y + imgRect.height) newTop = imgRect.y + imgRect.height - newHeight;
-
-      setCrop({ x: newLeft, y: newTop, w: newWidth, h: newHeight });
+      pendingCropRef.current = newCrop;
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(() => {
+          if (pendingCropRef.current) {
+            setCrop(pendingCropRef.current);
+            pendingCropRef.current = null;
+          }
+          rafRef.current = 0;
+        });
+      }
     };
 
     const handleMouseUp = () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      if (pendingCropRef.current) {
+        setCrop(pendingCropRef.current);
+        pendingCropRef.current = null;
+      }
       setIsDragging(false);
     };
 
@@ -282,6 +348,10 @@ export const CropEditor: React.FC<CropEditorProps> = ({
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
     };
   }, [isDragging, dragType, getTargetRatio]);
 
@@ -290,7 +360,7 @@ export const CropEditor: React.FC<CropEditorProps> = ({
 
     const scale = scaleRef.current;
     const imgRect = imgRectRef.current;
-    
+
     const sx = Math.round((crop.x - imgRect.x) / scale);
     const sy = Math.round((crop.y - imgRect.y) / scale);
     const sw = Math.round(crop.w / scale);
@@ -310,6 +380,18 @@ export const CropEditor: React.FC<CropEditorProps> = ({
     };
   }, [renderedUrl, crop, onCrop]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      } else if (e.key === "Enter") {
+        handleConfirm();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, handleConfirm]);
+
   const handleRotate = useCallback((direction: "cw" | "ccw") => {
     setRotation((prev) => {
       if (direction === "cw") return (prev + 90) % 360;
@@ -325,9 +407,8 @@ export const CropEditor: React.FC<CropEditorProps> = ({
   }, []);
 
   const handleIds: HandleId[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
-  const isRotated = rotation === 90 || rotation === 270;
-  const renderedW = isRotated ? origImageHeight : origImageWidth;
-  const renderedH = isRotated ? origImageWidth : origImageHeight;
+
+  const imgRect = imgRectRef.current;
 
   return (
     <div
@@ -359,6 +440,11 @@ export const CropEditor: React.FC<CropEditorProps> = ({
         className={`relative overflow-hidden border-b ${isDark ? "bg-[#0d0d0d] border-zinc-700/50" : "bg-gray-100 border-gray-200"}`}
         style={{ height: 400 }}
       >
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center z-30">
+            <Icons.Loader2 size={28} className={`animate-spin ${isDark ? "text-zinc-500" : "text-gray-400"}`} />
+          </div>
+        )}
         {renderedUrl && (
           <>
             <img
@@ -367,50 +453,21 @@ export const CropEditor: React.FC<CropEditorProps> = ({
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-full max-h-full object-contain"
               draggable={false}
             />
-            
-            {/* Dark overlay on non-cropped areas */}
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: 0,
-                top: 0,
-                width: imgRectRef.current.x,
-                height: "100%",
-                background: "rgba(0,0,0,0.6)",
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: imgRectRef.current.x + imgRectRef.current.width,
-                top: 0,
-                width: `calc(100% - ${imgRectRef.current.x + imgRectRef.current.width}px)`,
-                height: "100%",
-                background: "rgba(0,0,0,0.6)",
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: imgRectRef.current.x,
-                top: 0,
-                width: imgRectRef.current.width,
-                height: imgRectRef.current.y,
-                background: "rgba(0,0,0,0.6)",
-              }}
-            />
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: imgRectRef.current.x,
-                top: imgRectRef.current.y + imgRectRef.current.height,
-                width: imgRectRef.current.width,
-                height: `calc(100% - ${imgRectRef.current.y + imgRectRef.current.height}px)`,
-                background: "rgba(0,0,0,0.6)",
-              }}
-            />
-            
-            {/* Crop area - interactive */}
+
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-[5]">
+              <defs>
+                <mask id="crop-mask">
+                  <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                  <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="black" />
+                </mask>
+              </defs>
+              <rect
+                x="0" y="0" width="100%" height="100%"
+                fill="rgba(0,0,0,0.6)"
+                mask="url(#crop-mask)"
+              />
+            </svg>
+
             <div
               className="absolute cursor-move z-10"
               style={{
@@ -422,7 +479,7 @@ export const CropEditor: React.FC<CropEditorProps> = ({
               onMouseDown={(e) => handleMouseDown(e, "move")}
             >
               <div className="absolute inset-0 border-2 border-white border-dashed" />
-              
+
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute left-1/3 top-0 bottom-0 border-r border-white/30" />
                 <div className="absolute left-2/3 top-0 bottom-0 border-r border-white/30" />
@@ -460,9 +517,11 @@ export const CropEditor: React.FC<CropEditorProps> = ({
                 );
               })}
 
-              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                {Math.round(crop.w / scaleRef.current)} × {Math.round(crop.h / scaleRef.current)}
-              </div>
+              {isDragging && (
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                  {Math.round(crop.w / scaleRef.current)} × {Math.round(crop.h / scaleRef.current)}
+                </div>
+              )}
             </div>
           </>
         )}
