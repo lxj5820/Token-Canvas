@@ -27,6 +27,7 @@ import {
   useKeyboardShortcuts,
   deleteSelectedNodesHelper,
 } from "./hooks/useKeyboardShortcuts";
+import { MODEL_REGISTRY, getModelConfig } from "./services/geminiService";
 import { useCanvasState } from "./hooks/useCanvasState";
 import { useGeneration } from "./hooks/useGeneration";
 import { useZoom } from "./hooks/useZoom";
@@ -42,6 +43,20 @@ const App: React.FC = () => {
 };
 
 const CanvasWithSidebar: React.FC = () => {
+  const checkHasApiConfigured = () => {
+    const globalConfig = getModelConfig("Banana 2");
+    if (globalConfig.key) return true;
+
+    return Object.keys(MODEL_REGISTRY).some((key) => {
+      const config = getModelConfig(key);
+      return config.key;
+    });
+  };
+
+  const [showStorageWarning, setShowStorageWarning] = useState(
+    !checkHasApiConfigured(),
+  );
+
   const {
     nodes,
     setNodes,
@@ -82,7 +97,6 @@ const CanvasWithSidebar: React.FC = () => {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => !hasShownWelcome());
   const [storageDirName, setStorageDirName] = useState<string | null>(null);
   const [deletedNodes, setDeletedNodes] = useState<NodeData[]>([]);
-  const [showStorageWarning, setShowStorageWarning] = useState(true);
   const [isScreenshotting, setIsScreenshotting] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{
     url: string;
