@@ -35,9 +35,11 @@ export const useAnnotation = (
             data.height,
           )
             .then((bakedSrc) => {
-              updateData(data.id, {
-                isAnnotating: false,
-                annotatedImageSrc: bakedSrc,
+              queueMicrotask(() => {
+                updateData(data.id, {
+                  isAnnotating: false,
+                  annotatedImageSrc: bakedSrc,
+                });
               });
             })
             .catch((err) => {
@@ -45,8 +47,9 @@ export const useAnnotation = (
                 "[Annotation] 烘焙失败，保留标注数据但跳过烘焙:",
                 err,
               );
-              // 降级：不烘焙但仍退出标注模式，标注数据保留以便下次重试
-              updateData(data.id, { isAnnotating: false });
+              queueMicrotask(() => {
+                updateData(data.id, { isAnnotating: false });
+              });
             });
         } else {
           updateData(data.id, {
@@ -91,16 +94,20 @@ export const useAnnotation = (
         data.height,
       )
         .then((bakedSrc) => {
-          setIsAnnotating(false);
-          updateData(data.id, {
-            isAnnotating: false,
-            annotatedImageSrc: bakedSrc,
+          queueMicrotask(() => {
+            setIsAnnotating(false);
+            updateData(data.id, {
+              isAnnotating: false,
+              annotatedImageSrc: bakedSrc,
+            });
           });
         })
         .catch((err) => {
           console.warn("[Annotation] 烘焙失败，保留标注数据但跳过烘焙:", err);
-          setIsAnnotating(false);
-          updateData(data.id, { isAnnotating: false });
+          queueMicrotask(() => {
+            setIsAnnotating(false);
+            updateData(data.id, { isAnnotating: false });
+          });
         });
     } else {
       setIsAnnotating(false);

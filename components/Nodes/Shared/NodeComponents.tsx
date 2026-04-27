@@ -286,7 +286,7 @@ export const EditableTitle: React.FC<{
   isDark?: boolean;
 }> = ({ title, onUpdate, isDark = true }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(title);
+  const [editValue, setEditValue] = useState(title || "");
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -295,7 +295,7 @@ export const EditableTitle: React.FC<{
     }
   }, [isEditing]);
   useEffect(() => {
-    if (!isEditing) setEditValue(title);
+    if (!isEditing) setEditValue(title || "");
   }, [title, isEditing]);
   const handleBlur = () => {
     setIsEditing(false);

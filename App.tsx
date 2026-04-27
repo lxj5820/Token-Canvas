@@ -228,6 +228,8 @@ const CanvasWithSidebar: React.FC = () => {
     handleAngleGenerate,
     handleLightGenerate,
     handleGridSplitCreateNodes,
+    handleCrop,
+    handleExpandImageGenerate,
   } = useGeneration({
     nodes,
     connections,
@@ -723,6 +725,8 @@ const CanvasWithSidebar: React.FC = () => {
                 onGridSplitCreateNodes={handleGridSplitCreateNodes}
                 onAngleGenerate={handleAngleGenerate}
                 onLightGenerate={handleLightGenerate}
+                onCrop={handleCrop}
+                onExpandImageGenerate={handleExpandImageGenerate}
               />
             </BaseNode>
           ))}

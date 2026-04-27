@@ -23,9 +23,9 @@ export const LocalEditableTitle: React.FC<{
   }, [title, isEditing]);
   const handleBlur = () => {
     setIsEditing(false);
-    if (editValue.trim() && editValue !== title)
+    if (editValue.trim() && editValue !== (title || ""))
       onUpdate(editValue.trim().slice(0, 20));
-    else setEditValue(title);
+    else setEditValue(title || "");
   };
 
   return isEditing ? (
@@ -38,7 +38,7 @@ export const LocalEditableTitle: React.FC<{
       onKeyDown={(e) => {
         if (e.key === "Enter") handleBlur();
         if (e.key === "Escape") {
-          setEditValue(title);
+          setEditValue(title || "");
           setIsEditing(false);
         }
       }}
@@ -52,7 +52,7 @@ export const LocalEditableTitle: React.FC<{
       onDoubleClick={(e) => {
         e.stopPropagation();
         setIsEditing(true);
-        setEditValue(title);
+        setEditValue(title || "");
       }}
       onMouseDown={(e) => e.stopPropagation()}
       title={title}

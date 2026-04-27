@@ -23,6 +23,8 @@ import {
 import { GridSplitOverlay, GridSplitToolbar } from "../GridSplit";
 import { AngleEditor, AngleGenerateParams } from "../AngleEditor";
 import { LightingEditor, LightingGenerateParams } from "../LightingEditor";
+import { CropEditor } from "../CropEditor";
+import { ExpandImageEditor, ExpandImageGenerateParams } from "../ExpandImageEditor";
 import { useAnnotation } from "../../hooks/useAnnotation";
 import { useAnnotationWithUndo } from "../../hooks/useAnnotationWithUndo";
 import { useGridSplit } from "../../hooks/useGridSplit";
@@ -47,6 +49,8 @@ interface TextToImageNodeProps {
   ) => void;
   onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
   onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
+  onCrop?: (id: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
+  onExpandImageGenerate?: (id: string, params: ExpandImageGenerateParams) => void;
 }
 
 // 文本到图片节点组件
@@ -64,6 +68,8 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
   onGridSplitCreateNodes,
   onAngleGenerate,
   onLightGenerate,
+  onCrop,
+  onExpandImageGenerate,
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [deferredInputs, setDeferredInputs] = useState(false);
@@ -129,6 +135,24 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
   }, [data.id, data.isLightEditing, updateData]);
   const closeLightEdit = useCallback(() => {
     updateData(data.id, { isLightEditing: false });
+  }, [data.id, updateData]);
+
+  // 裁剪编辑
+  const isCropEditing = !!data.isCropEditing;
+  const toggleCropEdit = useCallback(() => {
+    updateData(data.id, { isCropEditing: !data.isCropEditing });
+  }, [data.id, data.isCropEditing, updateData]);
+  const closeCropEdit = useCallback(() => {
+    updateData(data.id, { isCropEditing: false });
+  }, [data.id, updateData]);
+
+  // 扩图编辑
+  const isExpandImageEditing = !!data.isExpandImageEditing;
+  const toggleExpandImageEdit = useCallback(() => {
+    updateData(data.id, { isExpandImageEditing: !data.isExpandImageEditing });
+  }, [data.id, data.isExpandImageEditing, updateData]);
+  const closeExpandImageEdit = useCallback(() => {
+    updateData(data.id, { isExpandImageEditing: false });
   }, [data.id, updateData]);
 
   const isSelectedAndStable = selected && !isSelecting;
@@ -240,16 +264,18 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
   return (
     <>
       <div
-        className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || isLightEditing || (hasResult && isSelectedAndStable && showControls) ? "overflow-visible" : "overflow-hidden"} shadow-xl group transition-all duration-200`}
+        className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || isLightEditing || isCropEditing || isExpandImageEditing || (hasResult && isSelectedAndStable && showControls) ? "overflow-visible" : "overflow-hidden"} shadow-xl group transition-all duration-200`}
       >
-        {/* 顶部工具栏（标注/宫格切分/角度编辑/灯光编辑模式下隐藏） */}
+        {/* 顶部工具栏（标注/宫格切分/角度编辑/灯光编辑/裁剪/扩图模式下隐藏） */}
         {hasResult &&
           isSelectedAndStable &&
           showControls &&
           !isAnnotating &&
           !isGridSplitting &&
           !isAngleEditing &&
-          !isLightEditing && (
+          !isLightEditing &&
+          !isCropEditing &&
+          !isExpandImageEditing && (
             <div
               className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto"
               onMouseDown={(e) => e.stopPropagation()}
@@ -266,6 +292,10 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                 isAngleEditing={isAngleEditing}
                 onLightEdit={toggleLightEdit}
                 isLightEditing={isLightEditing}
+                onCropEdit={toggleCropEdit}
+                isCropEditing={isCropEditing}
+                onExpandEdit={toggleExpandImageEdit}
+                isExpandEditing={isExpandImageEditing}
               />
             </div>
           )}
@@ -318,7 +348,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
         {hasResult ? (
           <>
-            {/* 标注模式/宫格切分/角度编辑/灯光编辑模式显示原图+覆盖层，非标注模式显示烘焙图 */}
+            {/* 标注模式/宫格切分/角度编辑/灯光编辑/裁剪/扩图模式显示原图+覆盖层，非标注模式显示烘焙图 */}
             <LocalMediaStack
               data={data}
               updateData={updateData}
@@ -326,7 +356,9 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                 isAnnotating ||
                 isGridSplitting ||
                 isAngleEditing ||
-                isLightEditing
+                isLightEditing ||
+                isCropEditing ||
+                isExpandImageEditing
                   ? data.imageSrc
                   : data.annotatedImageSrc || data.imageSrc
               }
@@ -339,7 +371,9 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
             {!isAnnotating &&
               !isGridSplitting &&
               !isAngleEditing &&
-              !isLightEditing && (
+              !isLightEditing &&
+              !isCropEditing &&
+              !isExpandImageEditing && (
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                   {/* Top Gradient顶部渐变 */}
                   <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
@@ -360,6 +394,8 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
               !isGridSplitting &&
               !isAngleEditing &&
               !isLightEditing &&
+              !isCropEditing &&
+              !isExpandImageEditing &&
               !data.annotatedImageSrc &&
               (data.annotations?.length || 0) > 0 && (
                 <AnnotationRenderer
@@ -432,7 +468,9 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
         !isAnnotating &&
         !isGridSplitting &&
         !isAngleEditing &&
-        !isLightEditing && (
+        !isLightEditing &&
+        !isCropEditing &&
+        !isExpandImageEditing && (
           <div
             className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto"
             onMouseDown={(e) => e.stopPropagation()}
@@ -630,6 +668,50 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
             imageSrc={data.imageSrc || ""}
             onClose={closeLightEdit}
             onGenerate={(params) => onLightGenerate?.(data.id, params)}
+            isDark={isDark}
+            prompt={data.prompt}
+            isLoading={data.isLoading}
+            model={data.model || "Banana 2"}
+            aspectRatio={data.aspectRatio || "1:1"}
+            resolution={data.resolution || "1k"}
+            imageModels={imageModels}
+          />
+        </div>
+      )}
+
+      {/* 裁剪编辑器 - 与控制面板同级定位 */}
+      {isCropEditing && (
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel"
+          onMouseDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <CropEditor
+            imageSrc={data.imageSrc || ""}
+            imageWidth={data.width || 512}
+            imageHeight={data.height || 512}
+            onClose={closeCropEdit}
+            onCrop={(dataUrl, outputWidth, outputHeight) => {
+              onCrop?.(data.id, dataUrl, outputWidth, outputHeight);
+            }}
+            isDark={isDark}
+          />
+        </div>
+      )}
+
+      {/* 扩图编辑器 - 与控制面板同级定位 */}
+      {isExpandImageEditing && (
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel"
+          onMouseDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <ExpandImageEditor
+            imageSrc={data.imageSrc || ""}
+            imageWidth={data.width || 512}
+            imageHeight={data.height || 512}
+            onClose={closeExpandImageEdit}
+            onGenerate={(params) => onExpandImageGenerate?.(data.id, params)}
             isDark={isDark}
             prompt={data.prompt}
             isLoading={data.isLoading}

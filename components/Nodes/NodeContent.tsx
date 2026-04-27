@@ -8,6 +8,7 @@ import { OriginalImageNode } from "./OriginalImageNode";
 import { CreativeDescNode } from "./CreativeDescNode";
 import { AngleGenerateParams } from "../AngleEditor";
 import { LightingGenerateParams } from "../LightingEditor";
+import { ExpandImageGenerateParams } from "../ExpandImageEditor";
 
 interface NodeContentProps {
   data: NodeData;
@@ -28,6 +29,8 @@ interface NodeContentProps {
   ) => void;
   onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
   onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
+  onCrop?: (id: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
+  onExpandImageGenerate?: (id: string, params: ExpandImageGenerateParams) => void;
 }
 
 const NodeContentComponent: React.FC<NodeContentProps> = (props) => {

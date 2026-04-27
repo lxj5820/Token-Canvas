@@ -87,6 +87,8 @@ import {
   Eraser,
   Type,
   MessageCircle,
+  FlipHorizontal,
+  FlipVertical,
 } from "lucide-react";
 
 export const Icons = {
@@ -176,5 +178,7 @@ export const Icons = {
   Eraser,
   Type,
   MessageCircle,
+  FlipHorizontal,
+  FlipVertical,
   History: Clock,
 };

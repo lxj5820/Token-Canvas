@@ -11,6 +11,7 @@ import { saveAssetToIndexedDB } from "../services/saveAssetToIndexedDB";
 import { logger } from "../services/logger";
 import type { AngleGenerateParams } from "../components/AngleEditor";
 import type { LightingGenerateParams } from "../components/LightingEditor";
+import type { ExpandImageGenerateParams } from "../components/ExpandImageEditor";
 
 interface UseGenerationParams {
   nodes: NodeData[];
@@ -580,10 +581,170 @@ export const useGeneration = ({
     [],
   );
 
+  const handleCrop = useCallback(
+    (nodeId: string, dataUrl: string, outputWidth: number, outputHeight: number) => {
+      const sourceNode = nodesRef.current.find((n) => n.id === nodeId);
+      if (!sourceNode) return;
+
+      updateNodeDataRef.current(nodeId, { isCropEditing: false });
+
+      const newNodeId = `node_${Date.now()}`;
+      const gap = 30;
+
+      const newNode: NodeData = {
+        id: newNodeId,
+        type: NodeType.ORIGINAL_IMAGE,
+        x: sourceNode.x + sourceNode.width + gap + 60,
+        y: sourceNode.y,
+        width: 300,
+        height: 300,
+        title: `裁剪 #${Date.now() % 1000}`,
+        imageSrc: dataUrl,
+      };
+
+      const newConn: Connection = {
+        id: generateId(),
+        sourceId: nodeId,
+        targetId: newNodeId,
+      };
+
+      setNodesRef.current((prev) => [...prev, newNode]);
+      setConnectionsRef.current((prev) => [...prev, newConn]);
+
+      saveAssetToIndexedDB(newNodeId, dataUrl, "image");
+    },
+    [],
+  );
+
+  const handleExpandImageGenerate = useCallback(
+    async (nodeId: string, params: ExpandImageGenerateParams) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId);
+      if (!node) return;
+
+      // 使用参考图作为输入，如果没有参考图则使用原始图片
+      const inputImage = params.referenceImage || node.annotatedImageSrc || node.imageSrc;
+      const inputs = inputImage ? [inputImage] : [];
+      const count = params.count || 1;
+
+      const directions: string[] = [];
+      if (params.expandTop > 0) directions.push("上方");
+      if (params.expandBottom > 0) directions.push("下方");
+      if (params.expandLeft > 0) directions.push("左侧");
+      if (params.expandRight > 0) directions.push("右侧");
+
+      let expandPrompt = "扩展图像，保持主体和构图完全不变";
+      if (directions.length > 0) {
+        expandPrompt += `，向${directions.join("、")}方向自然扩展内容`;
+      }
+      if (params.outputWidth > 0 && params.outputHeight > 0) {
+        expandPrompt += `，目标尺寸${params.outputWidth}×${params.outputHeight}`;
+      }
+
+      const fullPrompt =
+        params.includePrompt && params.prompt
+          ? `${expandPrompt}。原始描述：${params.prompt}`
+          : expandPrompt;
+
+      updateNodeDataRef.current(nodeId, { isExpandImageEditing: false });
+
+      // 计算节点大小 - 与手动创建的生图节点一致
+      const parseRatio = (ratio: string): number => {
+        if (ratio === "原比例") return 1;
+        const parts = ratio.split(":").map(Number);
+        return parts[0] / parts[1];
+      };
+      
+      const ratio = parseRatio(params.aspectRatio);
+      const baseSize = 400;
+      let nodeWidth: number, nodeHeight: number;
+      
+      if (ratio >= 1) {
+        nodeHeight = baseSize;
+        nodeWidth = Math.round(baseSize * ratio);
+      } else {
+        nodeWidth = baseSize;
+        nodeHeight = Math.round(baseSize / ratio);
+      }
+
+      const gap = 30;
+      const cols = Math.ceil(Math.sqrt(count));
+      const newNodeIds: string[] = [];
+      const newNodes: NodeData[] = [];
+      const newConns: Connection[] = [];
+
+      for (let i = 0; i < count; i++) {
+        const newNodeId = `node_${Date.now()}_${i}`;
+        newNodeIds.push(newNodeId);
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        newNodes.push({
+          id: newNodeId,
+          type: NodeType.TEXT_TO_IMAGE,
+          x: node.x + node.width + gap + 60 + c * (nodeWidth + gap),
+          y: node.y + r * (nodeHeight + gap),
+          width: nodeWidth,
+          height: nodeHeight,
+          title: `扩图 #${i + 1}`,
+          prompt: fullPrompt,
+          isLoading: true,
+          model: params.model || node.model || "Banana 2",
+          aspectRatio: params.aspectRatio,
+          resolution: params.resolution,
+          outputArtifacts: [],
+        });
+        newConns.push({
+          id: generateId(),
+          sourceId: nodeId,
+          targetId: newNodeId,
+        });
+      }
+
+      setNodesRef.current((prev) => [...prev, ...newNodes]);
+      setConnectionsRef.current((prev) => [...prev, ...newConns]);
+
+      try {
+        const results = await generateImage(
+          fullPrompt,
+          params.aspectRatio,
+          params.model || node.model || "Banana 2",
+          params.resolution,
+          count,
+          inputs,
+          node.promptOptimize,
+        );
+
+        if (results.length > 0) {
+          for (let i = 0; i < results.length && i < newNodeIds.length; i++) {
+            updateNodeDataRef.current(newNodeIds[i], {
+              isLoading: false,
+              imageSrc: results[i],
+              outputArtifacts: [results[i]],
+            });
+            await saveAssetToIndexedDB(newNodeIds[i], results[i], "image");
+          }
+          for (let i = results.length; i < newNodeIds.length; i++) {
+            updateNodeDataRef.current(newNodeIds[i], { isLoading: false });
+          }
+        } else {
+          throw new Error("未返回结果");
+        }
+      } catch (e) {
+        logger.error("handleExpandImageGenerate: batch generate failed", e);
+        alert(`生成失败: ${(e as Error).message}`);
+        for (const nid of newNodeIds) {
+          updateNodeDataRef.current(nid, { isLoading: false });
+        }
+      }
+    },
+    [],
+  );
+
   return {
     handleGenerate,
     handleAngleGenerate,
     handleLightGenerate,
     handleGridSplitCreateNodes,
+    handleCrop,
+    handleExpandImageGenerate,
   };
 };

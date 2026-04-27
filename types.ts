@@ -47,6 +47,10 @@ export interface NodeData {
   isAngleEditing?: boolean;
 
   isLightEditing?: boolean;
+
+  isCropEditing?: boolean;
+
+  isExpandImageEditing?: boolean;
 }
 
 export interface Connection {

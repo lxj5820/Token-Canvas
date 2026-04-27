@@ -12,6 +12,8 @@ import {
 import { GridSplitOverlay, GridSplitToolbar } from "../GridSplit";
 import { LightingEditor, LightingGenerateParams } from "../LightingEditor";
 import { AngleEditor, AngleGenerateParams } from "../AngleEditor";
+import { CropEditor } from "../CropEditor";
+import { ExpandImageEditor, ExpandImageGenerateParams } from "../ExpandImageEditor";
 import { useAnnotation } from "../../hooks/useAnnotation";
 import { useAnnotationWithUndo } from "../../hooks/useAnnotationWithUndo";
 import { useGridSplit } from "../../hooks/useGridSplit";
@@ -35,6 +37,8 @@ interface OriginalImageNodeProps {
   ) => void;
   onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
   onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
+  onCrop?: (id: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
+  onExpandImageGenerate?: (id: string, params: ExpandImageGenerateParams) => void;
 }
 
 // 原始图片节点组件
@@ -51,6 +55,8 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
   onGridSplitCreateNodes,
   onLightGenerate,
   onAngleGenerate,
+  onCrop,
+  onExpandImageGenerate,
 }) => {
   const containerBg = isDark ? "bg-[#1a1a1a]" : "bg-white";
   const hasResult = !!(data.imageSrc || data.videoSrc);
@@ -62,6 +68,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
       : "border-gray-200";
 
   const [imageModels, setImageModels] = useState<string[]>([]);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
   const updateModels = useCallback(() => {
     const visibleModels = getVisibleModels();
@@ -78,6 +85,21 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
       window.removeEventListener("modelRegistryUpdated", updateModels);
     };
   }, [updateModels]);
+
+  // 加载图片尺寸
+  useEffect(() => {
+    if (!data.imageSrc) {
+      setImageDimensions({ width: 0, height: 0 });
+      return;
+    }
+
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.src = data.imageSrc;
+  }, [data.imageSrc]);
 
   // 标注功能
   const {
@@ -142,12 +164,30 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
     updateData(data.id, { isAngleEditing: false });
   }, [data.id, updateData]);
 
+  // 裁剪编辑
+  const isCropEditing = !!data.isCropEditing;
+  const toggleCropEdit = useCallback(() => {
+    updateData(data.id, { isCropEditing: !data.isCropEditing });
+  }, [data.id, data.isCropEditing, updateData]);
+  const closeCropEdit = useCallback(() => {
+    updateData(data.id, { isCropEditing: false });
+  }, [data.id, updateData]);
+
+  // 扩图编辑
+  const isExpandEditing = !!data.isExpandImageEditing;
+  const toggleExpandEdit = useCallback(() => {
+    updateData(data.id, { isExpandImageEditing: !data.isExpandImageEditing });
+  }, [data.id, data.isExpandImageEditing, updateData]);
+  const closeExpandEdit = useCallback(() => {
+    updateData(data.id, { isExpandImageEditing: false });
+  }, [data.id, updateData]);
+
   // 决定显示哪张图：
   // - 标注模式 → 显示原图（标注覆盖层叠在原图上方）
   // - 非标注模式 + 有烘焙图 → 显示烘焙图（标注已合成为图片）
   // - 非标注模式 + 无烘焙图 → 显示原图
   const displaySrc =
-    isAnnotating || isGridSplitting || isLightEditing || isAngleEditing
+    isAnnotating || isGridSplitting || isLightEditing || isAngleEditing || isCropEditing || isExpandEditing
       ? data.videoSrc || data.imageSrc
       : data.annotatedImageSrc || data.videoSrc || data.imageSrc;
 
@@ -162,16 +202,18 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
       </div>
 
       <div
-        className={`w-full h-full relative group rounded-xl border ${containerBorder} ${containerBg} ${data.isStackOpen || (hasResult && (data.outputArtifacts || []).length > 1) || isAnnotating || isGridSplitting || isLightEditing || isAngleEditing || (hasResult && isSelectedAndStable && showControls) ? "overflow-visible" : "overflow-hidden"} shadow-lg transition-all duration-200`}
+        className={`w-full h-full relative group rounded-xl border ${containerBorder} ${containerBg} ${data.isStackOpen || (hasResult && (data.outputArtifacts || []).length > 1) || isAnnotating || isGridSplitting || isLightEditing || isAngleEditing || isCropEditing || isExpandEditing || (hasResult && isSelectedAndStable && showControls) ? "overflow-visible" : "overflow-hidden"} shadow-lg transition-all duration-200`}
       >
-        {/* 顶部工具栏（标注/宫格切分/灯光编辑/多角度编辑模式下隐藏） */}
+        {/* 顶部工具栏（标注/宫格切分/灯光编辑/多角度编辑/裁剪/扩图编辑模式下隐藏） */}
         {hasResult &&
           isSelectedAndStable &&
           showControls &&
           !isAnnotating &&
           !isGridSplitting &&
           !isLightEditing &&
-          !isAngleEditing && (
+          !isAngleEditing &&
+          !isCropEditing &&
+          !isExpandEditing && (
             <div
               className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto"
               onMouseDown={(e) => e.stopPropagation()}
@@ -188,6 +230,10 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
                 isAngleEditing={isAngleEditing}
                 onLightEdit={toggleLightEdit}
                 isLightEditing={isLightEditing}
+                onCropEdit={toggleCropEdit}
+                isCropEditing={isCropEditing}
+                onExpandEdit={toggleExpandEdit}
+                isExpandEditing={isExpandEditing}
               />
             </div>
           )}
@@ -361,6 +407,48 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
             imageSrc={data.imageSrc || ""}
             onClose={closeAngleEdit}
             onGenerate={(params) => onAngleGenerate?.(data.id, params)}
+            isDark={isDark}
+            prompt={data.prompt}
+            isLoading={data.isLoading}
+            model={data.model || "Banana 2"}
+            aspectRatio={data.aspectRatio || "1:1"}
+            resolution={data.resolution || "1k"}
+            imageModels={imageModels}
+          />
+        </div>
+      )}
+
+      {/* 裁剪编辑器 - 与节点同级定位 */}
+      {isCropEditing && (
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel"
+          onMouseDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <CropEditor
+            imageSrc={data.imageSrc || ""}
+            imageWidth={imageDimensions.width}
+            imageHeight={imageDimensions.height}
+            onClose={closeCropEdit}
+            onCrop={(dataUrl, outputWidth, outputHeight) => onCrop?.(data.id, dataUrl, outputWidth, outputHeight)}
+            isDark={isDark}
+          />
+        </div>
+      )}
+
+      {/* 扩图编辑器 - 与节点同级定位 */}
+      {isExpandEditing && (
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 min-w-[520px] pt-4 z-[70] pointer-events-auto nodrag nowheel"
+          onMouseDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <ExpandImageEditor
+            imageSrc={data.imageSrc || ""}
+            imageWidth={imageDimensions.width}
+            imageHeight={imageDimensions.height}
+            onClose={closeExpandEdit}
+            onGenerate={(params) => onExpandImageGenerate?.(data.id, params)}
             isDark={isDark}
             prompt={data.prompt}
             isLoading={data.isLoading}
