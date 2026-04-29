@@ -115,8 +115,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({
                 <p
                   className={`text-xs mt-1 leading-relaxed ${isDark ? "text-yellow-300/80" : "text-yellow-600"}`}
                 >
-                  词元 AI
-                  画布为完全免费开源项目，仅供学习交流使用。使用过程中产生的任何内容均由用户自行负责，与本平台无关。
+                  词元AI 画布为完全免费项目，仅供学习交流使用。使用过程中产生的任何内容均由用户自行负责，与本平台无关。
                 </p>
               </div>
             </div>
@@ -130,8 +129,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({
               <Icons.Info size={14} className={`${textSub} shrink-0 mt-0.5`} />
               <p className={`text-[11px] leading-relaxed ${textSub}`}>
                 <strong>关于接口兼容性：</strong>
-                不同 API 中转商的接口参数可能不同，本项目无法做到统一适配。
-                如遇不兼容，请参考 README 或使用 AI 编辑器自行调整代码。
+                不同API中转商的接口参数可能不同，本项目无法做到统一适配。如遇不兼容，请添加群聊咨询。
               </p>
             </div>
           </div>
