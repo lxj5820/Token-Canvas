@@ -69,7 +69,7 @@ export const generateStandardImage = async (
           if (hasInputImage) payload.image = extractBase64(inputImages[0]);
         }
         const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-          timeout: 200000,
+          timeout: 600000,
         });
         const data =
           res.data && Array.isArray(res.data)
@@ -149,7 +149,7 @@ export const generateStandardImage = async (
   }
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-    timeout: 200000,
+    timeout: 600000,
   });
   const data =
     res.data && Array.isArray(res.data)
@@ -185,7 +185,7 @@ export const generateMjModal = async (
     botType: "MID_JOURNEY",
   };
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-    timeout: 200000,
+    timeout: 600000,
   });
   return res.imageUrl || res.url;
 };

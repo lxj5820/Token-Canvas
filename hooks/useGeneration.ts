@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { NodeData, Connection, NodeType } from "../types";
 import {
   generateCreativeDescription,
@@ -39,6 +40,7 @@ export const useGeneration = ({
   const saveToHistoryRef = useRef(saveToHistory);
   const setNodesRef = useRef(setNodes);
   const setConnectionsRef = useRef(setConnections);
+  const generatingNodesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     nodesRef.current = nodes;
@@ -52,10 +54,25 @@ export const useGeneration = ({
 
   const handleGenerate = useCallback(
     async (nodeId: string) => {
+      if (generatingNodesRef.current.has(nodeId)) {
+        logger.warn(`handleGenerate: node ${nodeId} is already generating, skipping`);
+        return;
+      }
+
       const node = nodesRef.current.find((n) => n.id === nodeId);
-      if (!node) return;
-      updateNodeDataRef.current(nodeId, { isLoading: true });
+      if (!node) {
+        logger.warn(`handleGenerate: node ${nodeId} not found in nodesRef`);
+        return;
+      }
+
+      generatingNodesRef.current.add(nodeId);
+      flushSync(() => {
+        updateNodeDataRef.current(nodeId, { isLoading: true });
+      });
       const inputs = getInputImagesRef.current(nodeId);
+
+      logger.log(`[Generate] Starting generation for node ${nodeId}, type: ${node.type}`);
+
       try {
         if (node.type === NodeType.CREATIVE_DESC) {
           const res = await generateCreativeDescription(
@@ -155,6 +172,8 @@ export const useGeneration = ({
         logger.error("handleGenerate failed", e);
         alert(`生成失败: ${(e as Error).message}`);
         updateNodeDataRef.current(nodeId, { isLoading: false });
+      } finally {
+        generatingNodesRef.current.delete(nodeId);
       }
     },
     [],
@@ -163,7 +182,10 @@ export const useGeneration = ({
   const handleAngleGenerate = useCallback(
     async (nodeId: string, params: AngleGenerateParams) => {
       const node = nodesRef.current.find((n) => n.id === nodeId);
-      if (!node) return;
+      if (!node) {
+        logger.warn(`handleAngleGenerate: node ${nodeId} not found`);
+        return;
+      }
 
       const H_LABELS: Record<number, string> = {
         0: "正面",
@@ -279,7 +301,9 @@ export const useGeneration = ({
           }
         }
       } else {
-        updateNodeDataRef.current(nodeId, { isLoading: true });
+        flushSync(() => {
+          updateNodeDataRef.current(nodeId, { isLoading: true });
+        });
 
         try {
           const results = await generateImage(
@@ -322,7 +346,10 @@ export const useGeneration = ({
   const handleLightGenerate = useCallback(
     async (nodeId: string, params: LightingGenerateParams) => {
       const node = nodesRef.current.find((n) => n.id === nodeId);
-      if (!node) return;
+      if (!node) {
+        logger.warn(`handleLightGenerate: node ${nodeId} not found`);
+        return;
+      }
 
       const getElevationLabel = (e: number) => {
         if (e <= -60) return "正下方";
@@ -431,7 +458,9 @@ export const useGeneration = ({
           }
         }
       } else {
-        updateNodeDataRef.current(nodeId, { isLoading: true });
+        flushSync(() => {
+          updateNodeDataRef.current(nodeId, { isLoading: true });
+        });
 
         try {
           const results = await generateImage(
@@ -534,8 +563,10 @@ export const useGeneration = ({
       cells: { dataUrl: string; label: string; row?: number; col?: number }[],
     ) => {
       const sourceNode = nodesRef.current.find((n) => n.id === sourceNodeId);
-      if (!sourceNode) return;
-
+      if (!sourceNode) {
+        logger.warn(`handleGridSplitCreateNodes: node ${sourceNodeId} not found`);
+        return;
+      }
       const newNodeSize = 300;
       const gap = 30;
       const spacing = newNodeSize + gap;
@@ -594,7 +625,10 @@ export const useGeneration = ({
   const handleCrop = useCallback(
     (nodeId: string, dataUrl: string, outputWidth: number, outputHeight: number) => {
       const sourceNode = nodesRef.current.find((n) => n.id === nodeId);
-      if (!sourceNode) return;
+      if (!sourceNode) {
+        logger.warn(`handleCrop: node ${nodeId} not found`);
+        return;
+      }
 
       updateNodeDataRef.current(nodeId, { isCropEditing: false });
 
@@ -629,7 +663,10 @@ export const useGeneration = ({
   const handleExpandImageGenerate = useCallback(
     async (nodeId: string, params: ExpandImageGenerateParams) => {
       const node = nodesRef.current.find((n) => n.id === nodeId);
-      if (!node) return;
+      if (!node) {
+        logger.warn(`handleExpandImageGenerate: node ${nodeId} not found`);
+        return;
+      }
 
       // 使用参考图作为输入，如果没有参考图则使用原始图片
       const inputImage = params.referenceImage || node.annotatedImageSrc || node.imageSrc;

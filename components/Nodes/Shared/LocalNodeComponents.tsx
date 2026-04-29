@@ -114,7 +114,7 @@ export const LocalCustomDropdown = <T extends LocalDropdownValue = string>({
     const el = dropdownPanelRef.current;
     if (!el) return;
     const stopWheelPropagation = (e: WheelEvent) => e.stopPropagation();
-    el.addEventListener("wheel", stopWheelPropagation);
+    el.addEventListener("wheel", stopWheelPropagation, { passive: true });
     return () => el.removeEventListener("wheel", stopWheelPropagation);
   }, [isOpen]);
 

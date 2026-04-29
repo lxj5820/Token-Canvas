@@ -196,7 +196,7 @@ const generateSingleBananaChatImage = async (
     );
 
     const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-      timeout: 200000,
+      timeout: 600000,
     });
     logger.log(
       "[BananaPro] Gemini Native Response:",
@@ -290,7 +290,7 @@ const generateSingleBananaChatImage = async (
 
     try {
       const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-        timeout: 200000,
+        timeout: 600000,
       });
       logger.log(
         "[BananaPro] Response received:",
@@ -376,7 +376,7 @@ const generateSingleBananaChatImage = async (
   };
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-    timeout: 200000,
+    timeout: 600000,
   });
   const content = res.choices?.[0]?.message?.content;
 
@@ -443,7 +443,7 @@ export const generateBananaEdit = async (
   }
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-    timeout: 200000,
+    timeout: 600000,
   });
 
   const extractBananaUrl = (data: any) => {

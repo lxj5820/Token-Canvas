@@ -175,7 +175,7 @@ export const generateGptImage = async (
   );
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-    timeout: 300000,
+    timeout: 600000,
   });
 
   logger.debug("[GPT Image] Response received", {
@@ -283,7 +283,7 @@ export const generateGptImageEdit = async (
   );
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
-    timeout: 300000,
+    timeout: 600000,
   });
 
   logger.debug("[GPT Image Edit] Response received", {
