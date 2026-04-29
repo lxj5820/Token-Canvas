@@ -142,10 +142,21 @@ export const useNodeActions = ({
   const deleteNode = useCallback(
     (id: string) => {
       const node = nodes.find((n) => n.id === id);
-      if (node && (node.imageSrc || node.videoSrc))
+      if (!node) return;
+      if (node.imageSrc || node.videoSrc)
         setDeletedNodes((prev) => [...prev, node]);
       saveToHistory(nodes, connections);
-      setNodes((prev) => prev.filter((n) => n.id !== id));
+      if (node.type === NodeType.GROUP) {
+        setNodes((prev) =>
+          prev
+            .filter((n) => n.id !== id)
+            .map((n) =>
+              n.parentId === id ? { ...n, parentId: undefined } : n,
+            ),
+        );
+      } else {
+        setNodes((prev) => prev.filter((n) => n.id !== id));
+      }
       setConnections((prev) =>
         prev.filter((c) => c.sourceId !== id && c.targetId !== id),
       );
@@ -153,16 +164,40 @@ export const useNodeActions = ({
     [nodes, connections, saveToHistory],
   );
 
+  const collectGroupDescendants = useCallback(
+    (groupId: string): Set<string> => {
+      const result = new Set<string>();
+      function dfs(id: string) {
+        result.add(id);
+        nodes.forEach((n) => {
+          if (n.parentId === id && !result.has(n.id)) dfs(n.id);
+        });
+      }
+      dfs(groupId);
+      return result;
+    },
+    [nodes],
+  );
+
   const performCopy = useCallback(
     (selectedNodeIds: Set<string>) => {
       if (selectedNodeIds.size === 0) return null;
-      const selectedNodes = nodes.filter((n) => selectedNodeIds.has(n.id));
+      const expandedIds = new Set<string>();
+      selectedNodeIds.forEach((id) => {
+        const node = nodes.find((n) => n.id === id);
+        if (node?.type === NodeType.GROUP) {
+          collectGroupDescendants(id).forEach((did) => expandedIds.add(did));
+        } else {
+          expandedIds.add(id);
+        }
+      });
+      const selectedNodes = nodes.filter((n) => expandedIds.has(n.id));
       const selectedConnections = connections.filter(
-        (c) => selectedNodeIds.has(c.sourceId) && selectedNodeIds.has(c.targetId),
+        (c) => expandedIds.has(c.sourceId) && expandedIds.has(c.targetId),
       );
       return { nodes: selectedNodes, connections: selectedConnections };
     },
-    [nodes, connections],
+    [nodes, connections, collectGroupDescendants],
   );
 
   const performPaste = useCallback(
@@ -193,11 +228,18 @@ export const useNodeActions = ({
         newNodes.push({
           ...node,
           id: newId,
+          parentId: undefined,
           x: targetPos.x + (node.x - minX),
           y: targetPos.y + (node.y - minY),
           title: getCopyTitle(node.title),
           isLoading: false,
         });
+      });
+      newNodes.forEach((node, i) => {
+        const origParentId = clipboardNodes[i].parentId;
+        if (origParentId && idMap.has(origParentId)) {
+          (node as NodeData).parentId = idMap.get(origParentId);
+        }
       });
       const newConnections: Connection[] = clipboardConnections
         .map((c) => ({
@@ -379,6 +421,203 @@ export const useNodeActions = ({
     [setNodes],
   );
 
+  const computeSelectionBounds = useCallback(
+    (ids: Set<string>) => {
+      const selected = nodes.filter((n) => ids.has(n.id));
+      if (selected.length === 0) return null;
+      const xs = selected.map((n) => n.x);
+      const ys = selected.map((n) => n.y);
+      const rightEdges = selected.map((n) => n.x + n.width);
+      const bottomEdges = selected.map((n) => n.y + n.height);
+      const minX = Math.min(...xs);
+      const minY = Math.min(...ys);
+      return {
+        x: minX,
+        y: minY,
+        width: Math.max(...rightEdges) - minX,
+        height: Math.max(...bottomEdges) - minY,
+      };
+    },
+    [nodes],
+  );
+
+  const handleEdgeAlign = useCallback(
+    (
+      direction: "left" | "right" | "top" | "bottom" | "h-center" | "v-center",
+      selectedNodeIds: Set<string>,
+    ) => {
+      if (selectedNodeIds.size < 2) return;
+      const selected = nodes.filter((n) => selectedNodeIds.has(n.id));
+      const bounds = computeSelectionBounds(selectedNodeIds);
+      if (!bounds) return;
+      saveToHistory(nodes, connections);
+      setNodes((prev) =>
+        prev.map((n) => {
+          if (!selectedNodeIds.has(n.id)) return n;
+          let targetX = n.x;
+          let targetY = n.y;
+          switch (direction) {
+            case "left":
+              targetX = bounds.x;
+              break;
+            case "right":
+              targetX = bounds.x + bounds.width - n.width;
+              break;
+            case "top":
+              targetY = bounds.y;
+              break;
+            case "bottom":
+              targetY = bounds.y + bounds.height - n.height;
+              break;
+            case "h-center":
+              targetX = bounds.x + (bounds.width - n.width) / 2;
+              break;
+            case "v-center":
+              targetY = bounds.y + (bounds.height - n.height) / 2;
+              break;
+          }
+          return { ...n, x: targetX, y: targetY };
+        }),
+      );
+    },
+    [nodes, connections, saveToHistory, computeSelectionBounds],
+  );
+
+  const handleDistribute = useCallback(
+    (
+      direction: "horizontal" | "vertical",
+      selectedNodeIds: Set<string>,
+    ) => {
+      if (selectedNodeIds.size < 3) return;
+      const selected = nodes.filter((n) => selectedNodeIds.has(n.id));
+      saveToHistory(nodes, connections);
+      setNodes((prev) => {
+        const updated = prev.map((n) => ({ ...n }));
+        const selectedUpdated = updated.filter((n) => selectedNodeIds.has(n.id));
+        if (direction === "horizontal") {
+          selectedUpdated.sort((a, b) => a.x - b.x);
+          const totalNodeWidth = selectedUpdated.reduce(
+            (sum, n) => sum + n.width,
+            0,
+          );
+          const totalSpan =
+            selectedUpdated[selectedUpdated.length - 1].x +
+            selectedUpdated[selectedUpdated.length - 1].width -
+            selectedUpdated[0].x;
+          const gap =
+            (totalSpan - totalNodeWidth) / (selectedUpdated.length - 1);
+          let currentX = selectedUpdated[0].x;
+          selectedUpdated.forEach((node) => {
+            node.x = currentX;
+            currentX += node.width + gap;
+          });
+        } else {
+          selectedUpdated.sort((a, b) => a.y - b.y);
+          const totalNodeHeight = selectedUpdated.reduce(
+            (sum, n) => sum + n.height,
+            0,
+          );
+          const totalSpan =
+            selectedUpdated[selectedUpdated.length - 1].y +
+            selectedUpdated[selectedUpdated.length - 1].height -
+            selectedUpdated[0].y;
+          const gap =
+            (totalSpan - totalNodeHeight) / (selectedUpdated.length - 1);
+          let currentY = selectedUpdated[0].y;
+          selectedUpdated.forEach((node) => {
+            node.y = currentY;
+            currentY += node.height + gap;
+          });
+        }
+        return updated;
+      });
+    },
+    [nodes, connections, saveToHistory],
+  );
+
+  const handleGroup = useCallback(
+    (selectedNodeIds: Set<string>) => {
+      if (selectedNodeIds.size < 2) return;
+      const selectedSet = new Set(selectedNodeIds);
+      const topLevelIds = [...selectedNodeIds].filter((id) => {
+        const node = nodes.find((n) => n.id === id);
+        if (!node) return false;
+        if (!node.parentId) return true;
+        return !selectedSet.has(node.parentId);
+      });
+      if (topLevelIds.length < 2) return;
+      const selected = nodes.filter((n) => topLevelIds.includes(n.id));
+      const padding = 20;
+      const xs = selected.map((n) => n.x);
+      const ys = selected.map((n) => n.y);
+      const rightEdges = selected.map((n) => n.x + n.width);
+      const bottomEdges = selected.map((n) => n.y + n.height);
+      const minX = Math.min(...xs) - padding;
+      const minY = Math.min(...ys) - padding;
+      const groupNode: NodeData = {
+        id: generateId(),
+        type: NodeType.GROUP,
+        x: minX,
+        y: minY,
+        width: Math.max(...rightEdges) - Math.min(...xs) + padding * 2,
+        height: Math.max(...bottomEdges) - Math.min(...ys) + padding * 2,
+        title: "新建组",
+        groupName: "新建组",
+        groupColor: "#6366f1",
+      };
+      saveToHistory(nodes, connections);
+      setNodes((prev) => [
+        ...prev.map((n) =>
+          topLevelIds.includes(n.id) ? { ...n, parentId: groupNode.id } : n,
+        ),
+        groupNode,
+      ]);
+      setSelectedNodeIds(new Set([groupNode.id]));
+    },
+    [nodes, connections, saveToHistory],
+  );
+
+  const handleUnGroup = useCallback(
+    (groupId: string) => {
+      const groupNode = nodes.find((n) => n.id === groupId);
+      if (!groupNode || groupNode.type !== NodeType.GROUP) return;
+      const childIds = nodes
+        .filter((n) => n.parentId === groupId)
+        .map((n) => n.id);
+      saveToHistory(nodes, connections);
+      setNodes((prev) =>
+        prev
+          .filter((n) => n.id !== groupId)
+          .map((n) =>
+            n.parentId === groupId ? { ...n, parentId: undefined } : n,
+          ),
+      );
+      setSelectedNodeIds(new Set(childIds));
+    },
+    [nodes, connections, saveToHistory],
+  );
+
+  const getGroupNodeIds = useCallback(
+    (nodeId: string): Set<string> => {
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return new Set([nodeId]);
+      if (node.type === NodeType.GROUP) {
+        return collectGroupDescendants(nodeId);
+      }
+      return new Set([nodeId]);
+    },
+    [nodes, collectGroupDescendants],
+  );
+
+  const hasGroupInSelection = useCallback(
+    (selectedNodeIds: Set<string>): boolean => {
+      return nodes.some(
+        (n) => selectedNodeIds.has(n.id) && n.type === NodeType.GROUP,
+      );
+    },
+    [nodes],
+  );
+
   return {
     updateNodeData,
     addNode,
@@ -387,6 +626,14 @@ export const useNodeActions = ({
     performCopy,
     performPaste,
     handleAlign,
+    handleEdgeAlign,
+    handleDistribute,
+    computeSelectionBounds,
+    handleGroup,
+    handleUnGroup,
+    getGroupNodeIds,
+    hasGroupInSelection,
+    collectGroupDescendants,
     getNodeDisplayData,
     handleMaximize: getNodeDisplayData,
     copyImageToClipboard,

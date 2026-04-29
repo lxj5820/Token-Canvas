@@ -83,6 +83,8 @@ export interface UseKeyboardShortcutsOptions {
   setNodes: React.Dispatch<React.SetStateAction<NodeData[]>>;
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>;
   setSelectedNodeIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  handleGroup: (selectedNodeIds: Set<string>) => void;
+  handleUnGroup: (groupId: string) => void;
   spacePressedRef?: React.MutableRefObject<boolean>;
 }
 
@@ -125,6 +127,8 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
     setNodes,
     setConnections,
     setSelectedNodeIds,
+    handleGroup,
+    handleUnGroup,
     spacePressedRef,
   } = options;
 
@@ -159,6 +163,28 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
     if (!(e.ctrlKey || e.metaKey) || e.key !== "c") return false;
     e.preventDefault();
     opts.performCopy();
+    return true;
+  };
+
+  const handleSelectAllShortcut = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (!(e.ctrlKey || e.metaKey) || e.key !== "a") return false;
+    e.preventDefault();
+    const allIds = new Set(opts.nodes.map((n) => n.id));
+    opts.setSelectedNodeIds(allIds);
+    return true;
+  };
+
+  const handleGroupShortcuts = (e: KeyboardEvent, opts: UseKeyboardShortcutsOptions) => {
+    if (!(e.ctrlKey || e.metaKey) || e.key !== "g") return false;
+    e.preventDefault();
+    if (e.shiftKey) {
+      const groupNode = opts.nodes.find(
+        (n) => opts.selectedNodeIds.has(n.id) && n.type === NodeType.GROUP,
+      );
+      if (groupNode) opts.handleUnGroup(groupNode.id);
+    } else {
+      if (opts.selectedNodeIds.size >= 2) opts.handleGroup(opts.selectedNodeIds);
+    }
     return true;
   };
 
@@ -221,6 +247,8 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
         if (handleModeShortcuts(e, opts)) return;
         if (handleDeleteShortcut(e, opts)) return;
         if (handleClipboardShortcut(e, opts)) return;
+        if (handleSelectAllShortcut(e, opts)) return;
+        if (handleGroupShortcuts(e, opts)) return;
         if (handleHistoryShortcuts(e, opts)) return;
         if (handleAlignShortcut(e, opts)) return;
       }
@@ -258,7 +286,25 @@ export const deleteSelectedNodesHelper = (
     setDeletedNodes((prev) => [...prev, ...withContent]);
   }
   saveToHistory(nodes, connections);
-  setNodes((prev) => prev.filter((n) => !selectedNodeIds.has(n.id)));
+  const hasGroup = nodesToDelete.some((n) => n.type === NodeType.GROUP);
+  if (hasGroup) {
+    const groupIds = new Set(
+      nodesToDelete
+        .filter((n) => n.type === NodeType.GROUP)
+        .map((n) => n.id),
+    );
+    setNodes((prev) =>
+      prev
+        .filter((n) => !selectedNodeIds.has(n.id))
+        .map((n) =>
+          n.parentId && groupIds.has(n.parentId)
+            ? { ...n, parentId: undefined }
+            : n,
+        ),
+    );
+  } else {
+    setNodes((prev) => prev.filter((n) => !selectedNodeIds.has(n.id)));
+  }
   setConnections((prev) =>
     prev.filter(
       (c) =>

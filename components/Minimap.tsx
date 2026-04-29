@@ -122,7 +122,7 @@ const Minimap: React.FC<MinimapProps> = ({
         <rect width="100%" height="100%" fill="url(#minimapGrid)" />
 
         {/* 节点 */}
-        {nodes.map((node) => {
+        {nodes.filter((n) => n.type !== ("GROUP" as string)).map((node) => {
           const x = node.x * scale + offsetX;
           const y = node.y * scale + offsetY;
           const w = Math.max((node.width || 200) * scale, 4);

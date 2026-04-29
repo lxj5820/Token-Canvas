@@ -38,28 +38,32 @@ export const importFileAsNode = (
     };
     reader.readAsDataURL(file);
   } else if (file.type.startsWith("video/")) {
-    const url = URL.createObjectURL(file);
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = () => {
-      const { width, height, ratio } = calculateImportDimensions(
-        video.videoWidth,
-        video.videoHeight,
-      );
-      addNode(
-        NodeType.ORIGINAL_IMAGE,
-        worldPos.x - width / 2,
-        worldPos.y - height / 2,
-        {
-          width,
-          height,
-          videoSrc: url,
-          title: file.name,
-          aspectRatio: `${ratio}:1`,
-          outputArtifacts: [url],
-        },
-      );
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const src = event.target?.result as string;
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        const { width, height, ratio } = calculateImportDimensions(
+          video.videoWidth,
+          video.videoHeight,
+        );
+        addNode(
+          NodeType.ORIGINAL_IMAGE,
+          worldPos.x - width / 2,
+          worldPos.y - height / 2,
+          {
+            width,
+            height,
+            videoSrc: src,
+            title: file.name,
+            aspectRatio: `${ratio}:1`,
+            outputArtifacts: [src],
+          },
+        );
+      };
+      video.src = src;
     };
-    video.src = url;
+    reader.readAsDataURL(file);
   }
 };

@@ -7,6 +7,7 @@ export enum NodeType {
   START_END_TO_VIDEO = "START_END_TO_VIDEO",
   CREATIVE_DESC = "CREATIVE_DESC",
   ORIGINAL_IMAGE = "ORIGINAL_IMAGE",
+  GROUP = "GROUP",
 }
 
 export interface NodeData {
@@ -54,6 +55,10 @@ export interface NodeData {
   isCropEditing?: boolean;
 
   isExpandImageEditing?: boolean;
+
+  parentId?: string;
+  groupName?: string;
+  groupColor?: string;
 }
 
 export interface Connection {

@@ -11,7 +11,6 @@ interface SidebarProps {
   onPreviewMedia: (url: string, type: "image" | "video") => void;
   isDark?: boolean;
   // 新增：画布操作回调
-  onScreenshot?: () => void;
   onSelectMode?: () => void;
   onPanMode?: () => void;
   onAlignVertical?: () => void;
@@ -29,7 +28,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   nodes,
   onPreviewMedia,
   isDark = true,
-  onScreenshot,
   onSelectMode,
   onPanMode,
   onAlignVertical,
@@ -572,17 +570,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         ref={sidebarRef}
         className={`fixed left-4 top-1/2 -translate-y-1/2 z-[200] ${bgMain} backdrop-blur-xl border ${borderColor} rounded-2xl p-2 flex flex-col items-center gap-1 shadow-xl`}
       >
-        {/* 第一行：截图 */}
-        <SidebarButton
-          icon={Icons.Camera}
-          tooltip="截图"
-          onClick={onScreenshot}
-        />
-
-        <div
-          className={`w-8 h-px my-1 ${isDark ? "bg-zinc-800" : "bg-gray-200"}`}
-        />
-
         {/* 第二行：选择模式 */}
         <ModeButton
           icon={Icons.MousePointer2}

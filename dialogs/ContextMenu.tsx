@@ -22,6 +22,9 @@ interface ContextMenuProps {
   onReplaceImage?: (nodeId: string) => void;
   onCopyImageToClipboard?: (nodeId: string) => void;
   onToggleVideoType?: (nodeId: string) => void;
+  onGroup?: () => void;
+  onUnGroup?: (groupId: string) => void;
+  selectedNodeIds?: Set<string>;
   onClose: () => void;
 }
 
@@ -37,6 +40,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onReplaceImage,
   onCopyImageToClipboard,
   onToggleVideoType,
+  onGroup,
+  onUnGroup,
+  selectedNodeIds,
   onClose,
 }) => {
   if (!contextMenu) return null;
@@ -76,6 +82,38 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               >
                 <Icons.Copy size={14} /> 复制节点
               </button>
+              {contextMenu.nodeType === NodeType.GROUP && onUnGroup && (
+                <button
+                  className={menuItemClass}
+                  onClick={() => {
+                    onUnGroup(contextMenu.nodeId!);
+                    onClose();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg> 解组 <span className={`ml-auto text-[9px] ${isDark ? "text-zinc-500" : "text-gray-400"}`}>Ctrl+Shift+G</span>
+                </button>
+              )}
+              {contextMenu.nodeType !== NodeType.GROUP && onGroup && selectedNodeIds && selectedNodeIds.size >= 2 && (
+                <button
+                  className={menuItemClass}
+                  onClick={() => {
+                    onGroup();
+                    onClose();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2" strokeDasharray="4 2"/>
+                    <rect x="6" y="6" width="5" height="5" rx="1"/>
+                    <rect x="13" y="6" width="5" height="5" rx="1"/>
+                    <rect x="6" y="13" width="5" height="5" rx="1"/>
+                  </svg> 编组 <span className={`ml-auto text-[9px] ${isDark ? "text-zinc-500" : "text-gray-400"}`}>Ctrl+G</span>
+                </button>
+              )}
               {contextMenu.nodeType === NodeType.ORIGINAL_IMAGE &&
                 onReplaceImage && (
                   <button

@@ -33,6 +33,7 @@ interface UseCanvasInteractionParams {
   screenToWorld: (x: number, y: number) => Point;
   containerRef: React.RefObject<HTMLDivElement | null>;
   spacePressed: React.MutableRefObject<boolean>;
+  getGroupNodeIds: (nodeId: string) => Set<string>;
 }
 
 export const useCanvasInteraction = ({
@@ -56,6 +57,7 @@ export const useCanvasInteraction = ({
   screenToWorld,
   containerRef,
   spacePressed,
+  getGroupNodeIds,
 }: UseCanvasInteractionParams) => {
   const dragModeRef = useRef(dragMode);
   const nodesRef = useRef(nodes);
@@ -71,6 +73,9 @@ export const useCanvasInteraction = ({
     w?: number;
     h?: number;
     nodeId?: string;
+    nodeX?: number;
+    nodeY?: number;
+    resizeDir?: string;
   }>({ x: 0, y: 0 });
   const initialTransformRef = useRef<CanvasTransform>({ x: 0, y: 0, k: 1 });
   const initialNodePositionsRef = useRef<Map<string, { x: number; y: number }>>(
@@ -177,17 +182,21 @@ export const useCanvasInteraction = ({
       if (e.button === 0) {
         setDragMode("DRAG_NODE");
         dragStartRef.current = { x: e.clientX, y: e.clientY };
+        const groupIds = getGroupNodeIds(id);
         setSelectedNodeIds((prev) => {
           const isAlreadySelected = prev.has(id);
           let newSelection = new Set(prev);
           if (e.shiftKey) {
-            isAlreadySelected
-              ? newSelection.delete(id)
-              : newSelection.add(id);
+            if (isAlreadySelected) {
+              groupIds.forEach((gid) => newSelection.delete(gid));
+            } else {
+              groupIds.forEach((gid) => newSelection.add(gid));
+            }
           } else {
-            if (!isAlreadySelected) {
+            const allGroupSelected = [...groupIds].every((gid) => prev.has(gid));
+            if (!allGroupSelected) {
               newSelection.clear();
-              newSelection.add(id);
+              groupIds.forEach((gid) => newSelection.add(gid));
             }
           }
           initialNodePositionsRef.current = new Map(
@@ -199,7 +208,7 @@ export const useCanvasInteraction = ({
         });
       }
     },
-    [],
+    [getGroupNodeIds],
   );
 
   const handleNodeContextMenu = useCallback(
@@ -237,7 +246,7 @@ export const useCanvasInteraction = ({
   );
 
   const handleResizeStart = useCallback(
-    (e: React.MouseEvent, nodeId: string) => {
+    (e: React.MouseEvent, nodeId: string, direction?: string) => {
       e.stopPropagation();
       e.preventDefault();
       const node = nodes.find((n) => n.id === nodeId);
@@ -249,6 +258,9 @@ export const useCanvasInteraction = ({
         w: node.width,
         h: node.height,
         nodeId: nodeId,
+        nodeX: node.x,
+        nodeY: node.y,
+        resizeDir: direction || "se",
       };
       setSelectedNodeIds(new Set([nodeId]));
     },
@@ -338,13 +350,22 @@ export const useCanvasInteraction = ({
         const worldHeight = h / transformRef.current.k;
         const newSelection = new Set<string>();
         nodesRef.current.forEach((n) => {
-          if (
-            n.x < worldStartX + worldWidth &&
-            n.x + n.width > worldStartX &&
-            n.y < worldStartY + worldHeight &&
-            n.y + n.height > worldStartY
-          ) {
-            newSelection.add(n.id);
+          if (n.type === ("GROUP" as string)) {
+            const contained =
+              n.x >= worldStartX &&
+              n.x + n.width <= worldStartX + worldWidth &&
+              n.y >= worldStartY &&
+              n.y + n.height <= worldStartY + worldHeight;
+            if (contained) newSelection.add(n.id);
+          } else {
+            if (
+              n.x < worldStartX + worldWidth &&
+              n.x + n.width > worldStartX &&
+              n.y < worldStartY + worldHeight &&
+              n.y + n.height > worldStartY
+            ) {
+              newSelection.add(n.id);
+            }
           }
         });
         setSelectedNodeIds(newSelection);
@@ -398,32 +419,70 @@ export const useCanvasInteraction = ({
         if (node) {
           const dx =
             (e.clientX - dragStartRef.current.x) / transformRef.current.k;
-          let ratio = 1.33;
-          if (node.aspectRatio) {
-            const ar =
-              node.aspectRatio === "auto" ? "1:1" : node.aspectRatio;
-            const [w, h] = ar.split(":").map(Number);
-            if (!isNaN(w) && !isNaN(h) && h !== 0) ratio = w / h;
-          } else if (node.type === NodeType.ORIGINAL_IMAGE) {
-            ratio =
-              (dragStartRef.current.w || 1) / (dragStartRef.current.h || 1);
+          const dy =
+            (e.clientY - dragStartRef.current.y) / transformRef.current.k;
+          const dir = dragStartRef.current.resizeDir || "se";
+          const isGroup = node.type === ("GROUP" as string);
+
+          if (isGroup) {
+            const origX = dragStartRef.current.nodeX ?? node.x;
+            const origY = dragStartRef.current.nodeY ?? node.y;
+            const origW = dragStartRef.current.w || node.width;
+            const origH = dragStartRef.current.h || node.height;
+            const minW = 120;
+            const minH = 60;
+
+            let newX = origX;
+            let newY = origY;
+            let newW = origW;
+            let newH = origH;
+
+            if (dir.includes("e")) newW = Math.max(minW, origW + dx);
+            if (dir.includes("w")) {
+              newW = Math.max(minW, origW - dx);
+              newX = origX + origW - newW;
+            }
+            if (dir.includes("s")) newH = Math.max(minH, origH + dy);
+            if (dir.includes("n")) {
+              newH = Math.max(minH, origH - dy);
+              newY = origY + origH - newH;
+            }
+
+            setNodes((prev) =>
+              prev.map((n) =>
+                n.id === nodeId
+                  ? { ...n, x: newX, y: newY, width: newW, height: newH }
+                  : n,
+              ),
+            );
+          } else {
+            let ratio = 1.33;
+            if (node.aspectRatio) {
+              const ar =
+                node.aspectRatio === "auto" ? "1:1" : node.aspectRatio;
+              const [w, h] = ar.split(":").map(Number);
+              if (!isNaN(w) && !isNaN(h) && h !== 0) ratio = w / h;
+            } else if (node.type === NodeType.ORIGINAL_IMAGE) {
+              ratio =
+                (dragStartRef.current.w || 1) / (dragStartRef.current.h || 1);
+            }
+            let minWidth = 150;
+            if (node.type !== NodeType.CREATIVE_DESC) {
+              const limit1 = ratio >= 1 ? 400 * ratio : 400;
+              minWidth = Math.max(limit1, 400);
+            } else minWidth = 280;
+            let newWidth = Math.max(
+              minWidth,
+              (dragStartRef.current.w || 0) + dx,
+            );
+            setNodes((prev) =>
+              prev.map((n) =>
+                n.id === nodeId
+                  ? { ...n, width: newWidth, height: newWidth / ratio }
+                  : n,
+              ),
+            );
           }
-          let minWidth = 150;
-          if (node.type !== NodeType.CREATIVE_DESC) {
-            const limit1 = ratio >= 1 ? 400 * ratio : 400;
-            minWidth = Math.max(limit1, 400);
-          } else minWidth = 280;
-          let newWidth = Math.max(
-            minWidth,
-            (dragStartRef.current.w || 0) + dx,
-          );
-          setNodes((prev) =>
-            prev.map((n) =>
-              n.id === nodeId
-                ? { ...n, width: newWidth, height: newWidth / ratio }
-                : n,
-            ),
-          );
         }
       }
     }),
@@ -457,6 +516,59 @@ export const useCanvasInteraction = ({
           setTimeout(() => {
             saveToHistoryRef.current(currentNodes, currentConnections);
           }, 0);
+        }
+        if (dragModeRef.current === "DRAG_NODE" && hasMoved) {
+          const currentNodes = nodesRef.current;
+          const detached = new Set<string>();
+          currentNodes.forEach((n) => {
+            if (!n.parentId) return;
+            const parent = currentNodes.find((p) => p.id === n.parentId);
+            if (!parent) return;
+            const inBounds =
+              n.x >= parent.x &&
+              n.y >= parent.y &&
+              n.x + n.width <= parent.x + parent.width &&
+              n.y + n.height <= parent.y + parent.height;
+            if (!inBounds) {
+              detached.add(n.id);
+            }
+          });
+          if (detached.size > 0) {
+            setNodes((prev) =>
+              prev.map((n) =>
+                detached.has(n.id) ? { ...n, parentId: undefined } : n,
+              ),
+            );
+          }
+          const attachMap = new Map<string, string>();
+          currentNodes.forEach((n) => {
+            if (n.type === ("GROUP" as string)) return;
+            if (n.parentId) return;
+            if (detached.has(n.id)) return;
+            const cx = n.x + n.width / 2;
+            const cy = n.y + n.height / 2;
+            for (const g of currentNodes) {
+              if (g.type !== ("GROUP" as string)) continue;
+              if (
+                cx >= g.x &&
+                cx <= g.x + g.width &&
+                cy >= g.y &&
+                cy <= g.y + g.height
+              ) {
+                attachMap.set(n.id, g.id);
+                break;
+              }
+            }
+          });
+          if (attachMap.size > 0) {
+            setNodes((prev) =>
+              prev.map((n) => {
+                const newParent = attachMap.get(n.id);
+                if (newParent) return { ...n, parentId: newParent };
+                return n;
+              }),
+            );
+          }
         }
       }
       if (dragModeRef.current !== "NONE") {
@@ -505,9 +617,44 @@ export const useCanvasInteraction = ({
     return "cursor-default";
   }, [dragMode, currentMode, spacePressed]);
 
+  const handleGroupBoxMouseDown = useCallback(
+    (e: React.MouseEvent, groupId: string) => {
+      e.stopPropagation();
+      setContextMenu(null);
+      setQuickAddMenu(null);
+      setSelectedConnectionId(null);
+      if (e.button !== 0) return;
+      const groupNodeIds = getGroupNodeIds(groupId);
+      setDragMode("DRAG_NODE");
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
+      setSelectedNodeIds((prev) => {
+        const allGroupSelected = [...groupNodeIds].every((id) => prev.has(id));
+        let newSelection: Set<string>;
+        if (e.shiftKey) {
+          newSelection = new Set(prev);
+          if (allGroupSelected) {
+            groupNodeIds.forEach((id) => newSelection.delete(id));
+          } else {
+            groupNodeIds.forEach((id) => newSelection.add(id));
+          }
+        } else {
+          newSelection = allGroupSelected ? prev : groupNodeIds;
+        }
+        initialNodePositionsRef.current = new Map(
+          nodesRef.current
+            .filter((n) => newSelection.has(n.id))
+            .map((n) => [n.id, { x: n.x, y: n.y }]),
+        );
+        return newSelection;
+      });
+    },
+    [getGroupNodeIds],
+  );
+
   return {
     handleMouseDown,
     handleNodeMouseDown,
+    handleGroupBoxMouseDown,
     handleNodeContextMenu,
     handleCanvasContextMenu,
     handleResizeStart,

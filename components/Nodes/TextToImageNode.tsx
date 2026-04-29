@@ -246,7 +246,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
   const containerBg = isDark ? "bg-[#1a1a1a]" : "bg-white";
   const containerBorder = selected
-    ? "border-yellow-400/80 node-selected-glow"
+    ? "border-yellow-400 node-selected-glow"
     : isDark
       ? "border-zinc-700/50"
       : "border-gray-200";
@@ -263,88 +263,86 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
 
   return (
     <>
+      {hasResult &&
+        isSelectedAndStable &&
+        showControls &&
+        !isAnnotating &&
+        !isGridSplitting &&
+        !isAngleEditing &&
+        !isLightEditing &&
+        !isCropEditing &&
+        !isExpandImageEditing && (
+          <div
+            className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <ImageNodeToolbar
+              imageSrc={data.annotatedImageSrc || data.imageSrc}
+              nodeId={data.id}
+              onMaximize={onMaximize}
+              onAnnotate={toggleAnnotate}
+              isAnnotating={isAnnotating}
+              isDark={isDark}
+              onGridSplit={handleGridSplit}
+              onAngleEdit={toggleAngleEdit}
+              isAngleEditing={isAngleEditing}
+              onLightEdit={toggleLightEdit}
+              isLightEditing={isLightEditing}
+              onCropEdit={toggleCropEdit}
+              isCropEditing={isCropEditing}
+              onExpandEdit={toggleExpandImageEdit}
+              isExpandEditing={isExpandImageEditing}
+            />
+          </div>
+        )}
+
+      {isGridSplitting && gridSplit && (
+        <div
+          className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <GridSplitToolbar
+            rows={gridSplit.rows}
+            cols={gridSplit.cols}
+            selectedCount={gridSplit.selectedCells.length}
+            totalCount={gridSplit.rows * gridSplit.cols}
+            onSetSize={setGridSize}
+            onClose={exitGridSplit}
+            onSelectAll={selectAllCells}
+            onDeselectAll={deselectAllCells}
+            onCreateNodes={handleGridSplitCreateNodes}
+            onDownload={handleGridSplitDownload}
+            isDark={isDark}
+          />
+        </div>
+      )}
+
+      {isAnnotating && (
+        <div
+          className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <AnnotationToolbar
+            activeTool={annotationTool}
+            onToolChange={setAnnotationTool}
+            currentColor={annotationColor}
+            onColorChange={setAnnotationColor}
+            strokeWidth={annotationStrokeWidth}
+            onStrokeWidthChange={setAnnotationStrokeWidth}
+            onUndo={handleAnnotationUndo}
+            onRedo={handleAnnotationRedo}
+            onClear={handleAnnotationClear}
+            canUndo={(data.annotations?.length || 0) > 0}
+            canRedo={undoneAnnotations.length > 0}
+            onClose={handleCloseAnnotation}
+            isDark={isDark}
+          />
+        </div>
+      )}
+
       <div
-        className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen || isAnnotating || isGridSplitting || isAngleEditing || isLightEditing || isCropEditing || isExpandImageEditing || (hasResult && isSelectedAndStable && showControls) ? "overflow-visible" : "overflow-hidden"} shadow-xl group transition-all duration-200`}
+        className={`w-full h-full relative rounded-2xl border ${containerBorder} ${containerBg} ${data.isStackOpen ? "overflow-visible" : "overflow-hidden"} shadow-xl group transition-all duration-200`}
       >
-        {/* 顶部工具栏（标注/宫格切分/角度编辑/灯光编辑/裁剪/扩图模式下隐藏） */}
-        {hasResult &&
-          isSelectedAndStable &&
-          showControls &&
-          !isAnnotating &&
-          !isGridSplitting &&
-          !isAngleEditing &&
-          !isLightEditing &&
-          !isCropEditing &&
-          !isExpandImageEditing && (
-            <div
-              className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1001] pointer-events-auto"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <ImageNodeToolbar
-                imageSrc={data.annotatedImageSrc || data.imageSrc}
-                nodeId={data.id}
-                onMaximize={onMaximize}
-                onAnnotate={toggleAnnotate}
-                isAnnotating={isAnnotating}
-                isDark={isDark}
-                onGridSplit={handleGridSplit}
-                onAngleEdit={toggleAngleEdit}
-                isAngleEditing={isAngleEditing}
-                onLightEdit={toggleLightEdit}
-                isLightEditing={isLightEditing}
-                onCropEdit={toggleCropEdit}
-                isCropEditing={isCropEditing}
-                onExpandEdit={toggleExpandImageEdit}
-                isExpandEditing={isExpandImageEditing}
-              />
-            </div>
-          )}
-
-        {/* 宫格切分工具栏 */}
-        {isGridSplitting && gridSplit && (
-          <div
-            className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <GridSplitToolbar
-              rows={gridSplit.rows}
-              cols={gridSplit.cols}
-              selectedCount={gridSplit.selectedCells.length}
-              totalCount={gridSplit.rows * gridSplit.cols}
-              onSetSize={setGridSize}
-              onClose={exitGridSplit}
-              onSelectAll={selectAllCells}
-              onDeselectAll={deselectAllCells}
-              onCreateNodes={handleGridSplitCreateNodes}
-              onDownload={handleGridSplitDownload}
-              isDark={isDark}
-            />
-          </div>
-        )}
-
-        {/* 标注工具栏（与图片工具栏同位置） */}
-        {isAnnotating && (
-          <div
-            className="absolute top-[-18px] left-1/2 -translate-x-1/2 -translate-y-full z-[1003] pointer-events-auto"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <AnnotationToolbar
-              activeTool={annotationTool}
-              onToolChange={setAnnotationTool}
-              currentColor={annotationColor}
-              onColorChange={setAnnotationColor}
-              strokeWidth={annotationStrokeWidth}
-              onStrokeWidthChange={setAnnotationStrokeWidth}
-              onUndo={handleAnnotationUndo}
-              onRedo={handleAnnotationRedo}
-              onClear={handleAnnotationClear}
-              canUndo={(data.annotations?.length || 0) > 0}
-              canRedo={undoneAnnotations.length > 0}
-              onClose={handleCloseAnnotation}
-              isDark={isDark}
-            />
-          </div>
-        )}
 
         {hasResult ? (
           <>

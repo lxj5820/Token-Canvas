@@ -144,7 +144,7 @@ export const ImageToImageNode: React.FC<ImageToImageNodeProps> = ({
     // 样式定义
     const containerBg = isDark ? 'bg-[#1e1e1e]' : 'bg-white'; // 容器背景
     const containerBorder = selected
-        ? 'border-yellow-400/80 node-selected-glow' // 选中状态的边框
+        ? 'border-yellow-400 node-selected-glow' // 选中状态的边框
         : (isDark ? 'border-zinc-800' : 'border-gray-200'); // 未选中状态的边框
     const overlayToolbarBg = isDark ? 'bg-black/50 border-white/5 text-gray-400' : 'bg-white/50 border-black/5 text-gray-600'; // 顶部工具栏背景
     const controlPanelBg = isDark ? 'bg-[#1e1e1e] border-zinc-700/80' : 'bg-white border-gray-200'; // 控制面板背景

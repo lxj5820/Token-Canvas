@@ -40,7 +40,7 @@ export const CreativeDescNode: React.FC<CreativeDescNodeProps> = ({
   const containerBg = isDark ? "bg-[#1e1e1e]" : "bg-white";
   // 根据选中状态和主题模式设置容器边框
   const containerBorder = selected
-    ? "border-yellow-400/80 node-selected-glow"
+    ? "border-yellow-400 node-selected-glow"
     : isDark
       ? "border-zinc-800"
       : "border-gray-200";

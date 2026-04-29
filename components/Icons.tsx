@@ -89,6 +89,12 @@ import {
   MessageCircle,
   FlipHorizontal,
   FlipVertical,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignCenterHorizontal,
+  AlignEndHorizontal,
 } from "lucide-react";
 
 export const Icons = {
@@ -180,5 +186,11 @@ export const Icons = {
   MessageCircle,
   FlipHorizontal,
   FlipVertical,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignCenterHorizontal,
+  AlignEndHorizontal,
   History: Clock,
 };

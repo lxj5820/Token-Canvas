@@ -20,7 +20,7 @@ import {
   hasShownWelcome,
 } from "./components/Settings/WelcomeModal";
 import { AIPanel } from "./components/AIPanel";
-import { toPng } from "html-to-image";
+
 import { useHistory } from "./hooks/useHistory";
 import { useAutoSave, useLoadWorkflow } from "./hooks/useAutoSave";
 import {
@@ -34,12 +34,14 @@ import { useZoom } from "./hooks/useZoom";
 import { useNodeActions } from "./hooks/useNodeActions";
 import { useWorkflowIO } from "./hooks/useWorkflowIO";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
-import { ConnectionRenderer, SelectionBox, PreviewMedia } from "./renderers";
+import { ConnectionRenderer, SelectionBox, PreviewMedia, MultiSelectBox } from "./renderers";
+import { GroupNode } from "./components/Nodes/GroupNode";
 import { NewWorkflowDialog, ContextMenu, QuickAddMenu } from "./dialogs";
 import { importFileAsNode } from "./utils/importFileAsNode";
 import { logger } from "./services/logger";
 import { storageService } from "./services/storageService";
 import { Toast, ToastContainer } from "./components/Toast";
+import { MultiSelectToolbar } from "./components/MultiSelectToolbar";
 
 const App: React.FC = () => {
   return <CanvasWithSidebar />;
@@ -100,7 +102,6 @@ const CanvasWithSidebar: React.FC = () => {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => !hasShownWelcome() || !checkHasApiConfigured());
   const [storageDirName, setStorageDirName] = useState<string | null>(null);
   const [deletedNodes, setDeletedNodes] = useState<NodeData[]>([]);
-  const [isScreenshotting, setIsScreenshotting] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{
     url: string;
     type: "image" | "video";
@@ -167,6 +168,14 @@ const CanvasWithSidebar: React.FC = () => {
     performCopy: performCopyFromHook,
     performPaste: performPasteFromHook,
     handleAlign,
+    handleEdgeAlign,
+    handleDistribute,
+    computeSelectionBounds,
+    handleGroup,
+    handleUnGroup,
+    getGroupNodeIds,
+    hasGroupInSelection,
+    collectGroupDescendants,
     handleMaximize: handleMaximizeFromHook,
     copyImageToClipboard: copyImageToClipboardFromHook,
     triggerReplaceImage: triggerReplaceImageFromHook,
@@ -207,6 +216,7 @@ const CanvasWithSidebar: React.FC = () => {
   const {
     handleMouseDown,
     handleNodeMouseDown,
+    handleGroupBoxMouseDown,
     handleNodeContextMenu,
     handleCanvasContextMenu,
     handleResizeStart,
@@ -243,6 +253,7 @@ const CanvasWithSidebar: React.FC = () => {
     screenToWorld,
     containerRef,
     spacePressed,
+    getGroupNodeIds,
   });
 
   const {
@@ -323,46 +334,6 @@ const CanvasWithSidebar: React.FC = () => {
     setIsDark(dark);
     setCanvasBg(dark ? "#0B0C0E" : "#F5F7FA");
   };
-
-  const handleScreenshot = useCallback(async () => {
-    const container = containerRef.current;
-    if (!container || isScreenshotting) return;
-    setIsScreenshotting(true);
-    try {
-      const rect = container.getBoundingClientRect();
-      const pixelRatio = window.devicePixelRatio || 1;
-      const dataUrl = await toPng(container, {
-        width: rect.width,
-        height: rect.height,
-        pixelRatio: pixelRatio,
-        backgroundColor: canvasBg,
-        style: { transform: "none" },
-        filter: (node: HTMLElement) => {
-          if (
-            node.classList &&
-            (node.classList.contains("minimap-container") ||
-              (node.classList.contains("absolute") &&
-                node.closest(".minimap-container")))
-          ) {
-            return false;
-          }
-          return true;
-        },
-      });
-      const link = document.createElement("a");
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:.]/g, "-")
-        .slice(0, 19);
-      link.download = `token-canvas-${timestamp}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      logger.error("[Screenshot] Failed:", err);
-    } finally {
-      setIsScreenshotting(false);
-    }
-  }, [canvasBg, isScreenshotting]);
 
   const handleImportAsset = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -529,6 +500,8 @@ const CanvasWithSidebar: React.FC = () => {
     setNodes,
     setConnections,
     setSelectedNodeIds,
+    handleGroup,
+    handleUnGroup,
     spacePressedRef: spacePressed,
   });
 
@@ -569,7 +542,6 @@ const CanvasWithSidebar: React.FC = () => {
         nodes={[...nodes, ...deletedNodes]}
         onPreviewMedia={(url, type) => setPreviewMedia({ url, type })}
         isDark={isDark}
-        onScreenshot={handleScreenshot}
         onSelectMode={handleSelectMode}
         onPanMode={handlePanMode}
         onAlignVertical={() => handleAlign("UP", selectedNodeIds)}
@@ -734,7 +706,22 @@ const CanvasWithSidebar: React.FC = () => {
             connectionStartRef={connectionStartRef}
             tempConnection={tempConnection}
           />
-          {nodes.map((node) => (
+          {nodes.map((node) => {
+            if (node.type === ("GROUP" as string)) {
+              return (
+                <GroupNode
+                  key={node.id}
+                  data={node}
+                  selected={selectedNodeIds.has(node.id)}
+                  isDark={isDark}
+                  onUpdateData={updateNodeData}
+                  onUnGroup={handleUnGroup}
+                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                  onResizeStart={handleResizeStart}
+                />
+              );
+            }
+            return (
             <BaseNode
               key={node.id}
               data={node}
@@ -767,7 +754,13 @@ const CanvasWithSidebar: React.FC = () => {
                 onExpandImageGenerate={handleExpandImageGenerate}
               />
             </BaseNode>
-          ))}
+            );
+          })}
+          <MultiSelectBox
+            selectedNodeIds={selectedNodeIds}
+            nodes={nodes}
+            onGroupMouseDown={handleGroupBoxMouseDown}
+          />
         </div>
         {dragMode === "CONNECT" &&
           suggestedNodes.length > 0 &&
@@ -808,6 +801,35 @@ const CanvasWithSidebar: React.FC = () => {
             </div>
           )}
         <SelectionBox selectionBox={selectionBox} containerRef={containerRef} />
+
+        <MultiSelectToolbar
+          selectedNodeIds={selectedNodeIds}
+          nodes={nodes}
+          transform={transform}
+          isDark={isDark}
+          onEdgeAlign={(direction) => handleEdgeAlign(direction, selectedNodeIds)}
+          onDistribute={(direction) => handleDistribute(direction, selectedNodeIds)}
+          onDelete={() =>
+            deleteSelectedNodesHelper(
+              nodes,
+              connections,
+              selectedNodeIds,
+              setNodes,
+              setConnections,
+              setSelectedNodeIds,
+              setDeletedNodes,
+              saveToHistory,
+            )
+          }
+          onGroup={() => handleGroup(selectedNodeIds)}
+          onUnGroup={() => {
+            const groupNode = nodes.find(
+              (n) => selectedNodeIds.has(n.id) && n.type === ("GROUP" as string),
+            );
+            if (groupNode) handleUnGroup(groupNode.id);
+          }}
+          hasGroupInSelection={hasGroupInSelection(selectedNodeIds)}
+        />
 
         {transform.k < 0.5 && (
           <div
@@ -884,8 +906,8 @@ const CanvasWithSidebar: React.FC = () => {
             <div
               className={`w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center ${
                 isDark
-                  ? "bg-yellow-500/20 text-yellow-400"
-                  : "bg-yellow-500/20 text-yellow-600"
+                  ? "text-yellow-400"
+                  : "text-yellow-600"
               }`}
             >
               <img
@@ -1124,6 +1146,9 @@ const CanvasWithSidebar: React.FC = () => {
           onAddNode={addNode}
           onReplaceImage={triggerReplaceImage}
           onCopyImageToClipboard={copyImageToClipboard}
+          onGroup={() => handleGroup(selectedNodeIds)}
+          onUnGroup={handleUnGroup}
+          selectedNodeIds={selectedNodeIds}
           onClose={() => setContextMenu(null)}
         />
         <AIPanel

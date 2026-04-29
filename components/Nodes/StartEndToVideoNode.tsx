@@ -244,7 +244,7 @@ export const StartEndToVideoNode: React.FC<StartEndToVideoNodeProps> = ({
   // 样式变量
   const containerBg = isDark ? "bg-[#1a1a1a]" : "bg-white";
   const containerBorder = selected
-    ? "border-yellow-400/80 node-selected-glow"
+    ? "border-yellow-400 node-selected-glow"
     : isDark
       ? "border-zinc-700/50"
       : "border-gray-200";
