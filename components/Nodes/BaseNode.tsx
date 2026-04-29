@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState, useRef, useCallback } from "react";
 import { NodeData, NodeType } from "../../types";
 
 interface BaseNodeProps {
@@ -30,6 +30,37 @@ const ConnectionPort: React.FC<{
   onMouseUp?: (e: React.MouseEvent) => void;
 }> = ({ type, isDark, onMouseDown, onMouseUp }) => {
   const isInput = type === "input";
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const DETECT_RADIUS = 80;
+  const SNAP_RADIUS = 30;
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist <= SNAP_RADIUS) {
+      setOffset({ x: dx, y: dy });
+    } else if (dist <= DETECT_RADIUS) {
+      const t = (dist - SNAP_RADIUS) / (DETECT_RADIUS - SNAP_RADIUS);
+      const attraction = (1 - t) * (1 - t);
+      setOffset({ x: dx * attraction, y: dy * attraction });
+    } else {
+      setOffset({ x: 0, y: 0 });
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+    setOffset({ x: 0, y: 0 });
+  }, []);
 
   return (
     <div
@@ -39,13 +70,54 @@ const ConnectionPort: React.FC<{
         onMouseDown?.(e);
       }}
       onMouseUp={onMouseUp}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
+      ref={containerRef}
     >
-      {/* 鼠标悬停区域，方便目标定位 */}
-      <div className="absolute -inset-4 cursor-crosshair" />
-
-      {/* 连接端口视觉 */}
       <div
-        className={`
+        className="absolute cursor-crosshair"
+        style={{ pointerEvents: "all", inset: -48 }}
+      />
+
+      {isHovered && (
+        <div
+          className="pointer-events-none absolute z-40"
+          style={{
+            left: "50%",
+            top: "50%",
+            transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+            transition: "transform 0.08s ease-out",
+          }}
+        >
+          <div
+            className={`
+              w-8 h-8 rounded-full cursor-crosshair
+              flex items-center justify-center
+              transition-all duration-200 ease-out
+              ${
+                isDark
+                  ? "bg-[#1e1e1e]/80 border border-zinc-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]"
+                  : "bg-white/80 border border-gray-300 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
+              }
+            `}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              className={isDark ? "text-zinc-400" : "text-gray-500"}
+            >
+              <line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {!isHovered && (
+        <div
+          className={`
         relative w-3.5 h-3.5 rounded-full cursor-crosshair
         transition-all duration-200 ease-out
         ${
@@ -57,17 +129,17 @@ const ConnectionPort: React.FC<{
         group-hover/port:border-yellow-500
         group-hover/port:shadow-[0_0_8px_rgba(59,130,246,0.5)]
       `}
-      >
-        {/* 连接端口内部点 */}
-        <div
-          className={`
+        >
+          <div
+            className={`
           absolute inset-[3px] rounded-full
           transition-all duration-200
           ${isDark ? "bg-zinc-400" : "bg-gray-400"}
           group-hover/port:bg-yellow-500
         `}
-        />
-      </div>
+          />
+        </div>
+      )}
     </div>
   );
 };
