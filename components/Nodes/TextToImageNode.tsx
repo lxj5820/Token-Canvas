@@ -548,7 +548,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
                   icon={Icons.Layers}
                   options={[1, 2, 3, 4]}
                   value={data.count || 1}
-                  onChange={(val: string) => updateData(data.id, { count: val })}
+                  onChange={(val: number) => updateData(data.id, { count: val })}
                   isOpen={activeDropdown === "count"}
                   onToggle={() =>
                     setActiveDropdown(

@@ -281,9 +281,9 @@ export const ImageToImageNode: React.FC<ImageToImageNodeProps> = ({
                               {/* 生成数量选择 */}
                               <LocalCustomDropdown 
                                   icon={Icons.Layers} 
-                                  options={['1', '2', '3', '4']} 
-                                  value={String(data.count || 1)} 
-                                  onChange={(val: string) => updateData(data.id, { count: Number(val) })} 
+                                  options={[1, 2, 3, 4]} 
+                                  value={data.count || 1} 
+                                  onChange={(val: number) => updateData(data.id, { count: val })} 
                                   isOpen={activeDropdown === 'count'} 
                                   onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} 
                                   onClose={() => setActiveDropdown(null)} 

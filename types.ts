@@ -32,8 +32,11 @@ export interface NodeData {
   count?: number;
   model?: string;
   promptOptimize?: boolean;
+  isOptimizing?: boolean;
   swapFrames?: boolean;
   style?: string;
+  mode?: string;
+  seed?: number;
 
   optimizedPrompt?: string;
 

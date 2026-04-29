@@ -467,7 +467,7 @@ export const TextToAudioNode: React.FC<TextToAudioNodeProps> = ({
                 icon={Icons.Images}
                 options={[1, 2, 3, 4]}
                 value={data.count || 1}
-                onChange={(val: string) => updateData(data.id, { count: val })}
+                onChange={(val: number) => updateData(data.id, { count: val })}
                 isOpen={activeDropdown === "count"}
                 onToggle={() =>
                   setActiveDropdown(activeDropdown === "count" ? null : "count")

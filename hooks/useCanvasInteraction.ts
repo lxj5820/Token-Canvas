@@ -426,7 +426,7 @@ export const useCanvasInteraction = ({
           );
         }
       }
-    }, 16),
+    }),
     [],
   );
 

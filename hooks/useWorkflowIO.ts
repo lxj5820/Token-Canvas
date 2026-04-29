@@ -4,6 +4,7 @@ import { indexedDbService } from "../services/indexedDbService";
 import { saveAssetToIndexedDB } from "../services/saveAssetToIndexedDB";
 import { validateWorkflow } from "../services/workflowValidator";
 import { logger } from "../services/logger";
+import { storageService } from "../services/storageService";
 
 interface UseWorkflowIOParams {
   nodes: NodeData[];
@@ -121,7 +122,6 @@ export const useWorkflowIO = ({
       try {
         const response = await fetch(url);
         const blob = await response.blob();
-        const { storageService } = await import("../services/storageService");
         const saved = await storageService.saveFile(blob, filename);
         if (saved) return;
         const blobUrl = URL.createObjectURL(blob as Blob);

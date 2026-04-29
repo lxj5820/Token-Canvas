@@ -37,6 +37,8 @@ import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
 import { ConnectionRenderer, SelectionBox, PreviewMedia } from "./renderers";
 import { NewWorkflowDialog, ContextMenu, QuickAddMenu } from "./dialogs";
 import { importFileAsNode } from "./utils/importFileAsNode";
+import { logger } from "./services/logger";
+import { storageService } from "./services/storageService";
 
 const App: React.FC = () => {
   return <CanvasWithSidebar />;
@@ -94,7 +96,7 @@ const CanvasWithSidebar: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStorageOpen, setIsStorageOpen] = useState(false);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => !hasShownWelcome());
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => !hasShownWelcome() || !checkHasApiConfigured());
   const [storageDirName, setStorageDirName] = useState<string | null>(null);
   const [deletedNodes, setDeletedNodes] = useState<NodeData[]>([]);
   const [isScreenshotting, setIsScreenshotting] = useState(false);
@@ -408,7 +410,6 @@ const CanvasWithSidebar: React.FC = () => {
 
   useEffect(() => {
     const loadStorageInfo = async () => {
-      const { storageService } = await import("./services/storageService");
       const name = await storageService.getDownloadDirectoryName();
       setStorageDirName(name);
     };
@@ -548,8 +549,8 @@ const CanvasWithSidebar: React.FC = () => {
         onScreenshot={handleScreenshot}
         onSelectMode={handleSelectMode}
         onPanMode={handlePanMode}
-        onAlignVertical={() => handleAlign("UP")}
-        onAlignHorizontal={() => handleAlign("LEFT")}
+        onAlignVertical={() => handleAlign("UP", selectedNodeIds)}
+        onAlignHorizontal={() => handleAlign("LEFT", selectedNodeIds)}
         currentMode={currentMode}
       />
 
@@ -858,13 +859,17 @@ const CanvasWithSidebar: React.FC = () => {
             }`}
           >
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              className={`w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center ${
                 isDark
                   ? "bg-yellow-500/20 text-yellow-400"
                   : "bg-yellow-500/20 text-yellow-600"
               }`}
             >
-              <Icons.Coins size={16} />
+              <img
+                src="https://lxj-picgo.oss-cn-chengdu.aliyuncs.com/20260425224119523.png"
+                alt="Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             {isEditingProjectName ? (
               <input

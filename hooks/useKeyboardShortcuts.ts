@@ -5,6 +5,7 @@ import {
   NodeType,
   CanvasTransform,
   Point,
+  DragMode,
 } from "../types";
 
 export interface UseKeyboardShortcutsOptions {
@@ -12,7 +13,7 @@ export interface UseKeyboardShortcutsOptions {
   selectedConnectionId: string | null;
   nodes: NodeData[];
   connections: Connection[];
-  currentMode: "select" | "pan";
+  currentMode: DragMode;
   previewMedia: { url: string; type: "image" | "video" } | null;
   contextMenu: {
     type: "CANVAS" | "NODE";

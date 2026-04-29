@@ -30,55 +30,55 @@ const MODELS: ModelInfo[] = [
   {
     id: "gemini-3.1-flash-lite-preview",
     name: "gemini-3.1-flash",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "gemini-3.1-flash-lite-preview",
   },
   {
     id: "gemini-3.1-pro-preview",
     name: "gemini-3.1-pro",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "gemini-3.1-pro-preview",
   },
   {
     id: "gpt-5.4",
     name: "gpt-5.4",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "gpt-5.4",
   },
   {
     id: "gpt-5.5",
     name: "gpt-5.5",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "gpt-5.5",
   },
   {
     id: "claude-sonnet-4-6",
     name: "Claude 4.6",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "claude-sonnet-4-6-20250514",
   },
   {
     id: "claude-opus-4-7",
     name: "Claude 4.7",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "claude-sonnet-4-20250514",
   },
   {
     id: "glm-5",
     name: "glm-5",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "glm-5",
   },
   {
     id: "glm-5.1",
     name: "glm-5.1",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "glm-5.1",
   },
   {
     id: "deepseek-v4-pro",
     name: "deepseek-v4-pro",
-    defaultUrl: "https://newapi.asia/v1",
+    defaultUrl: "https://newapi.asia/",
     defaultModel: "deepseek-v4-pro",
   },
 ];
@@ -113,7 +113,6 @@ export const AIPanel: React.FC<AIPanelProps> = ({
   isOpen,
   onClose,
   isDark,
-  onOptimizePrompt,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -136,7 +135,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
   const [newCustomModel, setNewCustomModel] = useState<CustomModelConfig>({
     id: "",
     name: "",
-    baseUrl: "https://newapi.asia/v1",
+    baseUrl: "https://newapi.asia/",
     modelName: "",
   });
 
@@ -162,7 +161,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
     // 默认配置
     return {
       apiKey: "",
-      baseUrl: "https://newapi.asia/v1",
+      baseUrl: "https://newapi.asia/",
       model: MODELS[0].name,
     };
   });
@@ -203,7 +202,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
     setNewCustomModel({
       id: "",
       name: "",
-      baseUrl: "https://newapi.asia/v1",
+      baseUrl: "https://newapi.asia/",
       modelName: "",
     });
     setShowCustomModel(false);
@@ -240,10 +239,13 @@ export const AIPanel: React.FC<AIPanelProps> = ({
         modelName = customModel.modelName;
       }
     }
+    
+    // 标准化 baseUrl：移除末尾斜杠
+    baseUrl = baseUrl.replace(/\/$/, "");
 
     if (model.startsWith("claude")) {
       // Anthropic API
-      const response = await fetch(`${baseUrl}/messages`, {
+      const response = await fetch(`${baseUrl}/v1/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -266,7 +268,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
       return data.content[0]?.text || "";
     } else if (model.startsWith("glm")) {
       // 智谱 API
-      const response = await fetch(`${baseUrl}/chat/completions`, {
+      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -287,7 +289,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
       return data.choices[0]?.message?.content || "";
     } else {
       // OpenAI 兼容 API (包括 DeepSeek 和自定义模型)
-      const response = await fetch(`${baseUrl}/chat/completions`, {
+      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -516,7 +518,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
                   type="text"
                   value={modelConfig.baseUrl || ""}
                   onChange={(e) => updateModelConfig("baseUrl", e.target.value)}
-                  placeholder="https://newapi.asia/v1"
+                  placeholder="https://newapi.asia/"
                   className={`w-full px-3 py-2 text-sm rounded-lg border ${
                     isDark
                       ? "bg-zinc-800 border-zinc-700 text-white placeholder-gray-500"
@@ -702,7 +704,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
                       setNewCustomModel({
                         id: "",
                         name: "",
-                        baseUrl: "https://newapi.asia/v1",
+                        baseUrl: "https://newapi.asia/",
                         modelName: "",
                       });
                     }}

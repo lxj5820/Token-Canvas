@@ -80,7 +80,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const excludeModels = ["Jimeng45", "Jimeng41", "Jimeng31"];
     Object.keys(MODEL_REGISTRY).forEach((key) => {
       if (!excludeModels.some((ex) => key.includes(ex))) {
-        const config = configs[key] || {};
+        const config = configs[key];
         if (!config.baseUrl && globalBaseUrl) {
           updateConfig(key, "baseUrl", globalBaseUrl);
         }
@@ -314,8 +314,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         filterType === "all" ||
         (filterType === "image" && def.category === "IMAGE") ||
         (filterType === "video" && def.category === "VIDEO") ||
-        (filterType === "audio" && def.category === "AUDIO") ||
-        (filterType === "chat" && def.category === "CHAT");
+        (filterType === "audio" && def.category === "AUDIO");
 
       return matchesSearch && matchesType;
     });
@@ -557,7 +556,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-3">
               {filteredModels.map((key) => {
                 const def = MODEL_REGISTRY[key];
-                const config = configs[key] || {};
+                const config = configs[key] || getModelConfig(key);
                 const isExpanded = expandedModels.has(key);
                 const configured = isConfigured(key);
                 const testing = testingModels.has(key);

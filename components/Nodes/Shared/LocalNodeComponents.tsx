@@ -62,21 +62,35 @@ export const LocalEditableTitle: React.FC<{
   );
 };
 
-interface LocalCustomDropdownProps {
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
+export type LocalDropdownValue = string | number;
+export type LocalDropdownGroup<T extends LocalDropdownValue = string> = {
+  label: string;
+  items: T[];
+};
+export type LocalDropdownOption<T extends LocalDropdownValue = string> =
+  | T
+  | LocalDropdownGroup<T>;
+
+const isLocalDropdownGroup = <T extends LocalDropdownValue>(
+  option: LocalDropdownOption<T>,
+): option is LocalDropdownGroup<T> =>
+  typeof option === "object" && option !== null && "label" in option;
+
+interface LocalCustomDropdownProps<T extends LocalDropdownValue = string> {
+  options: LocalDropdownOption<T>[];
+  value: T;
+  onChange: (value: T) => void;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
   icon?: React.FC<{ size?: number; className?: string; fill?: string }>;
   width?: string;
   align?: "left" | "right" | "center";
-  disabledOptions?: string[];
+  disabledOptions?: LocalDropdownValue[];
   isDark?: boolean;
 }
 
-export const LocalCustomDropdown = ({
+export const LocalCustomDropdown = <T extends LocalDropdownValue = string>({
   options,
   value,
   onChange,
@@ -88,7 +102,7 @@ export const LocalCustomDropdown = ({
   align = "center",
   disabledOptions = [],
   isDark = true,
-}: LocalCustomDropdownProps) => {
+}: LocalCustomDropdownProps<T>) => {
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
@@ -155,11 +169,12 @@ export const LocalCustomDropdown = ({
     ? "bg-[#1a1a1a] border-zinc-700"
     : "bg-white border-gray-200 shadow-xl";
 
-  const activeGroupItems = hoveredGroup
-    ? (options.find((o) =>
-        typeof o === "object" && (o as any).label === hoveredGroup
-      ) as any)?.items || []
-    : [];
+  const valueLabel = String(value);
+  const activeGroup = options.find(
+    (option): option is LocalDropdownGroup<T> =>
+      isLocalDropdownGroup(option) && option.label === hoveredGroup,
+  );
+  const activeGroupItems = activeGroup?.items || [];
 
   return (
     <div className="relative flex items-center" ref={ref}>
@@ -196,7 +211,7 @@ export const LocalCustomDropdown = ({
                 : "text-gray-600 group-hover:text-gray-900"
           } ${Icon ? "min-w-[20px] text-center" : "max-w-[90px] truncate"}`}
         >
-          {value}
+          {valueLabel}
         </span>
         {!Icon && (
           <Icons.ChevronRight
@@ -218,13 +233,17 @@ export const LocalCustomDropdown = ({
             ref={listRef}
             className="max-h-[300px] overflow-y-auto custom-scrollbar px-1.5"
           >
-            {options.map((opt: string) => {
-              const isGroup = typeof opt === "object";
-              const label = isGroup ? opt.label : opt;
-              const isDisabled = !isGroup && disabledOptions.includes(label);
-              const isSelected = !isGroup && label === value;
+            {options.map((opt) => {
+              const isGroup = isLocalDropdownGroup(opt);
+              const label = isGroup ? opt.label : String(opt);
+              const isDisabled =
+                !isGroup &&
+                disabledOptions.some((disabled) => String(disabled) === label);
+              const isSelected = !isGroup && label === valueLabel;
               const isGroupHovered = isGroup && hoveredGroup === label;
-              const containsSelection = isGroup && opt.items.includes(value);
+              const containsSelection =
+                isGroup &&
+                opt.items.some((item) => String(item) === valueLabel);
 
               return (
                 <div
@@ -256,7 +275,7 @@ export const LocalCustomDropdown = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!isGroup && !isDisabled) {
-                      onChange(label);
+                      onChange(opt);
                       onClose();
                     }
                   }}
@@ -288,11 +307,12 @@ export const LocalCustomDropdown = ({
               onMouseLeave={handleMouseLeave}
             >
               <div className="max-h-[250px] overflow-y-auto custom-scrollbar px-1.5">
-                {activeGroupItems.map((subItem: string) => {
-                  const isSubSelected = subItem === value;
+                {activeGroupItems.map((subItem) => {
+                  const subItemLabel = String(subItem);
+                  const isSubSelected = subItemLabel === valueLabel;
                   return (
                     <div
-                      key={subItem}
+                      key={subItemLabel}
                       className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-0.5
                                                 ${isSubSelected ? activeItem : optionHover}
                                                 ${!isSubSelected && isDark ? "text-zinc-300" : ""} 
@@ -303,7 +323,7 @@ export const LocalCustomDropdown = ({
                         onClose();
                       }}
                     >
-                      <span className="truncate">{subItem}</span>
+                      <span className="truncate">{subItemLabel}</span>
                       {isSubSelected && (
                         <Icons.Check
                           size={12}

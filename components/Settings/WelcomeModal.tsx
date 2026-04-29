@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Icons } from "../Icons";
 
 interface WelcomeModalProps {
@@ -8,22 +8,46 @@ interface WelcomeModalProps {
 }
 
 // 欢迎弹窗是否显示过
-const WELCOME_SHOWN_KEY = "WELCOME_MODAL_SHOWN_V1";
+const WELCOME_SHOWN_KEY = "WELCOME_MODAL_SHOWN_V2";
+
+// API配置存储key - 与其他组件保持一致
+const GLOBAL_BASE_URL_KEY = "GLOBAL_BASE_URL";
+const GLOBAL_API_KEY_KEY = "GLOBAL_API_KEY";
+
+// 默认API地址
+const DEFAULT_API_URL = "https://newapi.asia";
+
+// 获取KEY链接
+const GET_KEY_URL = "https://newapi.asia/register?channel=c_h4b2e8rd";
 
 // 检查欢迎弹窗是否显示过
 export const hasShownWelcome = (): boolean => {
   return localStorage.getItem(WELCOME_SHOWN_KEY) === "true";
 };
+
 // 标记欢迎弹窗已显示
 export const markWelcomeShown = (): void => {
   localStorage.setItem(WELCOME_SHOWN_KEY, "true");
 };
+
 // 欢迎弹窗组件
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({
   isOpen,
   onClose,
   isDark,
 }) => {
+  const [apiUrl, setApiUrl] = useState(DEFAULT_API_URL);
+  const [apiKey, setApiKey] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setApiUrl(localStorage.getItem(GLOBAL_BASE_URL_KEY) || DEFAULT_API_URL);
+      setApiKey(localStorage.getItem(GLOBAL_API_KEY_KEY) || "");
+      setError("");
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleClose = () => {
@@ -31,65 +55,103 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({
     onClose();
   };
 
+  const handleEnterCanvas = () => {
+    const trimmedKey = apiKey.trim();
+    
+    if (!trimmedKey) {
+      setError("请输入 API Key");
+      return;
+    }
+
+    const finalApiUrl = apiUrl.trim() || DEFAULT_API_URL;
+    
+    localStorage.setItem(GLOBAL_API_KEY_KEY, trimmedKey);
+    localStorage.setItem(GLOBAL_BASE_URL_KEY, finalApiUrl);
+    
+    window.dispatchEvent(
+      new CustomEvent("modelConfigUpdated", { detail: { modelName: "*" } })
+    );
+
+    handleClose();
+  };
+
+  const handleGetKey = () => {
+    window.open(GET_KEY_URL, "_blank");
+  };
+
   const bgCard = isDark ? "bg-[#18181B]" : "bg-white";
   const borderColor = isDark ? "border-[#27272a]" : "border-gray-200";
   const textMain = isDark ? "text-white" : "text-gray-900";
   const textSub = isDark ? "text-gray-400" : "text-gray-500";
+  const inputBg = isDark ? "bg-zinc-900" : "bg-gray-50";
+  const inputBorder = isDark ? "border-zinc-700" : "border-gray-200";
+  const inputText = isDark ? "text-white" : "text-gray-900";
+  const inputPlaceholder = isDark ? "placeholder-gray-500" : "placeholder-gray-400";
 
   return (
     <div
       className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300"
-      onClick={handleClose}
     >
       <div
         className={`w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border ${bgCard} ${borderColor} animate-in zoom-in-95 duration-300`}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
         <div className={`px-6 py-5 border-b ${borderColor} text-center`}>
           <div
-            className={`w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center ${isDark ? "bg-gradient-to-br from-yellow-500/20 to-orange-500/20" : "bg-gradient-to-br from-yellow-100 to-orange-100"}`}
+            className={`w-16 h-16 mx-auto mb-3 rounded-2xl overflow-hidden flex items-center justify-center`}
           >
-            <Icons.Coins
-              size={32}
-              className={isDark ? "text-yellow-400" : "text-yellow-600"}
+            <img
+              src="https://lxj-picgo.oss-cn-chengdu.aliyuncs.com/20260425224119523.png"
+              alt="Logo"
+              className="w-full h-full object-cover"
             />
           </div>
           <h2 className={`text-xl font-bold ${textMain}`}>
-            欢迎使用词元 AI 画布🪙
+            欢迎使用词元 AI 画布
           </h2>
           <p className={`text-sm mt-1 ${textSub}`}>你的 AI 创意工具箱</p>
         </div>
 
         {/* 内容区域 */}
         <div className="p-6 space-y-4">
-          {/* 警告区域 */}
-          <div
-            className={`p-4 rounded-xl border ${isDark ? "bg-amber-500/10 border-amber-500/30" : "bg-amber-50 border-amber-200"}`}
-          >
-            <div className="flex items-start gap-3">
-              <Icons.AlertTriangle
-                size={20}
-                className={
-                  isDark
-                    ? "text-amber-400 shrink-0 mt-0.5"
-                    : "text-amber-600 shrink-0 mt-0.5"
-                }
+          {/* API配置区域 */}
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${textMain}`}>
+                API 地址
+              </label>
+              <input
+                type="text"
+                value={apiUrl}
+                onChange={(e) => {
+                  setApiUrl(e.target.value);
+                  setError("");
+                }}
+                placeholder={DEFAULT_API_URL}
+                className={`w-full px-4 py-2.5 rounded-xl border ${inputBorder} ${inputBg} ${inputText} ${inputPlaceholder} text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 transition-all`}
               />
-              <div>
-                <h4
-                  className={`text-sm font-bold ${isDark ? "text-amber-400" : "text-amber-700"}`}
-                >
-                  郑重提醒
-                </h4>
-                <p
-                  className={`text-xs mt-1 leading-relaxed ${isDark ? "text-amber-300/80" : "text-amber-600"}`}
-                >
-                  自接 API 平台存在风险！很多小型 API 中转商可能会
-                  <strong>跑路</strong>，充值后血本无归。
-                  如果你的出图/出视频量较大，强烈建议使用正规大厂服务。
-                </p>
-              </div>
+              <p className={`text-xs mt-1.5 ${textSub}`}>
+                使用默认地址：{DEFAULT_API_URL}
+              </p>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${textMain}`}>
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  setError("");
+                }}
+                placeholder="请输入您的 API Key"
+                className={`w-full px-4 py-2.5 rounded-xl border ${inputBorder} ${inputBg} ${inputText} ${inputPlaceholder} text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 transition-all`}
+              />
+              {error && (
+                <p className="text-red-500 text-xs mt-1.5">{error}</p>
+              )}
             </div>
           </div>
 
@@ -120,30 +182,23 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({
               </div>
             </div>
           </div>
-
-          {/* 接口兼容性提示 */}
-          <div
-            className={`p-3 rounded-lg ${isDark ? "bg-white/5" : "bg-gray-50"}`}
-          >
-            <div className="flex items-start gap-2">
-              <Icons.Info size={14} className={`${textSub} shrink-0 mt-0.5`} />
-              <p className={`text-[11px] leading-relaxed ${textSub}`}>
-                <strong>关于接口兼容性：</strong>
-                不同API中转商的接口参数可能不同，本项目无法做到统一适配。如遇不兼容，请添加群聊咨询。
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* 底部按钮 */}
         <div
-          className={`px-6 py-4 border-t ${borderColor} flex justify-center`}
+          className={`px-6 py-4 border-t ${borderColor} flex gap-3`}
         >
           <button
-            onClick={handleClose}
-            className="px-8 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white shadow-lg shadow-pink-500/25 transition-all active:scale-[0.98]"
+            onClick={handleEnterCanvas}
+            className={`flex-1 px-6 py-2.5 rounded-xl text-sm font-medium border transition-all ${isDark ? "border-zinc-600 text-gray-300 hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
           >
-            我已了解，开始使用
+            进入画布
+          </button>
+          <button
+            onClick={handleGetKey}
+            className="flex-1 px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white shadow-lg shadow-yellow-500/25 transition-all active:scale-[0.98]"
+          >
+            获取 Key
           </button>
         </div>
       </div>

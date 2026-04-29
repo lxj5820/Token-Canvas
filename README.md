@@ -194,7 +194,7 @@ yarn dev
 
 **常见配置项**：
 
-- **Base URL**：API 服务的基础 URL，如 `https://newapi.asia/v1`
+- **Base URL**：API 服务的基础 URL，如 `https://newapi.asia/`
 - **API Key**：你的 API 密钥
 - **Model ID**：模型的标识符
 - **Endpoint**：API 端点路径
