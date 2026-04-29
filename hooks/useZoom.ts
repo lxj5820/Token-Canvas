@@ -95,7 +95,28 @@ export const useZoom = ({
     const container = containerRef.current;
     if (!container) return;
 
+    const isInsideScrollable = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      let el: HTMLElement | null = target;
+      while (el && el !== container) {
+        const style = window.getComputedStyle(el);
+        const overflowY = style.overflowY;
+        const overflowX = style.overflowX;
+        const isScrollableY =
+          (overflowY === "auto" || overflowY === "scroll") &&
+          el.scrollHeight > el.clientHeight;
+        const isScrollableX =
+          (overflowX === "auto" || overflowX === "scroll") &&
+          el.scrollWidth > el.clientWidth;
+        if (isScrollableY || isScrollableX) return true;
+        if (el.tagName === "TEXTAREA") return true;
+        el = el.parentElement;
+      }
+      return false;
+    };
+
     const handleWheel = (e: WheelEvent) => {
+      if (isInsideScrollable(e.target)) return;
       e.preventDefault();
       const currentTransform = transformRef.current;
       const zoomIntensity = 0.1;

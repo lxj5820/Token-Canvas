@@ -91,9 +91,18 @@ export const LocalCustomDropdown = ({
 }: LocalCustomDropdownProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const [flyoutTop, setFlyoutTop] = useState<number>(0);
   const hoverTimeout = useRef<any>(null);
+
+  useEffect(() => {
+    const el = dropdownPanelRef.current;
+    if (!el) return;
+    const stopWheelPropagation = (e: WheelEvent) => e.stopPropagation();
+    el.addEventListener("wheel", stopWheelPropagation);
+    return () => el.removeEventListener("wheel", stopWheelPropagation);
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -200,6 +209,7 @@ export const LocalCustomDropdown = ({
       {/* Main Dropdown Body */}
       {isOpen && (
         <div
+          ref={dropdownPanelRef}
           className={`absolute bottom-full mb-2 ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${width} min-w-[130px] ${bgClass} border rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-150 overflow-visible`}
           onMouseDown={(e) => e.stopPropagation()}
           onWheel={(e) => e.stopPropagation()}

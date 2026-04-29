@@ -190,6 +190,14 @@ export const CustomDropdown = ({
   isDark = true,
 }: CustomDropdownProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = dropdownPanelRef.current;
+    if (!el) return;
+    const stopWheelPropagation = (e: WheelEvent) => e.stopPropagation();
+    el.addEventListener("wheel", stopWheelPropagation);
+    return () => el.removeEventListener("wheel", stopWheelPropagation);
+  }, [isOpen]);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) {
@@ -245,6 +253,7 @@ export const CustomDropdown = ({
       </div>
       {isOpen && (
         <div
+          ref={dropdownPanelRef}
           className={`absolute bottom-full mb-2 ${align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"} ${width} min-w-[80px] ${bgClass} border rounded-lg shadow-2xl py-1 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-150 custom-scrollbar`}
           onMouseDown={(e) => e.stopPropagation()}
           onWheel={(e) => e.stopPropagation()}
