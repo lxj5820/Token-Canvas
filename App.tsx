@@ -39,6 +39,7 @@ import { NewWorkflowDialog, ContextMenu, QuickAddMenu } from "./dialogs";
 import { importFileAsNode } from "./utils/importFileAsNode";
 import { logger } from "./services/logger";
 import { storageService } from "./services/storageService";
+import { Toast, ToastContainer } from "./components/Toast";
 
 const App: React.FC = () => {
   return <CanvasWithSidebar />;
@@ -124,6 +125,11 @@ const CanvasWithSidebar: React.FC = () => {
     nodes: NodeData[];
     connections: Connection[];
   } | null>(null);
+  const [toasts, setToasts] = useState<Array<{
+    id: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const assetInputRef = useRef<HTMLInputElement>(null);
@@ -162,7 +168,7 @@ const CanvasWithSidebar: React.FC = () => {
     performPaste: performPasteFromHook,
     handleAlign,
     handleMaximize: handleMaximizeFromHook,
-    copyImageToClipboard,
+    copyImageToClipboard: copyImageToClipboardFromHook,
     triggerReplaceImage: triggerReplaceImageFromHook,
     handleReplaceImage: handleReplaceImageFromHook,
   } = useNodeActions({
@@ -258,7 +264,10 @@ const CanvasWithSidebar: React.FC = () => {
 
   const performCopy = () => {
     const result = performCopyFromHook(selectedNodeIds);
-    if (result) setInternalClipboard(result);
+    if (result) {
+      setInternalClipboard(result);
+      showToast(`已复制 ${result.nodes.length} 个节点`, "success");
+    }
   };
 
   const performPaste = (targetPos: Point) => {
@@ -286,6 +295,11 @@ const CanvasWithSidebar: React.FC = () => {
   const handleReplaceImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleReplaceImageFromHook(e, nodeToReplaceRef);
     if (replaceImageRef.current) replaceImageRef.current.value = "";
+  };
+
+  const copyImageToClipboard = async (nodeId: string) => {
+    await copyImageToClipboardFromHook(nodeId);
+    showToast("图片已复制到剪贴板", "success");
   };
 
   const handleConfirmNew = async (shouldSave: boolean) => {
@@ -377,6 +391,15 @@ const CanvasWithSidebar: React.FC = () => {
       importFileAsNode(file, offset, addNode);
     });
   };
+
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1129,6 +1152,11 @@ const CanvasWithSidebar: React.FC = () => {
           containerWidth={containerRef.current?.clientWidth || 800}
           containerHeight={containerRef.current?.clientHeight || 600}
           isDark={isDark}
+        />
+        <ToastContainer
+          toasts={toasts}
+          isDark={isDark}
+          onRemove={removeToast}
         />
       </div>
     </div>
