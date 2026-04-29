@@ -1,6 +1,7 @@
 import type { ModelConfig, ModelDef } from "../types";
 import { fetchThirdParty, constructUrl } from "../network";
 import { calculateImageSize } from "./rules";
+import { logger } from "../../logger";
 
 const toDataUrl = (
   base64Str: string,
@@ -12,6 +13,21 @@ const toDataUrl = (
 };
 
 const GPT_IMAGE_SIZES = ["auto", "1:1", "2:3", "3:2"];
+
+const summarizeGptImageRequest = (
+  payload: Record<string, any>,
+  inputImageCount: number,
+) => ({
+  model: payload.model,
+  n: payload.n,
+  size: payload.size,
+  quality: payload.quality,
+  background: payload.background,
+  output_format: payload.output_format,
+  moderation: payload.moderation,
+  hasPrompt: Boolean(payload.prompt),
+  inputImageCount,
+});
 
 export type GptImageQuality = "auto" | "low" | "medium" | "high";
 export type GptImageBackground = "transparent" | "opaque" | "auto";
@@ -152,16 +168,23 @@ export const generateGptImage = async (
     payload.image = inputImages[0];
   }
 
-  console.log("[GPT Image] Creating image task...");
-  console.log("[GPT Image] URL:", targetUrl);
-  console.log("[GPT Image] Model:", config.modelId);
-  console.log("[GPT Image] Payload:", JSON.stringify(payload, null, 2));
+  logger.debug(
+    "[GPT Image] Creating image task",
+    summarizeGptImageRequest(payload, inputImages.length),
+    { url: targetUrl },
+  );
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
     timeout: 300000,
   });
 
-  console.log("[GPT Image] Create Response:", JSON.stringify(res, null, 2));
+  logger.debug("[GPT Image] Response received", {
+    hasDataArray: Array.isArray(res.data),
+    dataCount: Array.isArray(res.data) ? res.data.length : undefined,
+    hasB64Json: Boolean(res.b64_json || res.data?.b64_json),
+    hasUrl: Boolean(res.url || res.image_url),
+    event: res.event,
+  });
 
   if (res.data && Array.isArray(res.data)) {
     return res.data
@@ -186,7 +209,7 @@ export const generateGptImage = async (
     return [toDataUrl(res.data.b64_json)];
   }
 
-  console.error("[GPT Image] No valid response format found:", res);
+  logger.error("[GPT Image] No valid response format found:", res);
   throw new Error("GPT Image API returned an unrecognized response format");
 };
 
@@ -253,16 +276,23 @@ export const generateGptImageEdit = async (
     payload.stream = true;
   }
 
-  console.log("[GPT Image Edit] Creating edit task...");
-  console.log("[GPT Image Edit] URL:", targetUrl);
-  console.log("[GPT Image Edit] Model:", config.modelId);
-  console.log("[GPT Image Edit] Payload:", JSON.stringify(payload, null, 2));
+  logger.debug(
+    "[GPT Image Edit] Creating edit task",
+    summarizeGptImageRequest(payload, inputImages.length),
+    { url: targetUrl },
+  );
 
   const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
     timeout: 300000,
   });
 
-  console.log("[GPT Image Edit] Response:", JSON.stringify(res, null, 2));
+  logger.debug("[GPT Image Edit] Response received", {
+    hasDataArray: Array.isArray(res.data),
+    dataCount: Array.isArray(res.data) ? res.data.length : undefined,
+    hasB64Json: Boolean(res.b64_json || res.data?.b64_json),
+    hasUrl: Boolean(res.url || res.image_url),
+    event: res.event,
+  });
 
   if (res.data && Array.isArray(res.data)) {
     return res.data
@@ -283,7 +313,7 @@ export const generateGptImageEdit = async (
     return [toDataUrl(res.data.b64_json)];
   }
 
-  console.error("[GPT Image Edit] No valid response format found:", res);
+  logger.error("[GPT Image Edit] No valid response format found:", res);
   throw new Error(
     "GPT Image Edit API returned an unrecognized response format",
   );

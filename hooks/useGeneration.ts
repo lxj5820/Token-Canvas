@@ -65,7 +65,10 @@ export const useGeneration = ({
           updateNodeDataRef.current(nodeId, { optimizedPrompt: res, isLoading: false });
         } else {
           let results: string[] = [];
-          if (node.type === NodeType.TEXT_TO_IMAGE) {
+          if (
+            node.type === NodeType.TEXT_TO_IMAGE ||
+            node.type === NodeType.IMAGE_TO_IMAGE
+          ) {
             results = await generateImage(
               node.prompt || "",
               node.aspectRatio,
@@ -75,7 +78,10 @@ export const useGeneration = ({
               inputs,
               node.promptOptimize,
             );
-          } else if (node.type === NodeType.TEXT_TO_VIDEO) {
+          } else if (
+            node.type === NodeType.TEXT_TO_VIDEO ||
+            node.type === NodeType.IMAGE_TO_VIDEO
+          ) {
             results = await generateVideo(
               node.prompt || "",
               inputs,
@@ -121,7 +127,10 @@ export const useGeneration = ({
               isLoading: false,
               outputArtifacts: newArtifacts,
             };
-            if (node.type === NodeType.TEXT_TO_IMAGE) {
+            if (
+              node.type === NodeType.TEXT_TO_IMAGE ||
+              node.type === NodeType.IMAGE_TO_IMAGE
+            ) {
               updates.imageSrc = results[0];
               updates.annotations = [];
               updates.annotatedImageSrc = undefined;
@@ -129,6 +138,7 @@ export const useGeneration = ({
               await saveAssetToIndexedDB(nodeId, results[0], "image");
             } else if (
               node.type === NodeType.TEXT_TO_VIDEO ||
+              node.type === NodeType.IMAGE_TO_VIDEO ||
               node.type === NodeType.START_END_TO_VIDEO
             ) {
               updates.videoSrc = results[0];

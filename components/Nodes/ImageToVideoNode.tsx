@@ -259,7 +259,6 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
                      selected={selected} 
                  />
             ) : (
-                {/* 空状态显示 */}
                 <div className={`w-full h-full flex flex-col items-center justify-center ${emptyStateTextColor} grid-pattern`}>
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 border ${emptyStateIconColor}`}>
                         <Icons.Clapperboard size={20} className="opacity-50"/>
@@ -357,9 +356,9 @@ export const ImageToVideoNode: React.FC<ImageToVideoNodeProps> = ({
                           {/* 生成数量选择 */}
                           <LocalCustomDropdown 
                               icon={Icons.Layers} 
-                              options={[1, 2, 3, 4]} 
-                              value={data.count || 1} 
-                              onChange={(val: string) => updateData(data.id, { count: val })} 
+                              options={['1', '2', '3', '4']} 
+                              value={String(data.count || 1)} 
+                              onChange={(val: string) => updateData(data.id, { count: Number(val) })} 
                               isOpen={activeDropdown === 'count'} 
                               onToggle={() => setActiveDropdown(activeDropdown === 'count' ? null : 'count')} 
                               onClose={() => setActiveDropdown(null)} 

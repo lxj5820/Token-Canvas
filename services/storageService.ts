@@ -373,28 +373,31 @@ class StorageService {
 
     // 删除最旧的缓存直到低于限制
     try {
-      const store = await this.getStore(STORE_CACHE, "readwrite");
-      const index = store.index("timestamp");
+      const db = await this.dbPromise;
+      const targetSize = this.settings.maxCacheSize * 0.8;
 
-      let cursor = await new Promise<IDBCursorWithValue | null>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_CACHE, "readwrite");
+        const store = tx.objectStore(STORE_CACHE);
+        const index = store.index("timestamp");
+        let currentSize = stats.totalSize;
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+
         const request = index.openCursor();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => resolve(null);
-      });
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor || currentSize <= targetSize) return;
 
-      let currentSize = stats.totalSize;
-      while (cursor && currentSize > this.settings.maxCacheSize * 0.8) {
-        const entry = cursor.value as CacheEntry;
-        currentSize -= entry.size;
-        const currentCursor = cursor;
-        currentCursor.delete();
-        cursor = await new Promise<IDBCursorWithValue | null>((resolve) => {
-          currentCursor.continue();
-          const nextRequest = index.openCursor();
-          nextRequest.onsuccess = () => resolve(nextRequest.result);
-          nextRequest.onerror = () => resolve(null);
-        });
-      }
+          const entry = cursor.value as CacheEntry;
+          currentSize -= entry.size;
+          cursor.delete();
+          cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+      });
     } catch (e) {
       console.error("Cache cleanup failed:", e);
     }

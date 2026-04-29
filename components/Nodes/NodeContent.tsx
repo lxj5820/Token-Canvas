@@ -3,6 +3,8 @@ import { NodeData, NodeType } from "../../types";
 import { TextToImageNode } from "./TextToImageNode";
 import { TextToVideoNode } from "./TextToVideoNode";
 import { TextToAudioNode } from "./TextToAudioNode";
+import { ImageToImageNode } from "./ImageToImageNode";
+import { ImageToVideoNode } from "./ImageToVideoNode";
 import { StartEndToVideoNode } from "./StartEndToVideoNode";
 import { OriginalImageNode } from "./OriginalImageNode";
 import { CreativeDescNode } from "./CreativeDescNode";
@@ -43,9 +45,12 @@ const NodeContentComponent: React.FC<NodeContentProps> = (props) => {
       return <TextToVideoNode {...props} />;
     case NodeType.TEXT_TO_AUDIO:
       return <TextToAudioNode {...props} />;
+    case NodeType.IMAGE_TO_IMAGE:
+      return <ImageToImageNode {...props} />;
+    case NodeType.IMAGE_TO_VIDEO:
+      return <ImageToVideoNode {...props} />;
     case NodeType.START_END_TO_VIDEO:
       return <StartEndToVideoNode {...props} />;
-    case NodeType.IMAGE_TO_VIDEO:
     case NodeType.ORIGINAL_IMAGE:
       return <OriginalImageNode {...props} />;
     case NodeType.CREATIVE_DESC:
