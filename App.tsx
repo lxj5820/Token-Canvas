@@ -40,6 +40,8 @@ import { NewWorkflowDialog, ContextMenu, QuickAddMenu } from "./dialogs";
 import { importFileAsNode } from "./utils/importFileAsNode";
 import { logger } from "./services/logger";
 import { storageService } from "./services/storageService";
+import { generateId } from "./services/canvasConstants";
+import { saveAssetToIndexedDB } from "./services/saveAssetToIndexedDB";
 import { Toast, ToastContainer } from "./components/Toast";
 import { MultiSelectToolbar } from "./components/MultiSelectToolbar";
 
@@ -312,6 +314,86 @@ const CanvasWithSidebar: React.FC = () => {
     await copyImageToClipboardFromHook(nodeId);
     showToast("图片已复制到剪贴板", "success");
   };
+
+  const handlePanoramaEdit = useCallback((sourceNodeId: string) => {
+    const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+    if (!sourceNode) return;
+    const imageSrc = sourceNode.annotatedImageSrc || sourceNode.imageSrc;
+    if (!imageSrc) return;
+    const gap = 30;
+    const newNodeId = generateId();
+    const nodeH = sourceNode.height;
+    const nodeW = Math.round(nodeH * 16 / 9);
+    const newNode: NodeData = {
+      id: newNodeId,
+      type: NodeType.PANORAMA,
+      x: sourceNode.x + sourceNode.width + gap,
+      y: sourceNode.y,
+      width: Math.max(200, nodeW),
+      height: nodeH,
+      title: "全景",
+      imageSrc,
+      isPanoramaMode: true,
+      panoramaYaw: 0,
+      panoramaPitch: 0,
+      panoramaFov: 75,
+      panoramaAspectRatio: "16:9",
+      panoramaShowGrid: false,
+      outputArtifacts: [imageSrc],
+    };
+    const newConn: Connection = {
+      id: generateId(),
+      sourceId: sourceNodeId,
+      targetId: newNodeId,
+    };
+    saveToHistory(nodes, connections);
+    setNodes((prev) => [...prev, newNode]);
+    setConnections((prev) => [...prev, newConn]);
+    setSelectedNodeIds(new Set([newNodeId]));
+  }, [nodes, connections, saveToHistory]);
+
+  const handlePanoramaScreenshot = useCallback((
+    sourceNodeId: string,
+    dataUrl: string,
+    outputWidth: number,
+    outputHeight: number,
+  ) => {
+    const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+    if (!sourceNode) return;
+    const gap = 30;
+    const newNodeId = generateId();
+    const ratio = outputWidth / Math.max(1, outputHeight);
+    let nodeW: number, nodeH: number;
+    if (ratio >= 1) {
+      nodeH = 400;
+      nodeW = Math.round(nodeH * ratio);
+    } else {
+      nodeW = 400;
+      nodeH = Math.round(nodeW / ratio);
+    }
+    const newNode: NodeData = {
+      id: newNodeId,
+      type: NodeType.ORIGINAL_IMAGE,
+      x: sourceNode.x + sourceNode.width + gap,
+      y: sourceNode.y,
+      width: Math.max(200, nodeW),
+      height: Math.max(200, nodeH),
+      title: `全景截图_${Date.now()}`,
+      imageSrc: dataUrl,
+      aspectRatio: sourceNode.panoramaAspectRatio || "16:9",
+      outputArtifacts: [dataUrl],
+    };
+    const newConn: Connection = {
+      id: generateId(),
+      sourceId: sourceNodeId,
+      targetId: newNodeId,
+    };
+    saveToHistory(nodes, connections);
+    setNodes((prev) => [...prev, newNode]);
+    setConnections((prev) => [...prev, newConn]);
+    setSelectedNodeIds(new Set([newNodeId]));
+    saveAssetToIndexedDB(newNodeId, dataUrl, "image");
+  }, [nodes, connections, saveToHistory]);
 
   const handleConfirmNew = async (shouldSave: boolean) => {
     await handleConfirmNewFromHook(shouldSave);
@@ -752,6 +834,8 @@ const CanvasWithSidebar: React.FC = () => {
                 onLightGenerate={handleLightGenerate}
                 onCrop={handleCrop}
                 onExpandImageGenerate={handleExpandImageGenerate}
+                onPanoramaEdit={handlePanoramaEdit}
+                onPanoramaScreenshot={handlePanoramaScreenshot}
               />
             </BaseNode>
             );

@@ -99,6 +99,7 @@ export const useZoom = ({
       if (!(target instanceof HTMLElement)) return false;
       let el: HTMLElement | null = target;
       while (el && el !== container) {
+        if (el.classList.contains("nowheel")) return true;
         const style = window.getComputedStyle(el);
         const overflowY = style.overflowY;
         const overflowX = style.overflowX;

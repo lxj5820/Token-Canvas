@@ -8,6 +8,7 @@ import { ImageToVideoNode } from "./ImageToVideoNode";
 import { StartEndToVideoNode } from "./StartEndToVideoNode";
 import { OriginalImageNode } from "./OriginalImageNode";
 import { CreativeDescNode } from "./CreativeDescNode";
+import { PanoramaNode } from "./PanoramaNode";
 import { AngleGenerateParams } from "../AngleEditor";
 import { LightingGenerateParams } from "../LightingEditor";
 import { ExpandImageGenerateParams } from "../ExpandImageEditor";
@@ -33,6 +34,8 @@ interface NodeContentProps {
   onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
   onCrop?: (id: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
   onExpandImageGenerate?: (id: string, params: ExpandImageGenerateParams) => void;
+  onPanoramaEdit?: (id: string) => void;
+  onPanoramaScreenshot?: (sourceNodeId: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
 }
 
 const NodeContentComponent: React.FC<NodeContentProps> = (props) => {
@@ -55,6 +58,8 @@ const NodeContentComponent: React.FC<NodeContentProps> = (props) => {
       return <OriginalImageNode {...props} />;
     case NodeType.CREATIVE_DESC:
       return <CreativeDescNode {...props} />;
+    case NodeType.PANORAMA:
+      return <PanoramaNode {...props} />;
     default:
       return null;
   }

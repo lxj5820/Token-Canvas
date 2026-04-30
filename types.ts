@@ -7,6 +7,7 @@ export enum NodeType {
   START_END_TO_VIDEO = "START_END_TO_VIDEO",
   CREATIVE_DESC = "CREATIVE_DESC",
   ORIGINAL_IMAGE = "ORIGINAL_IMAGE",
+  PANORAMA = "PANORAMA",
   GROUP = "GROUP",
 }
 
@@ -55,6 +56,13 @@ export interface NodeData {
   isCropEditing?: boolean;
 
   isExpandImageEditing?: boolean;
+
+  isPanoramaMode?: boolean;
+  panoramaYaw?: number;
+  panoramaPitch?: number;
+  panoramaFov?: number;
+  panoramaAspectRatio?: string;
+  panoramaShowGrid?: boolean;
 
   parentId?: string;
   groupName?: string;

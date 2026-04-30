@@ -457,7 +457,10 @@ export const useCanvasInteraction = ({
             );
           } else {
             let ratio = 1.33;
-            if (node.aspectRatio) {
+            if (node.type === NodeType.PANORAMA && node.panoramaAspectRatio) {
+              const [w, h] = node.panoramaAspectRatio.split(":").map(Number);
+              if (!isNaN(w) && !isNaN(h) && h !== 0) ratio = w / h;
+            } else if (node.aspectRatio) {
               const ar =
                 node.aspectRatio === "auto" ? "1:1" : node.aspectRatio;
               const [w, h] = ar.split(":").map(Number);

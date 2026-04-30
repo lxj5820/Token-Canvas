@@ -52,6 +52,7 @@ interface TextToImageNodeProps {
   onLightGenerate?: (id: string, params: LightingGenerateParams) => void;
   onCrop?: (id: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
   onExpandImageGenerate?: (id: string, params: ExpandImageGenerateParams) => void;
+  onPanoramaEdit?: (id: string) => void;
 }
 
 // 文本到图片节点组件
@@ -71,6 +72,7 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
   onLightGenerate,
   onCrop,
   onExpandImageGenerate,
+  onPanoramaEdit,
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [deferredInputs, setDeferredInputs] = useState(false);
@@ -286,6 +288,8 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
               isAnnotating={isAnnotating}
               isDark={isDark}
               onGridSplit={handleGridSplit}
+              onPanoramaEdit={() => onPanoramaEdit?.(data.id)}
+              isPanoramaEditing={false}
               onAngleEdit={toggleAngleEdit}
               isAngleEditing={isAngleEditing}
               onLightEdit={toggleLightEdit}

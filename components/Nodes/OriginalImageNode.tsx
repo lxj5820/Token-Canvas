@@ -39,6 +39,7 @@ interface OriginalImageNodeProps {
   onAngleGenerate?: (id: string, params: AngleGenerateParams) => void;
   onCrop?: (id: string, dataUrl: string, outputWidth: number, outputHeight: number) => void;
   onExpandImageGenerate?: (id: string, params: ExpandImageGenerateParams) => void;
+  onPanoramaEdit?: (id: string) => void;
 }
 
 // 原始图片节点组件
@@ -57,6 +58,7 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
   onAngleGenerate,
   onCrop,
   onExpandImageGenerate,
+  onPanoramaEdit,
 }) => {
   const containerBg = isDark ? "bg-[#1a1a1a]" : "bg-white";
   const hasResult = !!(data.imageSrc || data.videoSrc);
@@ -222,6 +224,8 @@ export const OriginalImageNode: React.FC<OriginalImageNodeProps> = ({
               isAnnotating={isAnnotating}
               isDark={isDark}
               onGridSplit={handleGridSplit}
+              onPanoramaEdit={() => onPanoramaEdit?.(data.id)}
+              isPanoramaEditing={false}
               onAngleEdit={toggleAngleEdit}
               isAngleEditing={isAngleEditing}
               onLightEdit={toggleLightEdit}

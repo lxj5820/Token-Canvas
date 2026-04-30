@@ -103,6 +103,9 @@ export const getDefaultNodeSize = (
   ) {
     if (!dataOverride?.width) w = 400;
     if (!dataOverride?.height) h = 400;
+  } else if (type === NodeType.PANORAMA) {
+    if (!dataOverride?.width) w = 498;
+    if (!dataOverride?.height) h = 280;
   }
 
   return { width: w, height: h };
@@ -111,8 +114,9 @@ export const getDefaultNodeSize = (
 /** 根据节点类型获取默认配置 */
 export const getDefaultNodeConfig = (type: NodeType) => {
   const isVideoType = type === NodeType.TEXT_TO_VIDEO;
+  const isPanoramaType = type === NodeType.PANORAMA;
   return {
-    title: getDefaultTitle(type),
+    title: isPanoramaType ? "全景" : getDefaultTitle(type),
     model: getDefaultModel(type),
     aspectRatio: isVideoType ? "16:9" : "1:1",
     resolution: isVideoType ? "720p" : "1k",
