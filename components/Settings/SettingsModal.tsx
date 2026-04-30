@@ -376,14 +376,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <h4
                     className={`text-sm font-bold mb-1 ${isDark ? "text-amber-400" : "text-amber-700"}`}
                   >
-                    ⚠️ 博主提醒：自接 API 平台有风险！
+                    温馨提醒：自接 API 平台可能不适配！
                   </h4>
-                  <p
-                    className={`text-xs leading-relaxed ${isDark ? "text-amber-300/80" : "text-amber-600"}`}
-                  >
-                    很多小型 API
-                    中转商可能会跑路，充值后血本无归。如果出图/出视频量大，建议使用大厂服务。
-                  </p>
                   <div
                     className={`mt-2 p-2 rounded-lg ${isDark ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-emerald-50 border border-emerald-200"}`}
                   >
@@ -443,30 +437,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     GLOBAL API KEY（可选，全局默认 KEY）
                   </label>
-                  <a
-                    href="https://newapi.asia/console/token"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-yellow-500 hover:text-yellow-600 transition-colors"
-                  >
-                    获取 Key
-                  </a>
                 </div>
-                <div className="relative">
-                  <input
-                    type={showGlobalApiKey ? "text" : "password"}
-                    value={globalApiKey}
-                    onChange={(e) => setGlobalApiKey(e.target.value)}
-                    onBlur={saveGlobalConfig}
-                    className={`w-full px-4 py-3 pr-10 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
-                    placeholder="sk-..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGlobalApiKey(!showGlobalApiKey)}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`}
-                    title="显示/隐藏 API Key"
-                  >
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showGlobalApiKey ? "text" : "password"}
+                      value={globalApiKey}
+                      onChange={(e) => setGlobalApiKey(e.target.value)}
+                      onBlur={saveGlobalConfig}
+                      className={`w-full px-4 py-3 pr-10 rounded-xl text-sm border ${borderColor} ${inputBg} ${textMain} outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500/50 transition-all`}
+                      placeholder="sk-..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGlobalApiKey(!showGlobalApiKey)}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`}
+                      title="显示/隐藏 API Key"
+                    >
                     {showGlobalApiKey ? (
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -500,7 +487,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     )}
                   </button>
                 </div>
+                <a
+                  href="https://newapi.asia/console/token"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium ${isDark ? "bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 border border-yellow-500/30" : "bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-600 hover:from-amber-100 hover:to-yellow-100 border border-amber-200 shadow-sm"} transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                  </svg>
+                  获取 Key
+                </a>
               </div>
+            </div>
             </div>
 
             {/* 分隔线 */}
