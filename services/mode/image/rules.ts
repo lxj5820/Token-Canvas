@@ -215,20 +215,12 @@ export const calculateImageSize = (
   if (modelName.includes("gpt-image")) {
     if (aspectRatio === "auto") return "auto";
     if (aspectRatio === "1:1") return "1024x1024";
-    if (
-      aspectRatio === "3:2" ||
-      aspectRatio === "4:3" ||
-      aspectRatio === "16:9"
-    ) {
-      return "1536x1024"; // 横版
-    }
-    if (
-      aspectRatio === "2:3" ||
-      aspectRatio === "3:4" ||
-      aspectRatio === "9:16"
-    ) {
-      return "1024x1536"; // 竖版
-    }
+    if (aspectRatio === "3:2") return "1536x1024";
+    if (aspectRatio === "4:3") return "1024x768";
+    if (aspectRatio === "16:9") return "1280x720";
+    if (aspectRatio === "2:3") return "1024x1536";
+    if (aspectRatio === "3:4") return "768x1024";
+    if (aspectRatio === "9:16") return "720x1280";
     return "1024x1024";
   }
 

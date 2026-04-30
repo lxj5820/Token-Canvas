@@ -12,7 +12,27 @@ const toDataUrl = (
   return `data:${defaultMimeType};base64,${base64Str}`;
 };
 
-const GPT_IMAGE_SIZES = ["auto", "1:1", "2:3", "3:2"];
+const GPT_IMAGE_SIZES = [
+  "auto",
+  "1:1",
+  "2:3",
+  "3:2",
+  "4:3",
+  "3:4",
+  "16:9",
+  "9:16",
+];
+
+const GPT_IMAGE_SIZE_MAP: Record<string, string> = {
+  auto: "auto",
+  "1:1": "1024x1024",
+  "2:3": "1024x1536",
+  "3:2": "1536x1024",
+  "4:3": "1024x768",
+  "3:4": "768x1024",
+  "16:9": "1280x720",
+  "9:16": "720x1280",
+};
 
 const summarizeGptImageRequest = (
   payload: Record<string, any>,
@@ -55,7 +75,7 @@ export interface GptImageGenerationParams {
 }
 
 const DEFAULT_GPT_IMAGE_OPTIONS: Required<GptImageOptions> = {
-  quality: "auto",
+  quality: "high",
   background: "auto",
   outputFormat: "png",
   outputCompression: 100,
@@ -79,14 +99,17 @@ function createGptImageHandler(modelId: string) {
       };
       const size =
         resolvedOptions.size === "auto"
-          ? calculateImageSize(params.aspectRatio, params.resolution, modelId)
+          ? GPT_IMAGE_SIZE_MAP[params.aspectRatio] ||
+            calculateImageSize(params.aspectRatio, params.resolution, modelId)
           : resolvedOptions.size;
+
+      const promptWithRatio = `${prompt} [Aspect Ratio: ${params.aspectRatio}]`;
 
       if (params.inputImages.length > 0) {
         return await generateGptImageEdit(
           cfg,
           { id: modelId, name: modelId, type: "IMAGE_GEN" } as ModelDef,
-          prompt,
+          promptWithRatio,
           params.inputImages,
           params.count,
           {
@@ -103,7 +126,7 @@ function createGptImageHandler(modelId: string) {
       return await generateGptImage(
         cfg,
         { id: modelId, name: modelId, type: "IMAGE_GEN" } as ModelDef,
-        prompt,
+        promptWithRatio,
         params.aspectRatio,
         params.resolution,
         size,
@@ -127,12 +150,21 @@ export const GPT_IMAGE_CONFIG = {
   supportedResolutions: ["1k"],
   defaultParams: {
     responseFormat: "b64_json",
-    quality: "auto",
+    quality: "high",
   },
   supportedQualities: ["auto", "low", "medium", "high"],
   supportedBackgrounds: ["transparent", "opaque", "auto"],
   supportedOutputFormats: ["png", "jpeg", "webp"],
-  supportedSizes: ["auto", "1024x1024", "1536x1024", "1024x1536"],
+  supportedSizes: [
+    "auto",
+    "1024x1024",
+    "1536x1024",
+    "1024x1536",
+    "1024x768",
+    "768x1024",
+    "1280x720",
+    "720x1280",
+  ],
   maxInputImages: 16,
   maxPartialImages: 3,
 };
@@ -157,18 +189,23 @@ export const generateGptImage = async (
       : "/v1/images/generations";
   const targetUrl = constructUrl(config.baseUrl, endpoint);
 
-  const hasInputImage = inputImages.length > 0;
-
   const payload: Record<string, any> = {
     model: config.modelId,
     prompt: prompt,
     n: n || 1,
     size: calculatedSize,
-    background: options.background,
-    moderation: options.moderation,
-    output_format: options.outputFormat,
     quality: options.quality,
   };
+
+  if (options.background !== "auto") {
+    payload.background = options.background;
+  }
+  if (options.moderation !== "auto") {
+    payload.moderation = options.moderation;
+  }
+  if (options.outputFormat !== "png") {
+    payload.output_format = options.outputFormat;
+  }
 
   if (
     options.outputCompression < 100 &&
@@ -183,10 +220,6 @@ export const generateGptImage = async (
 
   if (options.stream) {
     payload.stream = true;
-  }
-
-  if (hasInputImage) {
-    payload.image = inputImages[0];
   }
 
   logger.debug(
@@ -243,6 +276,48 @@ export interface GptImageEditParams {
   options?: GptImageOptions & { inputFidelity?: "high" | "low" };
 }
 
+const dataUrlToFile = (
+  dataUrl: string,
+  filename = "image.png",
+  mimeType = "image/png",
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const imgEl = new Image();
+    imgEl.onload = () => {
+      const canvas = document.createElement("canvas");
+      const maxSize = 2048;
+      let width = imgEl.width;
+      let height = imgEl.height;
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = (height / width) * maxSize;
+          width = maxSize;
+        } else {
+          width = (width / height) * maxSize;
+          height = maxSize;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(imgEl, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Failed to convert image to blob"));
+            return;
+          }
+          resolve(new File([blob], filename, { type: mimeType }));
+        },
+        mimeType,
+        1.0,
+      );
+    };
+    imgEl.onerror = () => reject(new Error("Failed to load image"));
+    imgEl.src = dataUrl;
+  });
+};
+
 export const generateGptImageEdit = async (
   config: ModelConfig,
   modelDef: ModelDef,
@@ -266,49 +341,49 @@ export const generateGptImageEdit = async (
       : "/v1/images/edits";
   const targetUrl = constructUrl(config.baseUrl, endpoint);
 
-  const payload: Record<string, any> = {
-    model: config.modelId,
-    prompt: prompt,
-    images: inputImages.map((img) => ({ image_url: img })),
-    n: n,
-    size: "1024x1024",
-    background: resolvedOptions.background,
-    moderation: resolvedOptions.moderation,
-    output_format: resolvedOptions.outputFormat,
-    quality: resolvedOptions.quality,
-  };
+  const imageFiles = await Promise.all(
+    inputImages.map((img, i) => dataUrlToFile(img, `image_${i}.png`)),
+  );
+
+  const formData = new FormData();
+  imageFiles.forEach((file) => {
+    formData.append("image[]", file);
+  });
+  formData.append("prompt", prompt);
+  formData.append("model", config.modelId);
+  formData.append("n", String(n));
+  formData.append("size", GPT_IMAGE_SIZE_MAP[params?.aspectRatio || "1:1"] || "1024x1024");
+  formData.append("quality", resolvedOptions.quality);
 
   if (params?.options?.inputFidelity) {
-    payload.input_fidelity = params.options.inputFidelity;
+    formData.append("input_fidelity", params.options.inputFidelity);
   }
 
-  if (
-    resolvedOptions.outputCompression < 100 &&
-    (resolvedOptions.outputFormat === "jpeg" ||
-      resolvedOptions.outputFormat === "webp")
-  ) {
-    payload.output_compression = resolvedOptions.outputCompression;
+  if (resolvedOptions.background !== "auto") {
+    formData.append("background", resolvedOptions.background);
   }
-
-  if (resolvedOptions.partialImages > 0) {
-    payload.partial_images = Math.min(
-      Math.max(0, resolvedOptions.partialImages),
-      3,
-    );
+  if (resolvedOptions.moderation !== "auto") {
+    formData.append("moderation", resolvedOptions.moderation);
   }
-
-  if (resolvedOptions.stream) {
-    payload.stream = true;
+  if (resolvedOptions.outputFormat !== "png") {
+    formData.append("output_format", resolvedOptions.outputFormat);
   }
 
   logger.debug(
     "[GPT Image Edit] Creating edit task",
-    summarizeGptImageRequest(payload, inputImages.length),
+    {
+      model: config.modelId,
+      n,
+      size: GPT_IMAGE_SIZE_MAP[params?.aspectRatio || "1:1"] || "1024x1024",
+      quality: resolvedOptions.quality,
+      inputImageCount: inputImages.length,
+    },
     { url: targetUrl },
   );
 
-  const res = await fetchThirdParty(targetUrl, "POST", payload, config, {
+  const res = await fetchThirdParty(targetUrl, "POST", formData, config, {
     timeout: 600000,
+    isFormData: true,
   });
 
   logger.debug("[GPT Image Edit] Response received", {
@@ -364,7 +439,7 @@ export const getGptImageModelDefaults = (
 ): Partial<GptImageOptions> => {
   if (modelId.includes("gpt-image-2") || modelId.includes("gpt-image-1.5")) {
     return {
-      quality: "auto",
+      quality: "high",
       background: "auto",
       outputFormat: "png",
       outputCompression: 100,
@@ -372,7 +447,7 @@ export const getGptImageModelDefaults = (
     };
   }
   return {
-    quality: "auto",
+    quality: "high",
     background: "auto",
     outputFormat: "png",
     moderation: "auto",

@@ -305,8 +305,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             type={NodeType.TEXT_TO_IMAGE}
             color={
               isDark
-                ? "bg-cyan-500/15 text-cyan-400"
-                : "bg-cyan-100 text-cyan-600"
+                ? "bg-yellow-500/15 text-yellow-400"
+                : "bg-yellow-100 text-yellow-600"
             }
           />
           <NodeButton
@@ -316,8 +316,30 @@ const Sidebar: React.FC<SidebarProps> = ({
             type={NodeType.TEXT_TO_VIDEO}
             color={
               isDark
-                ? "bg-purple-500/15 text-purple-400"
-                : "bg-purple-100 text-purple-600"
+                ? "bg-yellow-500/15 text-yellow-400"
+                : "bg-yellow-100 text-yellow-600"
+            }
+          />
+          <NodeButton
+            icon={Icons.Music}
+            label="生音频"
+            description="文本生成音频"
+            type={NodeType.TEXT_TO_AUDIO}
+            color={
+              isDark
+                ? "bg-green-500/15 text-green-400"
+                : "bg-green-100 text-green-600"
+            }
+          />
+          <NodeButton
+            icon={Icons.Frame}
+            label="首尾帧视频"
+            description="首尾帧生成视频"
+            type={NodeType.START_END_TO_VIDEO}
+            color={
+              isDark
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-emerald-100 text-emerald-600"
             }
           />
         </div>
@@ -570,6 +592,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         ref={sidebarRef}
         className={`fixed left-4 top-1/2 -translate-y-1/2 z-[200] ${bgMain} backdrop-blur-xl border ${borderColor} rounded-2xl p-2 flex flex-col items-center gap-1 shadow-xl`}
       >
+        {/* 第一行：添加节点 */}
+        <SidebarButton icon={Icons.Plus} panel="ADD" tooltip="添加节点" />
+
+        <div
+          className={`w-8 h-px my-1 ${isDark ? "bg-zinc-800" : "bg-gray-200"}`}
+        />
+
         {/* 第二行：选择模式 */}
         <ModeButton
           icon={Icons.MousePointer2}
@@ -605,21 +634,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           className={`w-8 h-px my-1 ${isDark ? "bg-zinc-800" : "bg-gray-200"}`}
         />
 
-        {/* 第五行：添加节点 */}
-        <SidebarButton icon={Icons.Plus} panel="ADD" tooltip="添加节点" />
-
-        {/* 第六行：生成历史 */}
+        {/* 第五行：生成历史 */}
         <SidebarButton
           icon={Icons.History}
           panel="HISTORY"
           tooltip="生成历史"
         />
 
-        <div
-          className={`w-8 h-px my-1 ${isDark ? "bg-zinc-800" : "bg-gray-200"}`}
-        />
-
-        {/* 第七行：项目 */}
+        {/* 第六行：项目 */}
         <SidebarButton icon={Icons.Folder} panel="PROJECT" tooltip="项目" />
       </div>
 
