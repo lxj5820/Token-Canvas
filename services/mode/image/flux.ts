@@ -33,13 +33,12 @@ export const generateStandardImage = async (
 ): Promise<string[]> => {
   const targetUrl = constructUrl(config.baseUrl, config.endpoint);
   const isFlux = modelDef.id.includes("flux");
-  const isJimeng = modelDef.id.includes("jimeng");
-  const isDoubao = modelDef.id.includes("doubao");
+  const isSeedream = modelDef.id.includes("seedream");
   const isZimage = modelDef.id.includes("z-image");
   const isQwen = modelDef.id.includes("qwen");
   const hasInputImage = inputImages.length > 0;
 
-  if ((isFlux || isZimage || isDoubao) && n > 1) {
+  if ((isFlux || isZimage || isSeedream) && n > 1) {
     const promises = Array(n)
       .fill(null)
       .map(async () => {
@@ -56,12 +55,14 @@ export const generateStandardImage = async (
             payload.image = inputImages[0];
             payload.image_url = inputImages[0];
           }
-        } else if (isDoubao) {
-          // 为 Doubao 模型添加比例参数
-          payload.aspect_ratio = aspectRatio;
-          payload.aspectRatio = aspectRatio;
-          // Doubao 模型需要 response_format
+        } else if (isSeedream) {
+          delete payload.n;
           payload.response_format = "b64_json";
+          payload.watermark = false;
+          payload.sequential_image_generation = "disabled";
+          if (hasInputImage) {
+            payload.image = inputImages.length === 1 ? inputImages[0] : inputImages;
+          }
         } else if (isZimage) {
           payload.response_format = "b64_json";
           payload.watermark = false;
@@ -117,11 +118,11 @@ export const generateStandardImage = async (
       payload.image = inputImages[0];
       payload.image_url = inputImages[0];
     }
-  } else if (isDoubao) {
+  } else if (isSeedream) {
+    delete payload.n;
     payload.size = calculatedSize;
-    // 为 Doubao 模型添加比例参数
-    payload.aspect_ratio = aspectRatio;
-    payload.aspectRatio = aspectRatio;
+    payload.watermark = false;
+    payload.sequential_image_generation = "disabled";
   } else {
     payload.size = calculatedSize;
   }
@@ -132,13 +133,8 @@ export const generateStandardImage = async (
     if (hasInputImage) payload.image = extractBase64(inputImages[0]);
   }
 
-  // Jimeng (即梦) image-to-image support
-  if ((isJimeng || isDoubao) && hasInputImage) {
-    payload.image = inputImages[0];
-    payload.image_url = inputImages[0];
-    // Some APIs use these alternative field names
-    payload.init_image = inputImages[0];
-    payload.reference_image = inputImages[0];
+  if (isSeedream && hasInputImage) {
+    payload.image = inputImages.length === 1 ? inputImages[0] : inputImages;
   }
 
   // Qwen image-to-image support

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Icons } from "../Icons";
 import { LocalCustomDropdown } from "../Nodes/Shared/LocalNodeComponents";
 import { IMAGE_HANDLERS } from "../../services/mode/image/configurations";
+import { MODEL_NAME_MIGRATION } from "../../services/geminiService";
 
 // ===== 常量 =====
 
@@ -101,7 +102,7 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
   const [count, setCount] = useState(1);
   const [activePreset, setActivePreset] = useState("全景俯拍");
   const [countDropdownOpen, setCountDropdownOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(defaultModel || "Banana 2");
+  const [selectedModel, setSelectedModel] = useState(MODEL_NAME_MIGRATION[defaultModel] || defaultModel || "Banana 2");
   const [selectedRatio, setSelectedRatio] = useState(defaultAspectRatio || "1:1");
   const [selectedResolution, setSelectedResolution] = useState(defaultResolution || "1k");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -111,7 +112,7 @@ export const AngleEditor: React.FC<AngleEditorProps> = ({
   }, [prompt]);
 
   useEffect(() => {
-    if (defaultModel) setSelectedModel(defaultModel);
+    if (defaultModel) setSelectedModel(MODEL_NAME_MIGRATION[defaultModel] || defaultModel);
   }, [defaultModel]);
 
   useEffect(() => {

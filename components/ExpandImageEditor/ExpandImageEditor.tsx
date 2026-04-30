@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Icons } from "../Icons";
 import { LocalCustomDropdown } from "../Nodes/Shared/LocalNodeComponents";
 import { IMAGE_HANDLERS } from "../../services/mode/image/configurations";
+import { MODEL_NAME_MIGRATION } from "../../services/geminiService";
 
 const CANVAS_RATIOS = ["原比例", "1:1", "3:4", "4:3", "9:16", "16:9", "9:21", "21:9"];
 const RESOLUTIONS = ["1k", "2k", "4k"];
@@ -88,7 +89,7 @@ export const ExpandImageEditor: React.FC<ExpandImageEditorProps> = ({
   const [selectedRatio, setSelectedRatio] = useState(defaultAspectRatio || "原比例");
   const [selectedResolution, setSelectedResolution] = useState(defaultResolution || "1k");
   const [count, setCount] = useState(1);
-  const [selectedModel, setSelectedModel] = useState(defaultModel || "Banana 2");
+  const [selectedModel, setSelectedModel] = useState(MODEL_NAME_MIGRATION[defaultModel] || defaultModel || "Banana 2");
   const [includePrompt, setIncludePrompt] = useState(false);
   const [promptInput, setPromptInput] = useState(prompt || "");
   const [countDropdownOpen, setCountDropdownOpen] = useState(false);
@@ -122,7 +123,7 @@ export const ExpandImageEditor: React.FC<ExpandImageEditorProps> = ({
   }, [prompt]);
 
   useEffect(() => {
-    if (defaultModel) setSelectedModel(defaultModel);
+    if (defaultModel) setSelectedModel(MODEL_NAME_MIGRATION[defaultModel] || defaultModel);
   }, [defaultModel]);
 
   useEffect(() => {

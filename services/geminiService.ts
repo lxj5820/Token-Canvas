@@ -6,6 +6,7 @@ import {
   deleteModel,
   isCustomModel,
   getVisibleModels,
+  MODEL_NAME_MIGRATION,
 } from "./mode/config";
 import { logger } from "./logger";
 import type { ModelConfig } from "./mode/config";
@@ -31,6 +32,7 @@ export {
   deleteModel,
   isCustomModel,
   getVisibleModels,
+  MODEL_NAME_MIGRATION,
 };
 export type { ModelConfig };
 
@@ -66,24 +68,27 @@ export const generateImage = async (
   inputImages: string[] = [],
   promptOptimize: boolean = false,
 ): Promise<string[]> => {
-  let handler = IMAGE_HANDLERS[modelName];
+  let resolvedName = modelName;
+  if (!IMAGE_HANDLERS[modelName] && MODEL_NAME_MIGRATION[modelName]) {
+    resolvedName = MODEL_NAME_MIGRATION[modelName];
+  }
 
-  // Fallback for custom models
+  let handler = IMAGE_HANDLERS[resolvedName];
+
   if (!handler) {
-    const def = MODEL_REGISTRY[modelName];
+    const def = MODEL_REGISTRY[resolvedName];
     if (def) {
       if (def.type === "CHAT") handler = BananaHandler;
-      else handler = Flux2Handler; // Default to Generic Image Gen
+      else handler = Flux2Handler;
     }
   }
 
   if (!handler) handler = IMAGE_HANDLERS["Banana 2"];
 
-  const config = getModelConfig(modelName);
+  const config = getModelConfig(resolvedName);
 
-  // Debug: Log image generation parameters
   logger.log(
-    `[Image Gen] Model: ${modelName}, Input Images: ${inputImages.length}, Prompt Optimize: ${promptOptimize}`,
+    `[Image Gen] Model: ${resolvedName}, Input Images: ${inputImages.length}, Prompt Optimize: ${promptOptimize}`,
   );
 
   try {

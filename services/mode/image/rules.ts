@@ -21,6 +21,96 @@ const DEFAULT_RATIOS = [
   "16:9",
 ];
 
+const SEEDREAM_RATIOS = [
+  "1:1",
+  "2:3",
+  "3:2",
+  "3:4",
+  "4:3",
+  "9:16",
+  "16:9",
+  "21:9",
+];
+
+const SEEDREAM_SIZE_MAP: Record<string, Record<string, Record<string, string>>> = {
+  "seedream 4": {
+    "1k": {
+      "1:1": "1024x1024",
+      "4:3": "864x1152",
+      "3:4": "1152x864",
+      "16:9": "1280x720",
+      "9:16": "720x1280",
+      "3:2": "832x1248",
+      "2:3": "1248x832",
+      "21:9": "1512x648",
+    },
+    "2k": {
+      "1:1": "2048x2048",
+      "4:3": "2304x1728",
+      "3:4": "1728x2304",
+      "16:9": "2848x1600",
+      "9:16": "1600x2848",
+      "3:2": "2496x1664",
+      "2:3": "1664x2496",
+      "21:9": "3136x1344",
+    },
+    "4k": {
+      "1:1": "4096x4096",
+      "4:3": "4704x3520",
+      "3:4": "3520x4704",
+      "16:9": "5504x3040",
+      "9:16": "3040x5504",
+      "3:2": "4992x3328",
+      "2:3": "3328x4992",
+      "21:9": "6240x2656",
+    },
+  },
+  "seedream 4.5": {
+    "2k": {
+      "1:1": "2048x2048",
+      "4:3": "2304x1728",
+      "3:4": "1728x2304",
+      "16:9": "2848x1600",
+      "9:16": "1600x2848",
+      "3:2": "2496x1664",
+      "2:3": "1664x2496",
+      "21:9": "3136x1344",
+    },
+    "4k": {
+      "1:1": "4096x4096",
+      "4:3": "4704x3520",
+      "3:4": "3520x4704",
+      "16:9": "5504x3040",
+      "9:16": "3040x5504",
+      "3:2": "4992x3328",
+      "2:3": "3328x4992",
+      "21:9": "6240x2656",
+    },
+  },
+  "seedream 5": {
+    "2k": {
+      "1:1": "2048x2048",
+      "4:3": "2304x1728",
+      "3:4": "1728x2304",
+      "16:9": "2848x1600",
+      "9:16": "1600x2848",
+      "3:2": "2496x1664",
+      "2:3": "1664x2496",
+      "21:9": "3136x1344",
+    },
+    "3k": {
+      "1:1": "3072x3072",
+      "4:3": "3456x2592",
+      "3:4": "2592x3456",
+      "16:9": "4096x2304",
+      "9:16": "2304x4096",
+      "3:2": "3744x2496",
+      "2:3": "2496x3744",
+      "21:9": "4704x2016",
+    },
+  },
+};
+
 /**
  * 图像模型能力配置
  * 定义了每个模型支持的分辨率和比例
@@ -50,9 +140,9 @@ export const IMAGE_MODEL_CAPABILITIES: Record<string, ImageModelRules> = {
   Banana: { resolutions: ["1k"], ratios: DEFAULT_RATIOS },
   Flux2: { resolutions: ["1k", "2k"], ratios: DEFAULT_RATIOS },
   Fluxpro: { resolutions: ["1k", "2k"], ratios: DEFAULT_RATIOS },
-  "即梦4.5": { resolutions: ["1k", "2k", "4k"], ratios: DEFAULT_RATIOS },
-  "即梦 4": { resolutions: ["1k"], ratios: DEFAULT_RATIOS },
-  "doubao 5": { resolutions: ["1k", "2k", "4k"], ratios: DEFAULT_RATIOS },
+  "seedream 4.5": { resolutions: ["2k", "4k"], ratios: SEEDREAM_RATIOS },
+  "seedream 4": { resolutions: ["1k", "2k", "4k"], ratios: SEEDREAM_RATIOS },
+  "seedream 5": { resolutions: ["2k", "3k"], ratios: SEEDREAM_RATIOS },
   MJ: { resolutions: ["1k"], ratios: DEFAULT_RATIOS },
   Zimage: {
     resolutions: ["1k"],
@@ -104,6 +194,16 @@ export const calculateImageSize = (
   resolution: string,
   modelName: string,
 ): string => {
+  if (modelName.startsWith("seedream")) {
+    const modelMap = SEEDREAM_SIZE_MAP[modelName];
+    if (modelMap) {
+      const resMap = modelMap[resolution];
+      if (resMap && resMap[aspectRatio]) {
+        return resMap[aspectRatio];
+      }
+    }
+  }
+
   // Zimage 模型特殊处理
   if (modelName === "Zimage" && resolution === "1k") {
     if (aspectRatio === "16:9") return "1280x720";
@@ -164,7 +264,13 @@ export const calculateImageSize = (
   // 2k 分辨率：约 2000 像素
   // 4k 分辨率：约 4000 像素
   const baseSize =
-    resolution === "1k" ? 1024 : resolution === "2k" ? 2048 : 4096;
+    resolution === "1k"
+      ? 1024
+      : resolution === "2k"
+        ? 2048
+        : resolution === "3k"
+          ? 3072
+          : 4096;
 
   // 解析比例
   const [widthRatio, heightRatio] = aspectRatio.split(":").map(Number);

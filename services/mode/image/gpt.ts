@@ -67,7 +67,7 @@ const DEFAULT_GPT_IMAGE_OPTIONS: Required<GptImageOptions> = {
 
 function createGptImageHandler(modelId: string) {
   return {
-    rules: { resolutions: ["1k"], ratios: GPT_IMAGE_SIZES },
+    rules: { resolutions: ["1k"], ratios: GPT_IMAGE_SIZES, supportsEdit: true },
     generate: async (
       cfg: ModelConfig,
       prompt: string,
@@ -81,6 +81,25 @@ function createGptImageHandler(modelId: string) {
         resolvedOptions.size === "auto"
           ? calculateImageSize(params.aspectRatio, params.resolution, modelId)
           : resolvedOptions.size;
+
+      if (params.inputImages.length > 0) {
+        return await generateGptImageEdit(
+          cfg,
+          { id: modelId, name: modelId, type: "IMAGE_GEN" } as ModelDef,
+          prompt,
+          params.inputImages,
+          params.count,
+          {
+            aspectRatio: params.aspectRatio,
+            resolution: params.resolution,
+            inputImages: params.inputImages,
+            count: params.count,
+            promptOptimize: params.promptOptimize,
+            options: params.options,
+          },
+        );
+      }
+
       return await generateGptImage(
         cfg,
         { id: modelId, name: modelId, type: "IMAGE_GEN" } as ModelDef,
@@ -131,9 +150,11 @@ export const generateGptImage = async (
   options: Required<GptImageOptions> = DEFAULT_GPT_IMAGE_OPTIONS,
 ): Promise<string[]> => {
   const endpoint =
-    config.endpoint && config.endpoint !== "/images/generations"
+    config.endpoint &&
+    config.endpoint !== "/v1/images/generations" &&
+    config.endpoint !== "/images/generations"
       ? config.endpoint
-      : "/images/generations";
+      : "/v1/images/generations";
   const targetUrl = constructUrl(config.baseUrl, endpoint);
 
   const hasInputImage = inputImages.length > 0;
@@ -236,9 +257,13 @@ export const generateGptImageEdit = async (
   };
 
   const endpoint =
-    config.endpoint && config.endpoint !== "/images/edits"
+    config.endpoint &&
+    config.endpoint !== "/v1/images/edits" &&
+    config.endpoint !== "/images/edits" &&
+    config.endpoint !== "/v1/images/generations" &&
+    config.endpoint !== "/images/generations"
       ? config.endpoint
-      : "/images/edits";
+      : "/v1/images/edits";
   const targetUrl = constructUrl(config.baseUrl, endpoint);
 
   const payload: Record<string, any> = {

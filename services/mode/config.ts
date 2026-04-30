@@ -6,6 +6,12 @@ export type { ModelConfig };
 const CUSTOM_MODELS_KEY = "CUSTOM_MODEL_REGISTRY";
 const DELETED_MODELS_KEY = "DELETED_MODELS";
 
+export const MODEL_NAME_MIGRATION: Record<string, string> = {
+  "doubao 5": "seedream 5",
+  "doubao 4.5": "seedream 4.5",
+  "doubao 4": "seedream 4",
+};
+
 const loadCustomModels = (): Record<string, ModelDef> => {
   if (typeof window === "undefined") return {};
   try {
@@ -65,23 +71,23 @@ export const MODEL_REGISTRY: Record<string, ModelDef> = {
   },
   //'gpt-image-1.5': { id: 'gpt-image-1.5-all', name: 'gpt-image-1.5', type: 'IMAGE_GEN', category: 'IMAGE', defaultEndpoint: '/v1/images/generations' },
 
-  "doubao 5": {
+  "seedream 5": {
     id: "doubao-seedream-5-0-260128",
-    name: "Jimeng 5",
+    name: "seedream 5",
     type: "IMAGE_GEN",
     category: "IMAGE",
     defaultEndpoint: "/v1/images/generations",
   },
-  "doubao 4.5": {
+  "seedream 4.5": {
     id: "doubao-seedream-4-5-251128",
-    name: "Jimeng 4.5",
+    name: "seedream 4.5",
     type: "IMAGE_GEN",
     category: "IMAGE",
     defaultEndpoint: "/v1/images/generations",
   },
-  "doubao 4": {
+  "seedream 4": {
     id: "doubao-seedream-4-0-250828",
-    name: "Jimeng 4",
+    name: "seedream 4",
     type: "IMAGE_GEN",
     category: "IMAGE",
     defaultEndpoint: "/v1/images/generations",
@@ -273,7 +279,12 @@ const getGlobalConfig = (): { baseUrl: string; key: string } => {
 };
 
 export const getModelConfig = (modelName: string): ModelConfig => {
-  const def = MODEL_REGISTRY[modelName];
+  let resolvedName = modelName;
+  if (!MODEL_REGISTRY[modelName] && MODEL_NAME_MIGRATION[modelName]) {
+    resolvedName = MODEL_NAME_MIGRATION[modelName];
+  }
+
+  const def = MODEL_REGISTRY[resolvedName];
   const globalConfig = getGlobalConfig();
 
   if (!def) {
@@ -286,7 +297,19 @@ export const getModelConfig = (modelName: string): ModelConfig => {
   }
 
   if (typeof window !== "undefined") {
-    const stored = localStorage.getItem(getStorageKey(modelName));
+    let stored = localStorage.getItem(getStorageKey(resolvedName));
+    if (!stored) {
+      const oldName = Object.entries(MODEL_NAME_MIGRATION).find(
+        ([, v]) => v === resolvedName,
+      )?.[0];
+      if (oldName) {
+        stored = localStorage.getItem(getStorageKey(oldName));
+        if (stored) {
+          localStorage.setItem(getStorageKey(resolvedName), stored);
+          localStorage.removeItem(getStorageKey(oldName));
+        }
+      }
+    }
     if (stored) {
       const parsed = JSON.parse(stored);
 
@@ -302,7 +325,7 @@ export const getModelConfig = (modelName: string): ModelConfig => {
         downloadEndpoint = def.defaultDownloadEndpoint || "";
 
         // 保存更新后的配置
-        saveModelConfig(modelName, {
+        saveModelConfig(resolvedName, {
           ...parsed,
           endpoint,
           queryEndpoint,

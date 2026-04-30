@@ -162,9 +162,9 @@ yarn dev
 
 - Banana Pro
 - Banana 2
-- doubao 5
-- doubao 4.5
-- doubao 4
+- seedream 5
+- seedream 4.5
+- seedream 4
 - Midjourney
 - Qwen Zimage
 - Flux Pro

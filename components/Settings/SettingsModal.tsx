@@ -77,7 +77,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     localStorage.setItem(GLOBAL_API_KEY_KEY, globalApiKey);
 
     // 更新所有模型的 baseUrl（除了特定模型）
-    const excludeModels = ["Jimeng45", "Jimeng41", "Jimeng31"];
+    const excludeModels = ["seedream45", "seedream41", "seedream31"];
     Object.keys(MODEL_REGISTRY).forEach((key) => {
       if (!excludeModels.some((ex) => key.includes(ex))) {
         const config = configs[key];

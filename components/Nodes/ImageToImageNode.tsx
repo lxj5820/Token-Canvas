@@ -6,7 +6,7 @@ import { NodeData } from '../../types';
 // 导入图标组件
 import { Icons } from '../Icons';
 // 导入模型配置相关函数
-import { getModelConfig, MODEL_REGISTRY, getVisibleModels } from '../../services/geminiService';
+import { getModelConfig, MODEL_REGISTRY, getVisibleModels, MODEL_NAME_MIGRATION } from '../../services/geminiService';
 // 导入图片处理器配置
 import { IMAGE_HANDLERS } from '../../services/mode/image/configurations';
 // 导入本地节点组件
@@ -97,7 +97,8 @@ export const ImageToImageNode: React.FC<ImageToImageNodeProps> = ({
     }, [isSelectedAndStable, showControls]);
 
     // 获取当前模型和规则
-    const currentModel = data.model || 'Banana 2';
+    const currentModel =
+      MODEL_NAME_MIGRATION[data.model] || data.model || 'Banana 2';
     const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS['Banana 2'];
     const rules = handler.rules;
     const supportedResolutions = rules.resolutions || ['1k']; // 支持的分辨率

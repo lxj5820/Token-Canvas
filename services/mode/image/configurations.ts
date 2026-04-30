@@ -10,7 +10,7 @@ import {
 
 // --- 基础规则配置 ---
 // 基础比例列表
-const BASE_RATIOS = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+const BASE_RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"];
 // 扩展比例列表（包含更多比例选项）
 const EXTENDED_RATIOS = [
   "1:1",
@@ -86,34 +86,6 @@ export const Banana2 = {
 };
 
 /**
- * 即梦 4.5 模型处理器
- * 支持 1k、2k、4k 分辨率
- * 使用基础比例列表
- */
-export const Jimeng45Handler = {
-  rules: { resolutions: ["1k", "2k", "4k"], ratios: BASE_RATIOS },
-  generate: async (cfg: ModelConfig, prompt: string, params: any) => {
-    // 原为 Doubao4.5，现在为 Jimeng 4.5
-    const size = calculateImageSize(
-      params.aspectRatio,
-      params.resolution,
-      "即梦4.5",
-    );
-    return await generateStandardImage(
-      cfg,
-      { id: "doubao", name: "Doubao", type: "IMAGE_GEN" } as any,
-      prompt,
-      params.aspectRatio,
-      params.resolution,
-      size,
-      params.inputImages,
-      params.count,
-      params.promptOptimize,
-    );
-  },
-};
-
-/**
  * Midjourney 模型处理器
  * 仅支持 1k 分辨率
  * 使用基础比例列表
@@ -149,21 +121,21 @@ export const ZimageHandler = {
 };
 
 /**
- * doubao 4 模型处理器
+ * seedream 4 模型处理器
  * 支持 1k、2k、4k 分辨率
  * 使用基础比例列表
  */
-export const Doubao4Handler = {
+export const Seedream4Handler = {
   rules: { resolutions: ["1k", "2k", "4k"], ratios: BASE_RATIOS },
   generate: async (cfg: ModelConfig, prompt: string, params: any) => {
     const size = calculateImageSize(
       params.aspectRatio,
       params.resolution,
-      "doubao 4",
+      "seedream 4",
     );
     return await generateStandardImage(
       cfg,
-      { id: "doubao", name: "Doubao", type: "IMAGE_GEN" } as any,
+      { id: "seedream", name: "Seedream", type: "IMAGE_GEN" } as any,
       prompt,
       params.aspectRatio,
       params.resolution,
@@ -176,21 +148,21 @@ export const Doubao4Handler = {
 };
 
 /**
- * doubao 4.5 模型处理器
+ * seedream 4.5 模型处理器
  * 支持 2k、4k 分辨率
  * 使用基础比例列表
  */
-export const Doubao45Handler = {
+export const Seedream45Handler = {
   rules: { resolutions: ["2k", "4k"], ratios: BASE_RATIOS },
   generate: async (cfg: ModelConfig, prompt: string, params: any) => {
     const size = calculateImageSize(
       params.aspectRatio,
       params.resolution,
-      "doubao 4.5",
+      "seedream 4.5",
     );
     return await generateStandardImage(
       cfg,
-      { id: "doubao", name: "Doubao", type: "IMAGE_GEN" } as any,
+      { id: "seedream", name: "Seedream", type: "IMAGE_GEN" } as any,
       prompt,
       params.aspectRatio,
       params.resolution,
@@ -203,21 +175,21 @@ export const Doubao45Handler = {
 };
 
 /**
- * doubao 5 模型处理器
+ * seedream 5 模型处理器
  * 支持 2k、3k 分辨率
  * 使用基础比例列表
  */
-export const Doubao5Handler = {
+export const Seedream5Handler = {
   rules: { resolutions: ["2k", "3k"], ratios: BASE_RATIOS },
   generate: async (cfg: ModelConfig, prompt: string, params: any) => {
     const size = calculateImageSize(
       params.aspectRatio,
       params.resolution,
-      "doubao 5",
+      "seedream 5",
     );
     return await generateStandardImage(
       cfg,
-      { id: "doubao", name: "Doubao", type: "IMAGE_GEN" } as any,
+      { id: "seedream", name: "Seedream", type: "IMAGE_GEN" } as any,
       prompt,
       params.aspectRatio,
       params.resolution,
@@ -287,9 +259,9 @@ export const IMAGE_HANDLERS: Record<string, IModelHandler<ImageModelRules>> = {
   BananaPro: BananaProHandler,
   "Banana 2": Banana2,
   Fluxpro: FluxProHandler,
-  "doubao 4": Doubao4Handler,
-  "doubao 4.5": Doubao45Handler,
-  "doubao 5": Doubao5Handler,
+  "seedream 4": Seedream4Handler,
+  "seedream 4.5": Seedream45Handler,
+  "seedream 5": Seedream5Handler,
   MJ: MJHandler,
   Zimage: ZimageHandler,
   "kling image": KlingImageHandler,

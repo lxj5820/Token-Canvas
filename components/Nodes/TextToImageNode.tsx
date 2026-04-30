@@ -5,6 +5,7 @@ import {
   getModelConfig,
   MODEL_REGISTRY,
   getVisibleModels,
+  MODEL_NAME_MIGRATION,
 } from "../../services/geminiService";
 import { IMAGE_HANDLERS } from "../../services/mode/image/configurations";
 import {
@@ -193,7 +194,8 @@ export const TextToImageNode: React.FC<TextToImageNodeProps> = ({
   }, [isSelectedAndStable, showControls]);
 
   // 获取当前模型的规则配置
-  const currentModel = data.model || "Banana 2";
+  const currentModel =
+    MODEL_NAME_MIGRATION[data.model] || data.model || "Banana 2";
   const handler = IMAGE_HANDLERS[currentModel] || IMAGE_HANDLERS["Banana 2"];
   const rules = handler.rules;
   const supportedResolutions = rules.resolutions || ["1k"];
